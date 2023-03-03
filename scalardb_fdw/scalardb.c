@@ -62,7 +62,7 @@ static void clear_exception();
 static void catch_exception();
 
 static char* convert_string_to_cstring(jobject java_cstring);
-static char* convert_jbyteArray_to_c_byte_array(jbyteArray bytes);
+static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes);
 
 static void on_proc_exit_cb();
 
@@ -194,12 +194,12 @@ extern char* scalardb_result_get_text(jobject result, char* attname) {
     return convert_string_to_cstring(str);
 }
 
-extern char* scalardb_result_get_blob(jobject result, char* attname) {
+extern bytea* scalardb_result_get_blob(jobject result, char* attname) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     jbyteArray bytes = (jbyteArray)(*env)->CallObjectMethod(
         env, result, Result_getBlobAsBytes, attname_str);
-    return convert_jbyteArray_to_c_byte_array(bytes);
+    return convert_jbyteArray_to_bytea(bytes);
 }
 
 extern int scalardb_result_columns_size(jobject result) {
@@ -497,16 +497,26 @@ static char* convert_string_to_cstring(jstring java_string) {
     return ret;
 }
 
-static char* convert_jbyteArray_to_c_byte_array(jbyteArray bytes) {
+static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
-    char* ret = NULL;
+    bytea* ret = NULL;
 
     if (bytes != NULL) {
         jbyte* elems = (*env)->GetByteArrayElements(env, bytes, 0);
+
         jsize len = (*env)->GetArrayLength(env, bytes);
-        ret = pnstrdup((char*)elems, sizeof(jbyte) * len);
+        size_t nbytes = sizeof(jbyte) * len;
+
+        ret = (bytea*)palloc(nbytes + VARHDRSZ);
+        SET_VARSIZE(ret, nbytes + VARHDRSZ);
+        memcpy(VARDATA(ret), elems, nbytes);
+
         (*env)->ReleaseByteArrayElements(env, bytes, elems, JNI_ABORT);
+    } else {
+        size_t nbytes = 0;
+        ret = (bytea*)palloc(nbytes + VARHDRSZ);
+        SET_VARSIZE(ret, nbytes + VARHDRSZ);
     }
     return ret;
 }

@@ -34,7 +34,7 @@ extern long scalardb_result_get_bigint(jobject result, char* attname);
 extern float scalardb_result_get_float(jobject result, char* attname);
 extern double scalardb_result_get_double(jobject result, char* attname);
 extern char* scalardb_result_get_text(jobject result, char* attname);
-extern char* scalardb_result_get_blob(jobject result, char* attname);
+extern bytea* scalardb_result_get_blob(jobject result, char* attname);
 extern int scalardb_result_columns_size(jobject result);
 
 #endif

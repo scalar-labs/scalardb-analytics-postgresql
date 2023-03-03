@@ -521,7 +521,6 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
         count++;
     }
 
-    ereport(DEBUG1, errmsg("foo"));
     /* TODO: retrieve only used columns */
     /*
      * Check we got the expected number of columns.  Note: j == 0 and
@@ -565,8 +564,8 @@ static Datum convert_result_column_to_datum(jobject result, char* attname,
         return CStringGetDatum(val);
     }
     case BYTEAOID: {
-        char* val = scalardb_result_get_blob(result, attname);
-        return PointerGetDatum(val);
+        bytea* val = scalardb_result_get_blob(result, attname);
+        PG_RETURN_BYTEA_P(val);
     }
     default:
         ereport(ERROR, errmsg("Unsupported data type: %d", atttypid));
