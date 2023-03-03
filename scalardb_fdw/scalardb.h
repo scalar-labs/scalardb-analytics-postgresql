@@ -13,16 +13,19 @@
 
 extern void scalardb_initialize(ScalarDBFdwOptions* opts);
 
-extern jobject scalardb_begin_transaction(void);
+extern jobject scalardb_scan_all(char* namespace, char* table_name);
 
-extern jobject scalardb_scan_all(jobject transaction, char* namespace,
-                                 char* table_name);
+extern jobject scalardb_scanner_one(jobject scanner);
+extern void scalardb_scanner_close(jobject scanner);
 
 extern int scalardb_list_size(jobject list);
 extern jobject scalardb_list_iterator(jobject list);
 
 extern bool scalardb_iterator_has_next(jobject iterator);
 extern jobject scalardb_iterator_next(jobject iterator);
+
+extern bool scalardb_optional_is_present(jobject optional);
+extern jobject scalardb_optional_get(jobject optional);
 
 extern bool scalardb_result_is_null(jobject result, char* attname);
 extern bool scalardb_result_get_boolean(jobject result, char* attname);
@@ -33,7 +36,5 @@ extern double scalardb_result_get_double(jobject result, char* attname);
 extern char* scalardb_result_get_text(jobject result, char* attname);
 extern char* scalardb_result_get_blob(jobject result, char* attname);
 extern int scalardb_result_columns_size(jobject result);
-
-extern void scalardb_transaction_commit(jobject transaction);
 
 #endif

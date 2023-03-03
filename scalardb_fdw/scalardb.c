@@ -26,10 +26,16 @@ static jclass Iterator_class;
 static jmethodID Iterator_hasNext;
 static jmethodID Iterator_next;
 
+static jclass Optional_class;
+static jmethodID Optional_isPresent;
+static jmethodID Optional_get;
+
+static jclass Closeable_class;
+static jmethodID Closeable_close;
+
 static jclass ScalarDBUtils_class;
 static jmethodID ScalarDBUtils_initialize;
-static jmethodID ScalarDBUtils_closeTransactionManager;
-static jmethodID ScalarDBUtils_beginTransaction;
+static jmethodID ScalarDBUtils_closeStorage;
 static jmethodID ScalarDBUtils_scanAll;
 static jmethodID ScalarDBUtils_getResultColumnsSize;
 
@@ -43,8 +49,8 @@ static jmethodID Result_getDouble;
 static jmethodID Result_getText;
 static jmethodID Result_getBlobAsBytes;
 
-static jclass DistributedTransaction_class;
-static jmethodID DistributedTransaction_commit;
+static jclass Scanner_class;
+static jmethodID Scanner_one;
 
 static void initialize_jvm(ScalarDBFdwOptions* opts);
 static void destroy_jvm();
@@ -74,26 +80,31 @@ void scalardb_initialize(ScalarDBFdwOptions* opts) {
     catch_exception();
 }
 
-jobject scalardb_begin_transaction() {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
-    clear_exception();
-    jobject transaction = (*env)->CallStaticObjectMethod(
-        env, ScalarDBUtils_class, ScalarDBUtils_beginTransaction);
-    catch_exception();
-    return transaction;
-}
-
-extern jobject scalardb_scan_all(jobject transaction, char* namespace,
-                                 char* table_name) {
+extern jobject scalardb_scan_all(char* namespace, char* table_name) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     jstring namespace_str = (*env)->NewStringUTF(env, namespace);
     jstring table_name_str = (*env)->NewStringUTF(env, table_name);
     clear_exception();
-    jobject results = (*env)->CallStaticObjectMethod(
-        env, ScalarDBUtils_class, ScalarDBUtils_scanAll, transaction,
-        namespace_str, table_name_str);
+    jobject scanner = (*env)->CallStaticObjectMethod(
+        env, ScalarDBUtils_class, ScalarDBUtils_scanAll, namespace_str,
+        table_name_str);
     catch_exception();
-    return results;
+    return scanner;
+}
+
+extern jobject scalardb_scanner_one(jobject scanner) {
+    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    clear_exception();
+    jobject o = (*env)->CallObjectMethod(env, scanner, Scanner_one);
+    catch_exception();
+    return o;
+}
+
+extern void scalardb_scanner_close(jobject scanner) {
+    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    clear_exception();
+    (*env)->CallVoidMethod(env, scanner, Closeable_close);
+    catch_exception();
 }
 
 extern int scalardb_list_size(jobject list) {
@@ -111,6 +122,20 @@ extern bool scalardb_iterator_has_next(jobject iterator) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     jboolean b = (*env)->CallBooleanMethod(env, iterator, Iterator_hasNext);
     return b == JNI_TRUE;
+}
+
+extern bool scalardb_optional_is_present(jobject optional) {
+    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    jboolean b = (*env)->CallBooleanMethod(env, optional, Optional_isPresent);
+    return b == JNI_TRUE;
+}
+
+extern jobject scalardb_optional_get(jobject optional) {
+    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    clear_exception();
+    jobject o = (*env)->CallObjectMethod(env, optional, Optional_get);
+    catch_exception();
+    return o;
 }
 
 extern jobject scalardb_iterator_next(jobject iterator) {
@@ -181,13 +206,6 @@ extern int scalardb_result_columns_size(jobject result) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     return (int)(*env)->CallStaticIntMethod(
         env, ScalarDBUtils_class, ScalarDBUtils_getResultColumnsSize, result);
-}
-
-extern void scalardb_transaction_commit(jobject transaction) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
-    clear_exception();
-    (*env)->CallVoidMethod(env, transaction, DistributedTransaction_commit);
-    catch_exception();
 }
 
 static void initialize_jvm(ScalarDBFdwOptions* opts) {
@@ -319,6 +337,34 @@ static void initialize_references() {
         ereport(ERROR, (errmsg("Iterator.next is not found")));
     }
 
+    // java.util.Optional
+    class = (*env)->FindClass(env, "java/util/Optional");
+    if (class == NULL) {
+        ereport(ERROR, (errmsg("java/util/Optional is not found")));
+    }
+    Optional_class = (jclass)((*env)->NewGlobalRef(env, class));
+    Optional_isPresent =
+        (*env)->GetMethodID(env, Optional_class, "isPresent", "()Z");
+    if (Optional_isPresent == NULL) {
+        ereport(ERROR, (errmsg("Optional.isPresent is not found")));
+    }
+    Optional_get =
+        (*env)->GetMethodID(env, Optional_class, "get", "()Ljava/lang/Object;");
+    if (Optional_get == NULL) {
+        ereport(ERROR, (errmsg("Optional.get is not found")));
+    }
+
+    // java.io.Closeable
+    class = (*env)->FindClass(env, "java/io/Closeable");
+    if (class == NULL) {
+        ereport(ERROR, (errmsg("java/io/Closeable is not found")));
+    }
+    Closeable_class = (jclass)((*env)->NewGlobalRef(env, class));
+    Closeable_close = (*env)->GetMethodID(env, Closeable_class, "close", "()V");
+    if (Closeable_close == NULL) {
+        ereport(ERROR, (errmsg("Closeable.close is not found")));
+    }
+
     // ScalarDBUtils
     class = (*env)->FindClass(env, "ScalarDBUtils");
     if (class == NULL) {
@@ -331,22 +377,14 @@ static void initialize_references() {
     if (ScalarDBUtils_initialize == NULL) {
         ereport(ERROR, (errmsg("ScalarDBUtils.initialize is not found")));
     }
-    ScalarDBUtils_closeTransactionManager = (*env)->GetStaticMethodID(
-        env, ScalarDBUtils_class, "closeTransactionManager", "()V");
-    if (ScalarDBUtils_closeTransactionManager == NULL) {
-        ereport(ERROR,
-                (errmsg("ScalarDBUtils.closeTransactionManager is not found")));
-    }
-    ScalarDBUtils_beginTransaction = (*env)->GetStaticMethodID(
-        env, ScalarDBUtils_class, "beginTransaction",
-        "()Lcom/scalar/db/api/DistributedTransaction;");
-    if (ScalarDBUtils_initialize == NULL) {
-        ereport(ERROR, (errmsg("ScalarDBUtils.beginTransaction is not found")));
+    ScalarDBUtils_closeStorage = (*env)->GetStaticMethodID(
+        env, ScalarDBUtils_class, "closeStorage", "()V");
+    if (ScalarDBUtils_closeStorage == NULL) {
+        ereport(ERROR, (errmsg("ScalarDBUtils.closeStorage is not found")));
     }
     ScalarDBUtils_scanAll = (*env)->GetStaticMethodID(
         env, ScalarDBUtils_class, "scanAll",
-        "(Lcom/scalar/db/api/DistributedTransaction;Ljava/lang/String;Ljava/"
-        "lang/String;)Ljava/util/List;");
+        "(Ljava/lang/String;Ljava/lang/String;)Lcom/scalar/db/api/Scanner;");
     if (ScalarDBUtils_scanAll == NULL) {
         ereport(ERROR, (errmsg("ScalarDBUtils.scanAll is not found")));
     }
@@ -405,18 +443,16 @@ static void initialize_references() {
         ereport(ERROR, (errmsg("Result_getBlobAsBytes is not found")));
     }
 
-    // com.scalar.db.api.DistributedTransaction
-    class = (*env)->FindClass(env, "com/scalar/db/api/DistributedTransaction");
+    // com.scalar.db.api.Scanner
+    class = (*env)->FindClass(env, "com/scalar/db/api/Scanner");
     if (class == NULL) {
-        ereport(
-            ERROR,
-            (errmsg("com/scalar/db/api/DistributedTransaction is not found")));
+        ereport(ERROR, (errmsg("com/scalar/db/api/Scanner is not found")));
     }
-    DistributedTransaction_class = (jclass)((*env)->NewGlobalRef(env, class));
-    DistributedTransaction_commit =
-        (*env)->GetMethodID(env, DistributedTransaction_class, "commit", "()V");
-    if (DistributedTransaction_commit == NULL) {
-        ereport(ERROR, (errmsg("DistributedTransaction.commit is not found")));
+    Scanner_class = (jclass)((*env)->NewGlobalRef(env, class));
+    Scanner_one = (*env)->GetMethodID(env, Scanner_class, "one",
+                                      "()Ljava/util/Optional;");
+    if (Scanner_one == NULL) {
+        ereport(ERROR, (errmsg("Scanner.one is not found")));
     }
 }
 
@@ -477,6 +513,6 @@ static char* convert_jbyteArray_to_c_byte_array(jbyteArray bytes) {
 
 static void on_proc_exit_cb() {
     (*env)->CallStaticObjectMethod(env, ScalarDBUtils_class,
-                                   ScalarDBUtils_closeTransactionManager);
+                                   ScalarDBUtils_closeStorage);
     destroy_jvm();
 }

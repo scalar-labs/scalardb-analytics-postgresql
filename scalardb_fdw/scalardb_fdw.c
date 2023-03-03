@@ -56,11 +56,7 @@ typedef struct {
     Relation rel;             /* relcache entry for the foreign table */
     AttInMetadata* attinmeta; /* attribute datatype conversion metadata */
 
-    jobject transaction; /* Java instance of DistributedTransaction*/
-
-    jobject results;
-    int results_size;
-    jobject results_iterator;
+    jobject scanner; /* Java instance of com.scalar.db.api.Scanner */
 } ScalarDBFdwScanState;
 
 enum ScanFdwPrivateIndex {
@@ -304,8 +300,7 @@ static void scalardbBeginForeignScan(ForeignScanState* node, int eflags) {
 
     scalardb_initialize(&fdw_state->options);
 
-    fdw_state->transaction = scalardb_begin_transaction();
-    fdw_state->results = NULL;
+    fdw_state->scanner = NULL;
 }
 
 static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
@@ -314,20 +309,18 @@ static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
     ScalarDBFdwScanState* fdw_state = (ScalarDBFdwScanState*)node->fdw_state;
     TupleTableSlot* slot = node->ss.ss_ScanTupleSlot;
 
-    if (!fdw_state->results) {
-        fdw_state->results = scalardb_scan_all(fdw_state->transaction,
-                                               fdw_state->options.namespace,
+    if (!fdw_state->scanner) {
+        fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
                                                fdw_state->options.table_name);
-        fdw_state->results_size = scalardb_list_size(fdw_state->results);
-        fdw_state->results_iterator =
-            scalardb_list_iterator(fdw_state->results);
     }
 
-    if (!scalardb_iterator_has_next(fdw_state->results_iterator)) {
+    jobject result_optional = scalardb_scanner_one(fdw_state->scanner);
+
+    if (!scalardb_optional_is_present(result_optional)) {
         return ExecClearTuple(slot);
     }
 
-    jobject result = scalardb_iterator_next(fdw_state->results_iterator);
+    jobject result = scalardb_optional_get(result_optional);
     HeapTuple tuple =
         make_tuple_from_result(result, scalardb_result_columns_size(result),
                                fdw_state->rel, fdw_state->attrs_to_retrieve);
@@ -340,13 +333,11 @@ static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
 static void scalardbReScanForeignScan(ForeignScanState* node) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     ScalarDBFdwScanState* fdw_state = (ScalarDBFdwScanState*)node->fdw_state;
-    if (!fdw_state->results) {
-        fdw_state->results = scalardb_scan_all(fdw_state->transaction,
-                                               fdw_state->options.namespace,
-                                               fdw_state->options.table_name);
-    }
-    fdw_state->results_size = scalardb_list_size(fdw_state->results);
-    fdw_state->results_iterator = scalardb_list_iterator(fdw_state->results);
+    if (!fdw_state->scanner)
+        scalardb_scanner_close(fdw_state->scanner);
+
+    fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
+                                           fdw_state->options.table_name);
 }
 
 static void scalardbEndForeignScan(ForeignScanState* node) {
@@ -357,11 +348,11 @@ static void scalardbEndForeignScan(ForeignScanState* node) {
     if (fdw_state == NULL)
         return;
 
-    /* Close the cursor if open, to prevent accumulation of cursors */
-    if (fdw_state->transaction)
-        scalardb_transaction_commit(fdw_state->transaction);
+    /* Close the scanner if open, to prevent accumulation of cursors */
+    if (fdw_state->scanner)
+        scalardb_scanner_close(fdw_state->scanner);
 
-    // TODO: consider whether DistributedTransactionManager should be closed
+    // TODO: consider whether DistributedStorage should be closed
     // here
 }
 
