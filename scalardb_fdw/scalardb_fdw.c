@@ -560,8 +560,8 @@ static Datum convert_result_column_to_datum(jobject result, char* attname,
         return Float8GetDatum(val);
     }
     case TEXTOID: {
-        char* val = scalardb_result_get_text(result, attname);
-        return CStringGetDatum(val);
+        text* val = scalardb_result_get_text(result, attname);
+        PG_RETURN_TEXT_P(val);
     }
     case BYTEAOID: {
         bytea* val = scalardb_result_get_blob(result, attname);

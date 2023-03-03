@@ -62,6 +62,7 @@ static void clear_exception();
 static void catch_exception();
 
 static char* convert_string_to_cstring(jobject java_cstring);
+static text* convert_string_to_text(jobject java_cstring);
 static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes);
 
 static void on_proc_exit_cb();
@@ -186,12 +187,12 @@ extern double scalardb_result_get_double(jobject result, char* attname) {
                                             attname_str);
 }
 
-extern char* scalardb_result_get_text(jobject result, char* attname) {
+extern text* scalardb_result_get_text(jobject result, char* attname) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     jstring str =
         (*env)->CallObjectMethod(env, result, Result_getText, attname_str);
-    return convert_string_to_cstring(str);
+    return convert_string_to_text(str);
 }
 
 extern bytea* scalardb_result_get_blob(jobject result, char* attname) {
@@ -497,6 +498,31 @@ static char* convert_string_to_cstring(jstring java_string) {
     return ret;
 }
 
+static text* convert_string_to_text(jstring java_string) {
+    ereport(DEBUG1, errmsg("entering function %s", __func__));
+
+    text* ret = NULL;
+
+    if (!((*env)->IsInstanceOf(env, java_string, String_class))) {
+        ereport(ERROR, errmsg("Not an instance of String class"));
+    }
+
+    if (java_string != NULL) {
+        const char* str =
+            (char*)(*env)->GetStringUTFChars(env, (jstring)java_string, 0);
+
+        jsize nbytes = (*env)->GetStringUTFLength(env, java_string);
+
+        ret = (bytea*)palloc(nbytes + VARHDRSZ);
+        SET_VARSIZE(ret, nbytes + VARHDRSZ);
+        memcpy(VARDATA(ret), str, nbytes);
+
+        (*env)->ReleaseStringUTFChars(env, (jstring)java_string, str);
+        (*env)->DeleteLocalRef(env, java_string);
+    }
+    return ret;
+}
+
 static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
@@ -513,10 +539,6 @@ static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes) {
         memcpy(VARDATA(ret), elems, nbytes);
 
         (*env)->ReleaseByteArrayElements(env, bytes, elems, JNI_ABORT);
-    } else {
-        size_t nbytes = 0;
-        ret = (bytea*)palloc(nbytes + VARHDRSZ);
-        SET_VARSIZE(ret, nbytes + VARHDRSZ);
     }
     return ret;
 }
