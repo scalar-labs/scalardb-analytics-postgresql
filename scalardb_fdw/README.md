@@ -95,6 +95,23 @@ The following options can be set on a Cassandra foreign table object:
 | TEXT     | text             |
 | BLOB     | bytea            |
 
+## Testing
+
+### Setup ScalarDB databases for testing
+
+Before running the tests, you need a running ScalarDB instance and test data loaded into it. You can setup all by executing the following commands.
+
+```
+cd tests;
+./setup.sh
+```
+
+### Run regression tests
+
+```
+make USE_PGXS=1 installcheck
+```
+
 ## Limitations
 
 - This extension aims at enabling analytical query processing on calarDB-managed databases. Thus, only reading data from ScalarDB is supported.

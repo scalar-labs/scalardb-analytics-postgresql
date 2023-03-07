@@ -6,6 +6,8 @@ DATA = scalardb_fdw--1.0.sql
 
 DATA_built = build/classes/java/main/ScalarDBUtils.class
 
+REGRESS = scalardb_fdw
+
 DATA_MODULE_DIR = $(DESTDIR)$(datadir)/$(datamoduledir)
 
 OS = $(shell uname | tr '[:upper:]' '[:lower:]')
