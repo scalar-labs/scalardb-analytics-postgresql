@@ -55,7 +55,6 @@ static jmethodID Scanner_one;
 static void initialize_jvm(ScalarDBFdwOptions* opts);
 static void destroy_jvm();
 static void attach_jvm();
-static void detach_jvm();
 static void initialize_references();
 
 static void clear_exception();
@@ -272,11 +271,6 @@ static void destroy_jvm() {
 static void attach_jvm() {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     (*jvm)->AttachCurrentThread(jvm, (void**)&env, NULL);
-}
-
-static void detach_jvm() {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
-    (*jvm)->DetachCurrentThread(jvm);
 }
 
 static void initialize_references() {

@@ -7,7 +7,7 @@ INSERT INTO cassandrans.test(
     c_float_col,
     c_double_col,
     c_text_col
-    -- c_blob_col
+    -- c_blob_col -- skip a blob column because scalardb-sql-cli doesn't support blob literal
 ) VALUES (
     1,
     1,
