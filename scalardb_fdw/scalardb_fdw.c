@@ -417,7 +417,11 @@ static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
      * size estimate of 10 pages, and divide by the column-datatype-based
      * width estimate to get the corresponding number of tuples.
      */
+#if PG_VERSION_NUM >= 140000
     if (baserel->tuples < 0) {
+#else
+    if (baserel->pages == 0 && baserel->tuples == 0) {
+#endif
         baserel->pages = 10;
         baserel->tuples = (10.0 * BLCKSZ) / (baserel->reltarget->width +
                                              sizeof(HeapTupleHeaderData));

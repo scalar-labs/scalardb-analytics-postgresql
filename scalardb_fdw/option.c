@@ -94,7 +94,13 @@ Datum scalardb_fdw_validator(PG_FUNCTION_ARGS) {
         }
 
         if (strcmp(def->defname, "jar_file_path") == 0) {
-            if (!has_privs_of_role(GetUserId(), ROLE_PG_READ_SERVER_FILES)) {
+            if (!has_privs_of_role(GetUserId(),
+#if PG_VERSION_NUM >= 140000
+                                   ROLE_PG_READ_SERVER_FILES
+#else
+                                   DEFAULT_ROLE_READ_SERVER_FILES
+#endif
+                                   )) {
                 ereport(
                     ERROR,
                     (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
@@ -104,7 +110,13 @@ Datum scalardb_fdw_validator(PG_FUNCTION_ARGS) {
             }
             jar_file_path = defGetString(def);
         } else if (strcmp(def->defname, "config_file_path") == 0) {
-            if (!has_privs_of_role(GetUserId(), ROLE_PG_READ_SERVER_FILES)) {
+            if (!has_privs_of_role(GetUserId(),
+#if PG_VERSION_NUM >= 140000
+                                   ROLE_PG_READ_SERVER_FILES
+#else
+                                   DEFAULT_ROLE_READ_SERVER_FILES
+#endif
+                                   )) {
                 ereport(
                     ERROR,
                     (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
