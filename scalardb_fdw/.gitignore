@@ -12,3 +12,5 @@ bin/
 results/
 regression.diffs
 regression.out
+sql/
+expected/
