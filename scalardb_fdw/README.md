@@ -8,6 +8,8 @@ This PostgreSQL extension implements a Foreign Data Wrapper (FDW) for [ScalarDB]
 
 You need to install JDK whose version is compatible with ScalarDB.
 
+You also need to set `JAVA_HOME` environment variable, which points to your JDK installation directory.
+
 Note that since these extions use JNI internally, the dynamic library of the JVM, such as `libjvm.so`, must be found in the library search paths.
 
 ### ScalarDB
