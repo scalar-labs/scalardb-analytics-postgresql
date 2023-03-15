@@ -14,6 +14,10 @@ Note that since these extions use JNI internally, the dynamic library of the JVM
 
 You have to download the ScalarDB library jar. You can put it in an arbitrary path.
 
+### PostgreSQL
+
+This extension supports PostgreSQL 13 and above.
+
 ## Build
 
 ```
