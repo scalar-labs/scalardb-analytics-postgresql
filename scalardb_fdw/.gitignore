@@ -12,5 +12,5 @@ bin/
 results/
 regression.diffs
 regression.out
-sql/
-expected/
+sql/scalardb_fdw.sql
+expected/scalardb_fdw.out
