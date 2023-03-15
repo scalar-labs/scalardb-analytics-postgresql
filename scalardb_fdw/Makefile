@@ -14,7 +14,9 @@ OS = $(shell uname | tr '[:upper:]' '[:lower:]')
 
 PG_CPPFLAGS = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(OS) -D'DATA_MODULE_DIR=$(DATA_MODULE_DIR)'
 
-SHLIB_LINK+=-L$(JAVA_HOME)/lib/server -ljvm
+libjvm_path = $(shell find $(JAVA_HOME) -name libjvm\.*)
+
+SHLIB_LINK+=-L$(dir $(libjvm_path)) -ljvm
 
 EXTRA_CLEAN = build
 
