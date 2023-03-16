@@ -4,6 +4,6 @@ ScalarDB Analytics with PostgreSQL processes analytical queries on ScalarDB-mana
 
 ## Components
 
-ScalarDB Analytics PostgreSQL provides analytical environment as Docker images. This repository gather all required components to build the images. Currently, this repository consists of the following:
+ScalarDB Analytics with PostgreSQL provides a Docker container image that includes all the required components to run. This repository gathers all the required components to build the image. Currently, this repository consists of the following:
 
 - [scalardb_fdw](./scalardb_fdw): a FDW plugin that read data from underlying databases using the ScalarDB library internally.
