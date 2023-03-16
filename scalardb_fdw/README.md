@@ -20,28 +20,57 @@ You have to download the ScalarDB library jar. You can put it in an arbitrary pa
 
 This extension supports PostgreSQL 13 and above.
 
-## Build
+## Build & Installation
+
+You can build and install this extension by running the following command. You may not need to set `USE_PGXS` if you are familiar with the PostgreSQL extension.
 
 ```
-cd scalardb_fdw;
-make USE_PGXS=1 install;
+make USE_PGXS=1 install
+```
+
+### Common Build Errors
+
+#### ld: library not found for -ljvm
+
+Normally, the build script find the path of `libjvm` and set it as a library search path properly. If you still encounte an error like the above, please you may copy or like the `libjvm.so` under the default library paths. For example:
+
+```
+ln -s /path/to/your/libjvm.so /usr/lib64/libjvm.so
 ```
 
 ## Usage
 
 ### Example
 
+#### 1. Install the Extension
+
+You have to install the extension at first. Please refer to the Build & Installation section.
+
+#### 2. Create an extension
+
 ```sql
 CREATE EXTENSION scalardb_fdw;
+```
 
+#### 3. Create a foreign server
+
+```sql
 CREATE SERVER scalardb FOREIGN DATA WRAPPER scalardb_fdw OPTIONS (
     jar_file_path '/path/to/scalardb-3.8.0.jar',
     config_file_path '/path/to/scalardb.properties'
 );
 
+```
 
+#### 4. Create a user mapping
+
+```sql
 CREATE USER MAPPING FOR PUBLIC SERVER scalardb;
+```
 
+#### 5. Create a foreign table
+
+```sql
 CREATE FOREIGN TABLE sample_table (
     pk int OPTIONS(scalardb_partition_key 'true'),
     ck1 int OPTIONS(scalardb_clustering_key 'true'),
@@ -56,13 +85,17 @@ CREATE FOREIGN TABLE sample_table (
     namespace 'ns',
     table_name 'sample_table'
 );
+```
 
+#### 6. Run a query you want
+
+```sql
 select * from sample_table;
 ```
 
 ### Available Options
 
-#### Foreign Server
+#### `CREATE SERVER`
 
 The following options can be set on a ScalarDB foreign server object:
 
@@ -72,7 +105,11 @@ The following options can be set on a ScalarDB foreign server object:
 | `config_file_path` | **REQURIED** | `string` | The path to the ScalarDB config file.                                                         |
 | `max_heap_size`    |              | `string` | The maximux heap size of JVM. The format is the same as `-Xmx`.                               |
 
-#### Foreign Table
+#### `CREATE USER MAAPING`
+
+Currently, there is no available options for the `CREATE USER MAPPING`.
+
+#### `CREATE FOREIGN SERVER`
 
 The following options can be set on a Cassandra foreign table object:
 
@@ -113,6 +150,8 @@ cd tests;
 ```
 
 ### Run regression tests
+
+You can run the regression tests by running the following command **AFTER** you install the extension.
 
 ```
 make USE_PGXS=1 installcheck
