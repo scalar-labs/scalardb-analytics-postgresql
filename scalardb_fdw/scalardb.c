@@ -254,7 +254,9 @@ static void initialize_jvm(ScalarDBFdwOptions* opts) {
 
         jint res = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
         if (res < 0) {
-            ereport(ERROR, (errmsg("Failed to create Java VM")));
+            ereport(
+                ERROR,
+                (errmsg("Failed to create Java VM. JNI error code: %d", res)));
         }
         ereport(DEBUG1, (errmsg("Successfully created a JVM with %s heapsize",
                                 max_heap_size)));
