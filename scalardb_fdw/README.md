@@ -115,4 +115,4 @@ make USE_PGXS=1 installcheck
 ## Limitations
 
 - This extension aims at enabling analytical query processing on ScalarDB-managed databases. Thus, only reading data from ScalarDB is supported.
-- Currently, this extension always reads all recoreds in the underlying table no matter what selection exists in the query.
+- Currently, this extension always reads all records from the underlying databases, no matter what selection exists in queries.
