@@ -10,6 +10,17 @@
 #define StrValue(arg) Str(arg)
 #define STR_DATA_MODULE_DIR StrValue(DATA_MODULE_DIR)
 
+/* a length of "-Djava.class.path=" */
+#define JAVA_CLASS_PATH_STR_LEN 18
+/* a length of ":" */
+#define CLASSPATH_SEP_STR_LEN 1
+/* a length of "\0" */
+#define NULL_STR_LEN 1
+/* a length of "-Xmx" */
+#define MAX_HEAP_SIZE_STR_LEN 4
+
+#define DEFAULT_MAX_HEAP_SIZE "1g"
+
 static __thread JNIEnv* env = NULL;
 static JavaVM* jvm;
 
@@ -214,17 +225,20 @@ static void initialize_jvm(ScalarDBFdwOptions* opts) {
     static bool already_initialized = false;
 
     if (already_initialized == false) {
-        size_t classpath_len = 18 + strlen(opts->jar_file_path) + 1 +
-                               strlen(STR_DATA_MODULE_DIR) + 1;
+        size_t classpath_len =
+            JAVA_CLASS_PATH_STR_LEN + strlen(opts->jar_file_path) +
+            CLASSPATH_SEP_STR_LEN + strlen(STR_DATA_MODULE_DIR) + NULL_STR_LEN;
         char* classpath = (char*)palloc0(classpath_len);
         snprintf(classpath, classpath_len, "-Djava.class.path=%s:%s",
                  opts->jar_file_path, STR_DATA_MODULE_DIR);
 
-        char* max_heap_size = opts->max_heap_size ? opts->max_heap_size : "1g";
+        char* max_heap_size =
+            opts->max_heap_size ? opts->max_heap_size : DEFAULT_MAX_HEAP_SIZE;
 
         JavaVMOption* options =
             (JavaVMOption*)palloc0(sizeof(JavaVMOption) * 2);
-        size_t max_heap_size_option_len = 4 + strlen(max_heap_size) + 1;
+        size_t max_heap_size_option_len =
+            MAX_HEAP_SIZE_STR_LEN + strlen(max_heap_size) + NULL_STR_LEN;
         char* max_heap_size_option = (char*)palloc0(max_heap_size_option_len);
         snprintf(max_heap_size_option, max_heap_size_option_len, "-Xmx%s",
                  max_heap_size);
