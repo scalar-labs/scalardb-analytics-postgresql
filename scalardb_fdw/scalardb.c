@@ -275,6 +275,9 @@ static void initialize_jvm(ScalarDBFdwOptions* opts) {
         } else if (GetEnvStat == JNI_EVERSION) {
             ereport(ERROR, (errmsg("GetEnv: JNI_EVERSION; the specified "
                                    "version is not supported")));
+        } else {
+            ereport(ERROR,
+                    (errmsg("GetEnv returned unknown code: %d", GetEnvStat)));
         }
     }
 }
