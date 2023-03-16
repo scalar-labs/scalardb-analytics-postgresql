@@ -7,7 +7,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.service.StorageFactory;
 
-public class ScalarDBUtils {
+public class ScalarDbUtils {
   static StorageFactory storageFactory;
   static DistributedStorage storage;
 

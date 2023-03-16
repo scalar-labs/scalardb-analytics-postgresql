@@ -4,7 +4,7 @@ OBJS = scalardb_fdw.o option.o scalardb.o
 EXTENSION = scalardb_fdw
 DATA = scalardb_fdw--1.0.sql
 
-DATA_built = build/classes/java/main/ScalarDBUtils.class
+DATA_built = build/classes/java/main/ScalarDbUtils.class
 
 REGRESS = scalardb_fdw
 
