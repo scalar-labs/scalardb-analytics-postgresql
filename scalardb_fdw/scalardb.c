@@ -257,26 +257,26 @@ static void initialize_jvm(ScalarDBFdwOptions* opts) {
         if (res < 0) {
             ereport(
                 ERROR,
-                (errmsg("Failed to create Java VM. JNI error code: %d", res)));
+                errmsg("Failed to create Java VM. JNI error code: %d", res));
         }
-        ereport(DEBUG1, (errmsg("Successfully created a JVM with %s heapsize",
-                                max_heap_size)));
+        ereport(DEBUG1, errmsg("Successfully created a JVM with %s heapsize",
+                               max_heap_size));
         on_proc_exit(on_proc_exit_cb, 0);
         already_initialized = true;
     } else {
         jint GetEnvStat = (*jvm)->GetEnv(jvm, (void**)&env, JNI_VERSION);
         if (GetEnvStat == JNI_EDETACHED) {
-            ereport(DEBUG1, (errmsg("GetEnv: JNI_EDETACHED; the current "
-                                    "thread is not attached to the VM")));
+            ereport(DEBUG1, errmsg("GetEnv: JNI_EDETACHED; the current "
+                                   "thread is not attached to the VM"));
             attach_jvm();
         } else if (GetEnvStat == JNI_OK) {
-            ereport(DEBUG1, (errmsg("GetEnv: JNI_OK")));
+            ereport(DEBUG1, errmsg("GetEnv: JNI_OK"));
         } else if (GetEnvStat == JNI_EVERSION) {
-            ereport(ERROR, (errmsg("GetEnv: JNI_EVERSION; the specified "
-                                   "version is not supported")));
+            ereport(ERROR, errmsg("GetEnv: JNI_EVERSION; the specified "
+                                  "version is not supported"));
         } else {
             ereport(ERROR,
-                    (errmsg("GetEnv returned unknown code: %d", GetEnvStat)));
+                    errmsg("GetEnv returned unknown code: %d", GetEnvStat));
         }
     }
 }
@@ -299,173 +299,173 @@ static void initialize_references() {
     // java.lang.Object
     class = (*env)->FindClass(env, "java/lang/Object");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("java/lang/Object is not found")));
+        ereport(ERROR, errmsg("java/lang/Object is not found"));
     }
     Object_class = (jclass)((*env)->NewGlobalRef(env, class));
     Object_toString = (*env)->GetMethodID(env, Object_class, "toString",
                                           "()Ljava/lang/String;");
     if (Object_toString == NULL) {
-        ereport(ERROR, (errmsg("Object.toString is not found")));
+        ereport(ERROR, errmsg("Object.toString is not found"));
     }
 
     // java.lang.String
     class = (*env)->FindClass(env, "java/lang/String");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("java/lang/String is not found")));
+        ereport(ERROR, errmsg("java/lang/String is not found"));
     }
     String_class = (jclass)((*env)->NewGlobalRef(env, class));
 
     // java.util.List
     class = (*env)->FindClass(env, "java/util/List");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("java/util/List is not found")));
+        ereport(ERROR, errmsg("java/util/List is not found"));
     }
     List_class = (jclass)((*env)->NewGlobalRef(env, class));
     List_size = (*env)->GetMethodID(env, List_class, "size", "()I");
     if (List_size == NULL) {
-        ereport(ERROR, (errmsg("List.size is not found")));
+        ereport(ERROR, errmsg("List.size is not found"));
     }
 
     List_iterator = (*env)->GetMethodID(env, List_class, "iterator",
                                         "()Ljava/util/Iterator;");
     if (List_iterator == NULL) {
-        ereport(ERROR, (errmsg("List.iterator is not found")));
+        ereport(ERROR, errmsg("List.iterator is not found"));
     }
 
     // java.util.Iterator
     class = (*env)->FindClass(env, "java/util/Iterator");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("java/util/Iterator is not found")));
+        ereport(ERROR, errmsg("java/util/Iterator is not found"));
     }
     Iterator_class = (jclass)((*env)->NewGlobalRef(env, class));
     Iterator_hasNext =
         (*env)->GetMethodID(env, Iterator_class, "hasNext", "()Z");
     if (Iterator_hasNext == NULL) {
-        ereport(ERROR, (errmsg("Iterator.hasNext is not found")));
+        ereport(ERROR, errmsg("Iterator.hasNext is not found"));
     }
 
     Iterator_next = (*env)->GetMethodID(env, Iterator_class, "next",
                                         "()Ljava/lang/Object;");
     if (Iterator_next == NULL) {
-        ereport(ERROR, (errmsg("Iterator.next is not found")));
+        ereport(ERROR, errmsg("Iterator.next is not found"));
     }
 
     // java.util.Optional
     class = (*env)->FindClass(env, "java/util/Optional");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("java/util/Optional is not found")));
+        ereport(ERROR, errmsg("java/util/Optional is not found"));
     }
     Optional_class = (jclass)((*env)->NewGlobalRef(env, class));
     Optional_isPresent =
         (*env)->GetMethodID(env, Optional_class, "isPresent", "()Z");
     if (Optional_isPresent == NULL) {
-        ereport(ERROR, (errmsg("Optional.isPresent is not found")));
+        ereport(ERROR, errmsg("Optional.isPresent is not found"));
     }
     Optional_get =
         (*env)->GetMethodID(env, Optional_class, "get", "()Ljava/lang/Object;");
     if (Optional_get == NULL) {
-        ereport(ERROR, (errmsg("Optional.get is not found")));
+        ereport(ERROR, errmsg("Optional.get is not found"));
     }
 
     // java.io.Closeable
     class = (*env)->FindClass(env, "java/io/Closeable");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("java/io/Closeable is not found")));
+        ereport(ERROR, errmsg("java/io/Closeable is not found"));
     }
     Closeable_class = (jclass)((*env)->NewGlobalRef(env, class));
     Closeable_close = (*env)->GetMethodID(env, Closeable_class, "close", "()V");
     if (Closeable_close == NULL) {
-        ereport(ERROR, (errmsg("Closeable.close is not found")));
+        ereport(ERROR, errmsg("Closeable.close is not found"));
     }
 
     // ScalarDBUtils
     class = (*env)->FindClass(env, "ScalarDBUtils");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("ScalarDBUtils is not found")));
+        ereport(ERROR, errmsg("ScalarDBUtils is not found"));
     }
 
     ScalarDBUtils_class = (jclass)((*env)->NewGlobalRef(env, class));
     ScalarDBUtils_initialize = (*env)->GetStaticMethodID(
         env, ScalarDBUtils_class, "initialize", "(Ljava/lang/String;)V");
     if (ScalarDBUtils_initialize == NULL) {
-        ereport(ERROR, (errmsg("ScalarDBUtils.initialize is not found")));
+        ereport(ERROR, errmsg("ScalarDBUtils.initialize is not found"));
     }
     ScalarDBUtils_closeStorage = (*env)->GetStaticMethodID(
         env, ScalarDBUtils_class, "closeStorage", "()V");
     if (ScalarDBUtils_closeStorage == NULL) {
-        ereport(ERROR, (errmsg("ScalarDBUtils.closeStorage is not found")));
+        ereport(ERROR, errmsg("ScalarDBUtils.closeStorage is not found"));
     }
     ScalarDBUtils_scanAll = (*env)->GetStaticMethodID(
         env, ScalarDBUtils_class, "scanAll",
         "(Ljava/lang/String;Ljava/lang/String;)Lcom/scalar/db/api/Scanner;");
     if (ScalarDBUtils_scanAll == NULL) {
-        ereport(ERROR, (errmsg("ScalarDBUtils.scanAll is not found")));
+        ereport(ERROR, errmsg("ScalarDBUtils.scanAll is not found"));
     }
     ScalarDBUtils_getResultColumnsSize = (*env)->GetStaticMethodID(
         env, ScalarDBUtils_class, "getResultColumnsSize",
         "(Lcom/scalar/db/api/Result;)I");
     if (ScalarDBUtils_getResultColumnsSize == NULL) {
         ereport(ERROR,
-                (errmsg("ScalarDBUtils.getResultColumnsSize  is not found")));
+                errmsg("ScalarDBUtils.getResultColumnsSize  is not found"));
     }
 
     // com.scalar.db.api.Result
     class = (*env)->FindClass(env, "com/scalar/db/api/Result");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("com/scalar/db/api/Result is not found")));
+        ereport(ERROR, errmsg("com/scalar/db/api/Result is not found"));
     }
     Result_class = (jclass)((*env)->NewGlobalRef(env, class));
     Result_isNull = (*env)->GetMethodID(env, Result_class, "isNull",
                                         "(Ljava/lang/String;)Z");
     if (Result_isNull == NULL) {
-        ereport(ERROR, (errmsg("Result.isNull is not found")));
+        ereport(ERROR, errmsg("Result.isNull is not found"));
     }
     Result_getBoolean = (*env)->GetMethodID(env, Result_class, "getBoolean",
                                             "(Ljava/lang/String;)Z");
     if (Result_getBoolean == NULL) {
-        ereport(ERROR, (errmsg("Result.getBoolean is not found")));
+        ereport(ERROR, errmsg("Result.getBoolean is not found"));
     }
     Result_getInt = (*env)->GetMethodID(env, Result_class, "getInt",
                                         "(Ljava/lang/String;)I");
     if (Result_getInt == NULL) {
-        ereport(ERROR, (errmsg("Result.getInt is not found")));
+        ereport(ERROR, errmsg("Result.getInt is not found"));
     }
     Result_getBigInt = (*env)->GetMethodID(env, Result_class, "getBigInt",
                                            "(Ljava/lang/String;)J");
     if (Result_getBigInt == NULL) {
-        ereport(ERROR, (errmsg("Result.getBigInt is not found")));
+        ereport(ERROR, errmsg("Result.getBigInt is not found"));
     }
     Result_getFloat = (*env)->GetMethodID(env, Result_class, "getFloat",
                                           "(Ljava/lang/String;)F");
     if (Result_getFloat == NULL) {
-        ereport(ERROR, (errmsg("Result.getFloat is not found")));
+        ereport(ERROR, errmsg("Result.getFloat is not found"));
     }
     Result_getDouble = (*env)->GetMethodID(env, Result_class, "getDouble",
                                            "(Ljava/lang/String;)D");
     if (Result_getDouble == NULL) {
-        ereport(ERROR, (errmsg("Result.getDouble is not found")));
+        ereport(ERROR, errmsg("Result.getDouble is not found"));
     }
     Result_getText = (*env)->GetMethodID(
         env, Result_class, "getText", "(Ljava/lang/String;)Ljava/lang/String;");
     if (Result_getText == NULL) {
-        ereport(ERROR, (errmsg("Result.getText is not found")));
+        ereport(ERROR, errmsg("Result.getText is not found"));
     }
     Result_getBlobAsBytes = (*env)->GetMethodID(
         env, Result_class, "getBlobAsBytes", "(Ljava/lang/String;)[B");
     if (Result_getBlobAsBytes == NULL) {
-        ereport(ERROR, (errmsg("Result_getBlobAsBytes is not found")));
+        ereport(ERROR, errmsg("Result_getBlobAsBytes is not found"));
     }
 
     // com.scalar.db.api.Scanner
     class = (*env)->FindClass(env, "com/scalar/db/api/Scanner");
     if (class == NULL) {
-        ereport(ERROR, (errmsg("com/scalar/db/api/Scanner is not found")));
+        ereport(ERROR, errmsg("com/scalar/db/api/Scanner is not found"));
     }
     Scanner_class = (jclass)((*env)->NewGlobalRef(env, class));
     Scanner_one = (*env)->GetMethodID(env, Scanner_class, "one",
                                       "()Ljava/util/Optional;");
     if (Scanner_one == NULL) {
-        ereport(ERROR, (errmsg("Scanner.one is not found")));
+        ereport(ERROR, errmsg("Scanner.one is not found"));
     }
 }
 
@@ -486,7 +486,7 @@ static void catch_exception() {
 
         ereport(DEBUG1, errmsg("%s", msg));
         ereport(ERROR, errcode(ERRCODE_FDW_ERROR),
-                (errmsg("Exception occurred in JVM")));
+                errmsg("Exception occurred in JVM"));
     }
     return;
 }

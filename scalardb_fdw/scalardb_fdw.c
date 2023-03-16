@@ -517,7 +517,7 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
             FormData_pg_attribute attr = tupdesc->attrs[i - 1];
             char* attname = NameStr(attr.attname);
             ereport(DEBUG1, errmsg("i %d, attname %s", i, attname));
-            nulls[i - 1] = (scalardb_result_is_null(result, attname));
+            nulls[i - 1] = scalardb_result_is_null(result, attname);
             values[i - 1] =
                 convert_result_column_to_datum(result, attname, attr.atttypid);
         }
