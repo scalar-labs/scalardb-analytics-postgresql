@@ -1,6 +1,6 @@
 # ScalarDB Analytics PostgreSQL
 
-ScalarDB Analytics PostgreSQL provides analytical query processing on ScalarDB-managed data with PostgreSQL and its Foreign Data Wrapper (FDW) feature.
+ScalarDB Analytics with PostgreSQL processes analytical queries on ScalarDB-managed data using PostgreSQL and its Foreign Data Wrapper (FDW) feature.
 
 ## Components
 
