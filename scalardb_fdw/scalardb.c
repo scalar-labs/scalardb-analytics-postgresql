@@ -77,6 +77,31 @@ static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes);
 
 static void on_proc_exit_cb();
 
+static char* get_class_name(jclass class);
+
+#define register_java_class(jclass_ref, class_fqdn)                            \
+    {                                                                          \
+        jclass class = (*env)->FindClass(env, (class_fqdn));                   \
+        if (class == NULL) {                                                   \
+            ereport(ERROR, errmsg("%s is not found", (class_fqdn)));           \
+        }                                                                      \
+        jclass_ref = (jclass)((*env)->NewGlobalRef(env, class));               \
+    }
+
+#define register_java_class_method(jmethod_ref, jclass_ref, name, sig)         \
+    jmethod_ref = (*env)->GetMethodID(env, jclass_ref, (name), (sig));         \
+    if (jmethod_ref == NULL) {                                                 \
+        ereport(ERROR, errmsg("%s.%s is not found",                            \
+                              get_class_name(jclass_ref), (name)));            \
+    }
+
+#define register_java_static_method(jmethod_ref, jclass_ref, name, sig)        \
+    jmethod_ref = (*env)->GetStaticMethodID(env, jclass_ref, (name), (sig));   \
+    if (jmethod_ref == NULL) {                                                 \
+        ereport(ERROR, errmsg("%s.%s is not found",                            \
+                              get_class_name(jclass_ref), (name)));            \
+    }
+
 void scalardb_initialize(ScalarDbFdwOptions* opts) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
@@ -294,179 +319,74 @@ static void attach_jvm() {
 static void initialize_references() {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
-    jclass class;
-
     // java.lang.Object
-    class = (*env)->FindClass(env, "java/lang/Object");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("java/lang/Object is not found"));
-    }
-    Object_class = (jclass)((*env)->NewGlobalRef(env, class));
-    Object_toString = (*env)->GetMethodID(env, Object_class, "toString",
-                                          "()Ljava/lang/String;");
-    if (Object_toString == NULL) {
-        ereport(ERROR, errmsg("Object.toString is not found"));
-    }
+    register_java_class(Object_class, "java/lang/Object");
+    register_java_class_method(Object_toString, Object_class, "toString",
+                               "()Ljava/lang/String;");
 
     // java.lang.String
-    class = (*env)->FindClass(env, "java/lang/String");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("java/lang/String is not found"));
-    }
-    String_class = (jclass)((*env)->NewGlobalRef(env, class));
+    register_java_class(String_class, "java/lang/String");
 
     // java.util.List
-    class = (*env)->FindClass(env, "java/util/List");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("java/util/List is not found"));
-    }
-    List_class = (jclass)((*env)->NewGlobalRef(env, class));
-    List_size = (*env)->GetMethodID(env, List_class, "size", "()I");
-    if (List_size == NULL) {
-        ereport(ERROR, errmsg("List.size is not found"));
-    }
-
-    List_iterator = (*env)->GetMethodID(env, List_class, "iterator",
-                                        "()Ljava/util/Iterator;");
-    if (List_iterator == NULL) {
-        ereport(ERROR, errmsg("List.iterator is not found"));
-    }
-
+    register_java_class(List_class, "java/util/List");
+    register_java_class_method(List_size, List_class, "size", "()I");
+    register_java_class_method(List_iterator, List_class, "iterator",
+                               "()Ljava/util/Iterator;");
     // java.util.Iterator
-    class = (*env)->FindClass(env, "java/util/Iterator");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("java/util/Iterator is not found"));
-    }
-    Iterator_class = (jclass)((*env)->NewGlobalRef(env, class));
-    Iterator_hasNext =
-        (*env)->GetMethodID(env, Iterator_class, "hasNext", "()Z");
-    if (Iterator_hasNext == NULL) {
-        ereport(ERROR, errmsg("Iterator.hasNext is not found"));
-    }
-
-    Iterator_next = (*env)->GetMethodID(env, Iterator_class, "next",
-                                        "()Ljava/lang/Object;");
-    if (Iterator_next == NULL) {
-        ereport(ERROR, errmsg("Iterator.next is not found"));
-    }
+    register_java_class(Iterator_class, "java/util/Iterator");
+    register_java_class_method(Iterator_hasNext, Iterator_class, "hasNext",
+                               "()Z");
+    register_java_class_method(Iterator_next, Iterator_class, "next",
+                               "()Ljava/lang/Object;");
 
     // java.util.Optional
-    class = (*env)->FindClass(env, "java/util/Optional");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("java/util/Optional is not found"));
-    }
-    Optional_class = (jclass)((*env)->NewGlobalRef(env, class));
-    Optional_isPresent =
-        (*env)->GetMethodID(env, Optional_class, "isPresent", "()Z");
-    if (Optional_isPresent == NULL) {
-        ereport(ERROR, errmsg("Optional.isPresent is not found"));
-    }
-    Optional_get =
-        (*env)->GetMethodID(env, Optional_class, "get", "()Ljava/lang/Object;");
-    if (Optional_get == NULL) {
-        ereport(ERROR, errmsg("Optional.get is not found"));
-    }
+    register_java_class(Optional_class, "java/util/Optional");
+    register_java_class_method(Optional_isPresent, Optional_class, "isPresent",
+                               "()Z");
+    register_java_class_method(Optional_get, Optional_class, "get",
+                               "()Ljava/lang/Object;");
 
     // java.io.Closeable
-    class = (*env)->FindClass(env, "java/io/Closeable");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("java/io/Closeable is not found"));
-    }
-    Closeable_class = (jclass)((*env)->NewGlobalRef(env, class));
-    Closeable_close = (*env)->GetMethodID(env, Closeable_class, "close", "()V");
-    if (Closeable_close == NULL) {
-        ereport(ERROR, errmsg("Closeable.close is not found"));
-    }
+    register_java_class(Closeable_class, "java/io/Closeable");
+    register_java_class_method(Closeable_close, Closeable_class, "close",
+                               "()V");
 
     // ScalarDbUtils
-    class = (*env)->FindClass(env, "ScalarDbUtils");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("ScalarDbUtils is not found"));
-    }
-
-    ScalarDbUtils_class = (jclass)((*env)->NewGlobalRef(env, class));
-    ScalarDbUtils_initialize = (*env)->GetStaticMethodID(
-        env, ScalarDbUtils_class, "initialize", "(Ljava/lang/String;)V");
-    if (ScalarDbUtils_initialize == NULL) {
-        ereport(ERROR, errmsg("ScalarDbUtils.initialize is not found"));
-    }
-    ScalarDbUtils_closeStorage = (*env)->GetStaticMethodID(
-        env, ScalarDbUtils_class, "closeStorage", "()V");
-    if (ScalarDbUtils_closeStorage == NULL) {
-        ereport(ERROR, errmsg("ScalarDbUtils.closeStorage is not found"));
-    }
-    ScalarDbUtils_scanAll = (*env)->GetStaticMethodID(
-        env, ScalarDbUtils_class, "scanAll",
+    register_java_class(ScalarDbUtils_class, "ScalarDBUtils");
+    register_java_static_method(ScalarDbUtils_initialize, ScalarDbUtils_class,
+                                "initialize", "(Ljava/lang/String;)V");
+    register_java_static_method(ScalarDbUtils_closeStorage, ScalarDbUtils_class,
+                                "closeStorage", "()V");
+    register_java_static_method(
+        ScalarDbUtils_scanAll, ScalarDbUtils_class, "scanAll",
         "(Ljava/lang/String;Ljava/lang/String;)Lcom/scalar/db/api/Scanner;");
-    if (ScalarDbUtils_scanAll == NULL) {
-        ereport(ERROR, errmsg("ScalarDbUtils.scanAll is not found"));
-    }
-    ScalarDbUtils_getResultColumnsSize = (*env)->GetStaticMethodID(
-        env, ScalarDbUtils_class, "getResultColumnsSize",
-        "(Lcom/scalar/db/api/Result;)I");
-    if (ScalarDbUtils_getResultColumnsSize == NULL) {
-        ereport(ERROR,
-                errmsg("ScalarDbUtils.getResultColumnsSize  is not found"));
-    }
+    register_java_static_method(ScalarDbUtils_getResultColumnsSize,
+                                ScalarDbUtils_class, "getResultColumnsSize",
+                                "(Lcom/scalar/db/api/Result;)I");
 
     // com.scalar.db.api.Result
-    class = (*env)->FindClass(env, "com/scalar/db/api/Result");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("com/scalar/db/api/Result is not found"));
-    }
-    Result_class = (jclass)((*env)->NewGlobalRef(env, class));
-    Result_isNull = (*env)->GetMethodID(env, Result_class, "isNull",
-                                        "(Ljava/lang/String;)Z");
-    if (Result_isNull == NULL) {
-        ereport(ERROR, errmsg("Result.isNull is not found"));
-    }
-    Result_getBoolean = (*env)->GetMethodID(env, Result_class, "getBoolean",
-                                            "(Ljava/lang/String;)Z");
-    if (Result_getBoolean == NULL) {
-        ereport(ERROR, errmsg("Result.getBoolean is not found"));
-    }
-    Result_getInt = (*env)->GetMethodID(env, Result_class, "getInt",
-                                        "(Ljava/lang/String;)I");
-    if (Result_getInt == NULL) {
-        ereport(ERROR, errmsg("Result.getInt is not found"));
-    }
-    Result_getBigInt = (*env)->GetMethodID(env, Result_class, "getBigInt",
-                                           "(Ljava/lang/String;)J");
-    if (Result_getBigInt == NULL) {
-        ereport(ERROR, errmsg("Result.getBigInt is not found"));
-    }
-    Result_getFloat = (*env)->GetMethodID(env, Result_class, "getFloat",
-                                          "(Ljava/lang/String;)F");
-    if (Result_getFloat == NULL) {
-        ereport(ERROR, errmsg("Result.getFloat is not found"));
-    }
-    Result_getDouble = (*env)->GetMethodID(env, Result_class, "getDouble",
-                                           "(Ljava/lang/String;)D");
-    if (Result_getDouble == NULL) {
-        ereport(ERROR, errmsg("Result.getDouble is not found"));
-    }
-    Result_getText = (*env)->GetMethodID(
-        env, Result_class, "getText", "(Ljava/lang/String;)Ljava/lang/String;");
-    if (Result_getText == NULL) {
-        ereport(ERROR, errmsg("Result.getText is not found"));
-    }
-    Result_getBlobAsBytes = (*env)->GetMethodID(
-        env, Result_class, "getBlobAsBytes", "(Ljava/lang/String;)[B");
-    if (Result_getBlobAsBytes == NULL) {
-        ereport(ERROR, errmsg("Result_getBlobAsBytes is not found"));
-    }
+    register_java_class(Result_class, "com/scalar/db/api/Result");
+    register_java_class_method(Result_isNull, Result_class, "isNull",
+                               "(Ljava/lang/String;)Z");
+    register_java_class_method(Result_getBoolean, Result_class, "getBoolean",
+                               "(Ljava/lang/String;)Z");
+    register_java_class_method(Result_getInt, Result_class, "getInt",
+                               "(Ljava/lang/String;)I");
+    register_java_class_method(Result_getBigInt, Result_class, "getBigInt",
+                               "(Ljava/lang/String;)J");
+    register_java_class_method(Result_getFloat, Result_class, "getFloat",
+                               "(Ljava/lang/String;)F");
+    register_java_class_method(Result_getDouble, Result_class, "getDouble",
+                               "(Ljava/lang/String;)D");
+    register_java_class_method(Result_getText, Result_class, "getText",
+                               "(Ljava/lang/String;)Ljava/lang/String;");
+    register_java_class_method(Result_getBlobAsBytes, Result_class,
+                               "getBlobAsBytes", "(Ljava/lang/String;)[B");
 
     // com.scalar.db.api.Scanner
-    class = (*env)->FindClass(env, "com/scalar/db/api/Scanner");
-    if (class == NULL) {
-        ereport(ERROR, errmsg("com/scalar/db/api/Scanner is not found"));
-    }
-    Scanner_class = (jclass)((*env)->NewGlobalRef(env, class));
-    Scanner_one = (*env)->GetMethodID(env, Scanner_class, "one",
-                                      "()Ljava/util/Optional;");
-    if (Scanner_one == NULL) {
-        ereport(ERROR, errmsg("Scanner.one is not found"));
-    }
+    register_java_class(Scanner_class, "com/scalar/db/api/Scanner");
+    register_java_class_method(Scanner_one, Scanner_class, "one",
+                               "()Ljava/util/Optional;");
 }
 
 static void clear_exception() {
@@ -559,4 +479,12 @@ static void on_proc_exit_cb() {
     (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
                                    ScalarDbUtils_closeStorage);
     destroy_jvm();
+}
+
+static char* get_class_name(jclass class) {
+    jclass cls = (*env)->FindClass(env, "java/lang/Class");
+    jmethodID getName =
+        (*env)->GetMethodID(env, cls, "getName", "()Ljava/lang/String;");
+    jstring name = (*env)->CallObjectMethod(env, class, getName);
+    return convert_string_to_cstring(name);
 }
