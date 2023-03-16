@@ -111,7 +111,7 @@ Currently, there is no available options for the `CREATE USER MAPPING`.
 
 #### `CREATE FOREIGN SERVER`
 
-The following options can be set on a Cassandra foreign table object:
+The following options can be set on a ScalarDB foreign table object:
 
 | Name         | Required     | Type     | Description                                            |
 | ------------ | ------------ | -------- | ------------------------------------------------------ |
