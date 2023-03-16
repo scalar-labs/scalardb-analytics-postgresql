@@ -43,7 +43,7 @@ static struct OptionEntry valid_options[] = {
     {NULL, InvalidOid}};
 
 static bool is_valid_option(const char* option, Oid context);
-static void get_attribute_options(Oid foreigntableid, ScalarDBFdwOptions* opts);
+static void get_attribute_options(Oid foreigntableid, ScalarDbFdwOptions* opts);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_validator);
 
@@ -185,7 +185,7 @@ static bool is_valid_option(const char* option, Oid context) {
  * Fetch all options for the foreign table.
  *
  */
-void get_scalardb_fdw_options(Oid foreigntableid, ScalarDBFdwOptions* opts) {
+void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions* opts) {
     ForeignTable* table;
     ForeignServer* server;
     ForeignDataWrapper* wrapper;
@@ -240,7 +240,7 @@ void get_scalardb_fdw_options(Oid foreigntableid, ScalarDBFdwOptions* opts) {
  * of DefElems representing them.
  */
 static void get_attribute_options(Oid foreigntableid,
-                                  ScalarDBFdwOptions* opts) {
+                                  ScalarDbFdwOptions* opts) {
     Relation rel = table_open(foreigntableid, AccessShareLock);
     TupleDesc tupleDesc = RelationGetDescr(rel);
     AttrNumber natts = tupleDesc->natts;

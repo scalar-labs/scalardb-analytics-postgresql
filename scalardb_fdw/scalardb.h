@@ -11,7 +11,7 @@
 
 #include "option.h"
 
-extern void scalardb_initialize(ScalarDBFdwOptions* opts);
+extern void scalardb_initialize(ScalarDbFdwOptions* opts);
 
 extern jobject scalardb_scan_all(char* namespace, char* table_name);
 

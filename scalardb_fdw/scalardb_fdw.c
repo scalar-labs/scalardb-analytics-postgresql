@@ -27,7 +27,7 @@ PG_MODULE_MAGIC;
  * baserel->fdw_private and fetched in scalardbGetForeignPaths.
  */
 typedef struct {
-    ScalarDBFdwOptions options;
+    ScalarDbFdwOptions options;
 
     /* Bitmap of attr numbers we need to fetch from the remote server. */
     Bitmapset* attrs_used;
@@ -42,13 +42,13 @@ typedef struct {
 
     BlockNumber pages; /* estimate of physical size */
     double tuples;     /* estimate of number of data rows */
-} ScalarDBFdwPlanState;
+} ScalarDbFdwPlanState;
 
 /*
  * FDW-specific information for ForeignScanState.fdw_state.
  */
 typedef struct {
-    ScalarDBFdwOptions options;
+    ScalarDbFdwOptions options;
 
     /* extracted fdw_private data */
     List* attrs_to_retrieve; /* list of retrieved attribute numbers */
@@ -57,21 +57,21 @@ typedef struct {
     AttInMetadata* attinmeta; /* attribute datatype conversion metadata */
 
     jobject scanner; /* Java instance of com.scalar.db.api.Scanner */
-} ScalarDBFdwScanState;
+} ScalarDbFdwScanState;
 
 enum ScanFdwPrivateIndex {
     /* Integer list of attribute numbers retrieved by the SELECT */
     ScanFdwPrivateAttrsToRetrieve
 };
 
-static void classifyConditions(PlannerInfo* root, RelOptInfo* baserel,
-                               List* input_conds, List** remote_conds,
-                               List** local_conds);
+static void classify_conditions(PlannerInfo* root, RelOptInfo* baserel,
+                                List* input_conds, List** remote_conds,
+                                List** local_conds);
 
 static bool is_foreign_expr(PlannerInfo* root, RelOptInfo* baserel, Expr* expr);
 
 static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
-                          ScalarDBFdwPlanState* fdw_private);
+                          ScalarDbFdwPlanState* fdw_private);
 static void estimate_costs(PlannerInfo* root, RelOptInfo* baserel,
                            Cost* startup_cost, Cost* total_cost);
 
@@ -112,13 +112,13 @@ static void scalardbGetForeignRelSize(PlannerInfo* root, RelOptInfo* baserel,
 
     baserel->rows = 0;
 
-    ScalarDBFdwPlanState* fdw_private = palloc0(sizeof(ScalarDBFdwPlanState));
+    ScalarDbFdwPlanState* fdw_private = palloc0(sizeof(ScalarDbFdwPlanState));
     baserel->fdw_private = (void*)fdw_private;
 
     get_scalardb_fdw_options(foreigntableid, &fdw_private->options);
 
-    classifyConditions(root, baserel, baserel->baserestrictinfo,
-                       &fdw_private->remote_conds, &fdw_private->local_conds);
+    classify_conditions(root, baserel, baserel->baserestrictinfo,
+                        &fdw_private->remote_conds, &fdw_private->local_conds);
 
     /*
      * Identify which attributes will need to be retrieved from the remote
@@ -153,8 +153,8 @@ static void scalardbGetForeignPaths(PlannerInfo* root, RelOptInfo* baserel,
                                     Oid foreigntableid) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
-    // ScalarDBFdwPlanState* fdw_private =
-    //     (ScalarDBFdwPlanState*)baserel->fdw_private;
+    // ScalarDbFdwPlanState* fdw_private =
+    //     (ScalarDbFdwPlanState*)baserel->fdw_private;
     Cost startup_cost;
     Cost total_cost;
 
@@ -185,8 +185,8 @@ scalardbGetForeignPlan(PlannerInfo* root, RelOptInfo* baserel,
                        List* scan_clauses, Plan* outer_plan) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
-    ScalarDBFdwPlanState* fdw_private =
-        (ScalarDBFdwPlanState*)baserel->fdw_private;
+    ScalarDbFdwPlanState* fdw_private =
+        (ScalarDbFdwPlanState*)baserel->fdw_private;
     Index scan_relid;
     List* remote_exprs = NIL;
     List* local_exprs = NIL;
@@ -274,7 +274,7 @@ static void scalardbBeginForeignScan(ForeignScanState* node, int eflags) {
     RangeTblEntry* rte;
 
     ForeignScan* fsplan = (ForeignScan*)node->ss.ps.plan;
-    ScalarDBFdwScanState* fdw_state;
+    ScalarDbFdwScanState* fdw_state;
 
     /*
      * Do nothing in EXPLAIN (no ANALYZE) case.  node->fdw_state stays NULL.
@@ -284,7 +284,7 @@ static void scalardbBeginForeignScan(ForeignScanState* node, int eflags) {
 
     rte = rt_fetch(fsplan->scan.scanrelid, estate->es_range_table);
 
-    fdw_state = (ScalarDBFdwScanState*)palloc0(sizeof(ScalarDBFdwScanState));
+    fdw_state = (ScalarDbFdwScanState*)palloc0(sizeof(ScalarDbFdwScanState));
     node->fdw_state = (void*)fdw_state;
 
     get_scalardb_fdw_options(rte->relid, &fdw_state->options);
@@ -306,7 +306,7 @@ static void scalardbBeginForeignScan(ForeignScanState* node, int eflags) {
 static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
-    ScalarDBFdwScanState* fdw_state = (ScalarDBFdwScanState*)node->fdw_state;
+    ScalarDbFdwScanState* fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
     TupleTableSlot* slot = node->ss.ss_ScanTupleSlot;
 
     if (!fdw_state->scanner) {
@@ -332,7 +332,7 @@ static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
 
 static void scalardbReScanForeignScan(ForeignScanState* node) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
-    ScalarDBFdwScanState* fdw_state = (ScalarDBFdwScanState*)node->fdw_state;
+    ScalarDbFdwScanState* fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
     if (!fdw_state->scanner)
         scalardb_scanner_close(fdw_state->scanner);
 
@@ -342,7 +342,7 @@ static void scalardbReScanForeignScan(ForeignScanState* node) {
 
 static void scalardbEndForeignScan(ForeignScanState* node) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
-    ScalarDBFdwScanState* fdw_state = (ScalarDBFdwScanState*)node->fdw_state;
+    ScalarDbFdwScanState* fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
 
     /* if fdw_state is NULL, we are in EXPLAIN; nothing to do */
     if (fdw_state == NULL)
@@ -371,9 +371,9 @@ static bool scalardbAnalyzeForeignTable(Relation relation,
  *	- remote_conds contains expressions that can be evaluated remotely
  *	- local_conds contains expressions that can't be evaluated remotely
  */
-static void classifyConditions(PlannerInfo* root, RelOptInfo* baserel,
-                               List* input_conds, List** remote_conds,
-                               List** local_conds) {
+static void classify_conditions(PlannerInfo* root, RelOptInfo* baserel,
+                                List* input_conds, List** remote_conds,
+                                List** local_conds) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
     ListCell* lc;
@@ -408,7 +408,7 @@ static bool is_foreign_expr(PlannerInfo* root, RelOptInfo* baserel,
  * calculation.
  */
 static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
-                          ScalarDBFdwPlanState* fdw_private) {
+                          ScalarDbFdwPlanState* fdw_private) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     /*
      * If the foreign table has never been ANALYZEd, it will have

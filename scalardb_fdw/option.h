@@ -16,8 +16,8 @@ typedef struct {
     char* partition_key_column;
     List* clustering_key_columns;
     List* index_key_columns;
-} ScalarDBFdwOptions;
+} ScalarDbFdwOptions;
 
-void get_scalardb_fdw_options(Oid foreigntableid, ScalarDBFdwOptions* opts);
+void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions* opts);
 
 #endif

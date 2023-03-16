@@ -44,11 +44,11 @@ static jmethodID Optional_get;
 static jclass Closeable_class;
 static jmethodID Closeable_close;
 
-static jclass ScalarDBUtils_class;
-static jmethodID ScalarDBUtils_initialize;
-static jmethodID ScalarDBUtils_closeStorage;
-static jmethodID ScalarDBUtils_scanAll;
-static jmethodID ScalarDBUtils_getResultColumnsSize;
+static jclass ScalarDbUtils_class;
+static jmethodID ScalarDbUtils_initialize;
+static jmethodID ScalarDbUtils_closeStorage;
+static jmethodID ScalarDbUtils_scanAll;
+static jmethodID ScalarDbUtils_getResultColumnsSize;
 
 static jclass Result_class;
 static jmethodID Result_isNull;
@@ -63,7 +63,7 @@ static jmethodID Result_getBlobAsBytes;
 static jclass Scanner_class;
 static jmethodID Scanner_one;
 
-static void initialize_jvm(ScalarDBFdwOptions* opts);
+static void initialize_jvm(ScalarDbFdwOptions* opts);
 static void destroy_jvm();
 static void attach_jvm();
 static void initialize_references();
@@ -77,7 +77,7 @@ static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes);
 
 static void on_proc_exit_cb();
 
-void scalardb_initialize(ScalarDBFdwOptions* opts) {
+void scalardb_initialize(ScalarDbFdwOptions* opts) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
     initialize_jvm(opts);
@@ -87,8 +87,8 @@ void scalardb_initialize(ScalarDBFdwOptions* opts) {
     jstring config_file_path =
         (*env)->NewStringUTF(env, opts->config_file_path);
     clear_exception();
-    (*env)->CallStaticObjectMethod(env, ScalarDBUtils_class,
-                                   ScalarDBUtils_initialize, config_file_path);
+    (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
+                                   ScalarDbUtils_initialize, config_file_path);
     catch_exception();
 }
 
@@ -98,7 +98,7 @@ extern jobject scalardb_scan_all(char* namespace, char* table_name) {
     jstring table_name_str = (*env)->NewStringUTF(env, table_name);
     clear_exception();
     jobject scanner = (*env)->CallStaticObjectMethod(
-        env, ScalarDBUtils_class, ScalarDBUtils_scanAll, namespace_str,
+        env, ScalarDbUtils_class, ScalarDbUtils_scanAll, namespace_str,
         table_name_str);
     catch_exception();
     return scanner;
@@ -217,10 +217,10 @@ extern bytea* scalardb_result_get_blob(jobject result, char* attname) {
 extern int scalardb_result_columns_size(jobject result) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
     return (int)(*env)->CallStaticIntMethod(
-        env, ScalarDBUtils_class, ScalarDBUtils_getResultColumnsSize, result);
+        env, ScalarDbUtils_class, ScalarDbUtils_getResultColumnsSize, result);
 }
 
-static void initialize_jvm(ScalarDBFdwOptions* opts) {
+static void initialize_jvm(ScalarDbFdwOptions* opts) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
     static bool already_initialized = false;
@@ -378,35 +378,35 @@ static void initialize_references() {
         ereport(ERROR, errmsg("Closeable.close is not found"));
     }
 
-    // ScalarDBUtils
-    class = (*env)->FindClass(env, "ScalarDBUtils");
+    // ScalarDbUtils
+    class = (*env)->FindClass(env, "ScalarDbUtils");
     if (class == NULL) {
-        ereport(ERROR, errmsg("ScalarDBUtils is not found"));
+        ereport(ERROR, errmsg("ScalarDbUtils is not found"));
     }
 
-    ScalarDBUtils_class = (jclass)((*env)->NewGlobalRef(env, class));
-    ScalarDBUtils_initialize = (*env)->GetStaticMethodID(
-        env, ScalarDBUtils_class, "initialize", "(Ljava/lang/String;)V");
-    if (ScalarDBUtils_initialize == NULL) {
-        ereport(ERROR, errmsg("ScalarDBUtils.initialize is not found"));
+    ScalarDbUtils_class = (jclass)((*env)->NewGlobalRef(env, class));
+    ScalarDbUtils_initialize = (*env)->GetStaticMethodID(
+        env, ScalarDbUtils_class, "initialize", "(Ljava/lang/String;)V");
+    if (ScalarDbUtils_initialize == NULL) {
+        ereport(ERROR, errmsg("ScalarDbUtils.initialize is not found"));
     }
-    ScalarDBUtils_closeStorage = (*env)->GetStaticMethodID(
-        env, ScalarDBUtils_class, "closeStorage", "()V");
-    if (ScalarDBUtils_closeStorage == NULL) {
-        ereport(ERROR, errmsg("ScalarDBUtils.closeStorage is not found"));
+    ScalarDbUtils_closeStorage = (*env)->GetStaticMethodID(
+        env, ScalarDbUtils_class, "closeStorage", "()V");
+    if (ScalarDbUtils_closeStorage == NULL) {
+        ereport(ERROR, errmsg("ScalarDbUtils.closeStorage is not found"));
     }
-    ScalarDBUtils_scanAll = (*env)->GetStaticMethodID(
-        env, ScalarDBUtils_class, "scanAll",
+    ScalarDbUtils_scanAll = (*env)->GetStaticMethodID(
+        env, ScalarDbUtils_class, "scanAll",
         "(Ljava/lang/String;Ljava/lang/String;)Lcom/scalar/db/api/Scanner;");
-    if (ScalarDBUtils_scanAll == NULL) {
-        ereport(ERROR, errmsg("ScalarDBUtils.scanAll is not found"));
+    if (ScalarDbUtils_scanAll == NULL) {
+        ereport(ERROR, errmsg("ScalarDbUtils.scanAll is not found"));
     }
-    ScalarDBUtils_getResultColumnsSize = (*env)->GetStaticMethodID(
-        env, ScalarDBUtils_class, "getResultColumnsSize",
+    ScalarDbUtils_getResultColumnsSize = (*env)->GetStaticMethodID(
+        env, ScalarDbUtils_class, "getResultColumnsSize",
         "(Lcom/scalar/db/api/Result;)I");
-    if (ScalarDBUtils_getResultColumnsSize == NULL) {
+    if (ScalarDbUtils_getResultColumnsSize == NULL) {
         ereport(ERROR,
-                errmsg("ScalarDBUtils.getResultColumnsSize  is not found"));
+                errmsg("ScalarDbUtils.getResultColumnsSize  is not found"));
     }
 
     // com.scalar.db.api.Result
@@ -556,7 +556,7 @@ static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes) {
 }
 
 static void on_proc_exit_cb() {
-    (*env)->CallStaticObjectMethod(env, ScalarDBUtils_class,
-                                   ScalarDBUtils_closeStorage);
+    (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
+                                   ScalarDbUtils_closeStorage);
     destroy_jvm();
 }
