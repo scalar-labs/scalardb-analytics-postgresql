@@ -81,6 +81,7 @@ void scalardb_initialize(ScalarDBFdwOptions* opts) {
     ereport(DEBUG1, errmsg("entering function %s", __func__));
 
     initialize_jvm(opts);
+    initialize_references();
 
     // TODO: skip after second call
     jstring config_file_path =
@@ -262,8 +263,6 @@ static void initialize_jvm(ScalarDBFdwOptions* opts) {
                                 max_heap_size)));
         on_proc_exit(on_proc_exit_cb, 0);
         already_initialized = true;
-
-        initialize_references();
     } else {
         jint GetEnvStat = (*jvm)->GetEnv(jvm, (void**)&env, JNI_VERSION);
         if (GetEnvStat == JNI_EDETACHED) {
