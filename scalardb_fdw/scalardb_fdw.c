@@ -401,7 +401,7 @@ static bool is_foreign_expr(PlannerInfo* root, RelOptInfo* baserel,
 }
 
 /*
- * Estimate size of a foreign table.
+ * Estimate the size of a foreign table.
  *
  * The main result is returned in baserel->rows.  We also set
  * fdw_private->pages and fdw_private->ntuples for later use in the cost
