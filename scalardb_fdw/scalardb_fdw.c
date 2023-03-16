@@ -535,7 +535,6 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
 
     HeapTuple tuple = heap_form_tuple(tupdesc, values, nulls);
 
-    ereport(DEBUG1, errmsg("hey"));
     return tuple;
 }
 
