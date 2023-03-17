@@ -67,3 +67,9 @@ select * from postgresns_null_test;
     1 |     1 |     1 |               |         0 |              |             |              |            | 
 (1 row)
 
+select p_pk from postgresns_test;
+ p_pk 
+------
+    1
+(1 row)
+

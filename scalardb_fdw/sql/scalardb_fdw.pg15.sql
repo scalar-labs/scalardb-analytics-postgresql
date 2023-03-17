@@ -65,3 +65,5 @@ CREATE FOREIGN TABLE postgresns_null_test (
 );
 
 select * from postgresns_null_test;
+
+select p_pk from postgresns_test;

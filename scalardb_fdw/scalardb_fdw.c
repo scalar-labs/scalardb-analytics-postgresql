@@ -501,7 +501,7 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
     bool* nulls = (bool*)palloc(tupdesc->natts * sizeof(bool));
 
     /* Initialize to nulls for any columns not present in result */
-    memset(nulls, false, tupdesc->natts * sizeof(bool));
+    memset(nulls, true, tupdesc->natts * sizeof(bool));
 
     /*
      * i indexes columns in the relation, j indexes columns in the PGresult.
