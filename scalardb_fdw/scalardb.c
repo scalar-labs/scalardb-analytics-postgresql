@@ -404,9 +404,8 @@ static void catch_exception() {
             (jstring)(*env)->CallObjectMethod(env, exc, Object_toString);
         char* msg = convert_string_to_cstring(exception_message);
 
-        ereport(DEBUG1, errmsg("%s", msg));
         ereport(ERROR, errcode(ERRCODE_FDW_ERROR),
-                errmsg("Exception occurred in JVM"));
+                errmsg("Exception occurred in JVM: %s", msg));
     }
     return;
 }
