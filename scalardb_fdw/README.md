@@ -145,8 +145,13 @@ The following options can be set on a ScalarDB foreign table object:
 Before running the tests, you need a running ScalarDB instance and test data loaded into it. You can setup all by executing the following commands.
 
 ```
-cd tests;
-./setup.sh
+./test/setup.sh
+```
+
+If you want to reset the instances, you can run the following command, then the above setup command again.
+
+```
+./test/cleanup.sh
 ```
 
 ### Run regression tests

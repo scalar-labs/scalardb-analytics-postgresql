@@ -37,7 +37,7 @@ check_postgresql() {
 }
 
 echo '- launch Cassandra and PostgreSQL containers as ScalarDB backends'
-docker compose up -d
+docker compose -f "${script_dir}/docker-compose.yaml" up -d
 
 check_postgresql
 check_cassandra

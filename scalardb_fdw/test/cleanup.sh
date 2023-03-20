@@ -2,4 +2,6 @@
 
 set -eu
 
-docker compose down -v
+script_dir=$(dirname "$0")
+
+docker compose -f "${script_dir}/docker-compose.yaml" down -v
