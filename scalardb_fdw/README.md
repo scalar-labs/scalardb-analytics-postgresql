@@ -158,7 +158,7 @@ If you want to reset the instances, you can run the following command, then the 
 
 You can run the regression tests by running the following command **AFTER** you install the extension.
 
-```
+```console
 make USE_PGXS=1 installcheck
 ```
 
