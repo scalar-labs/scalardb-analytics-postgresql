@@ -103,7 +103,14 @@ static char* get_class_name(jclass class);
     }
 
 void scalardb_initialize(ScalarDbFdwOptions* opts) {
-    ereport(DEBUG5, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
+
+    static bool already_initialized = false;
+
+    if (already_initialized == true) {
+        ereport(DEBUG3, errmsg("scalardb has already been initialized"));
+        return;
+    }
 
     initialize_jvm(opts);
     initialize_references();
@@ -115,6 +122,8 @@ void scalardb_initialize(ScalarDbFdwOptions* opts) {
     (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
                                    ScalarDbUtils_initialize, config_file_path);
     catch_exception();
+
+    already_initialized = true;
 }
 
 extern jobject scalardb_scan_all(char* namespace, char* table_name) {
