@@ -108,7 +108,7 @@ select * from sample_table;
 
 ### Available options
 
-You can set the following options for FDW for ScalarDB.
+You can set the following options for ScalarDB FDW objects.
 
 #### `CREATE SERVER`
 
