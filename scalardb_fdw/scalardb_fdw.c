@@ -361,7 +361,7 @@ static void scalardbEndForeignScan(ForeignScanState* node) {
     if (fdw_state == NULL)
         return;
 
-    /* Close the scanner if open, to prevent accumulation of cursors */
+    /* Close the scanner if open, to prevent accumulation of scanner */
     if (fdw_state->scanner)
         scalardb_scanner_close(fdw_state->scanner);
 

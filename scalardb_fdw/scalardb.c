@@ -169,6 +169,8 @@ extern void scalardb_scanner_close(jobject scanner) {
     clear_exception();
     (*env)->CallVoidMethod(env, scanner, Closeable_close);
     catch_exception();
+
+    (*env)->DeleteLocalRef(env, scanner);
 }
 
 extern int scalardb_list_size(jobject list) {
