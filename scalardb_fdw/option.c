@@ -54,7 +54,7 @@ PG_FUNCTION_INFO_V1(scalardb_fdw_validator);
  * Raise an ERROR if the option or its value is considered invalid.
  */
 Datum scalardb_fdw_validator(PG_FUNCTION_ARGS) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     List* options_list = untransformRelOptions(PG_GETARG_DATUM(0));
     Oid catalog = PG_GETARG_OID(1);

@@ -108,7 +108,7 @@ Datum scalardb_fdw_handler(PG_FUNCTION_ARGS) {
 
 static void scalardbGetForeignRelSize(PlannerInfo* root, RelOptInfo* baserel,
                                       Oid foreigntableid) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     baserel->rows = 0;
 
@@ -151,7 +151,7 @@ static void scalardbGetForeignRelSize(PlannerInfo* root, RelOptInfo* baserel,
  */
 static void scalardbGetForeignPaths(PlannerInfo* root, RelOptInfo* baserel,
                                     Oid foreigntableid) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     // ScalarDbFdwPlanState* fdw_private =
     //     (ScalarDbFdwPlanState*)baserel->fdw_private;
@@ -183,7 +183,7 @@ static ForeignScan*
 scalardbGetForeignPlan(PlannerInfo* root, RelOptInfo* baserel,
                        Oid foreigntableid, ForeignPath* best_path, List* tlist,
                        List* scan_clauses, Plan* outer_plan) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     ScalarDbFdwPlanState* fdw_private =
         (ScalarDbFdwPlanState*)baserel->fdw_private;
@@ -268,7 +268,7 @@ scalardbGetForeignPlan(PlannerInfo* root, RelOptInfo* baserel,
 }
 
 static void scalardbBeginForeignScan(ForeignScanState* node, int eflags) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     EState* estate = node->ss.ps.state;
     RangeTblEntry* rte;
@@ -304,7 +304,7 @@ static void scalardbBeginForeignScan(ForeignScanState* node, int eflags) {
 }
 
 static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG4, errmsg("entering function %s", __func__));
 
     ScalarDbFdwScanState* fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
     TupleTableSlot* slot = node->ss.ss_ScanTupleSlot;
@@ -331,7 +331,7 @@ static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
 }
 
 static void scalardbReScanForeignScan(ForeignScanState* node) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
     ScalarDbFdwScanState* fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
     if (!fdw_state->scanner)
         scalardb_scanner_close(fdw_state->scanner);
@@ -341,7 +341,7 @@ static void scalardbReScanForeignScan(ForeignScanState* node) {
 }
 
 static void scalardbEndForeignScan(ForeignScanState* node) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
     ScalarDbFdwScanState* fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
 
     /* if fdw_state is NULL, we are in EXPLAIN; nothing to do */
@@ -374,7 +374,7 @@ static bool scalardbAnalyzeForeignTable(Relation relation,
 static void classify_conditions(PlannerInfo* root, RelOptInfo* baserel,
                                 List* input_conds, List** remote_conds,
                                 List** local_conds) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     ListCell* lc;
 
@@ -409,7 +409,7 @@ static bool is_foreign_expr(PlannerInfo* root, RelOptInfo* baserel,
  */
 static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
                           ScalarDbFdwPlanState* fdw_private) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
     /*
      * If the foreign table has never been ANALYZEd, it will have
      * reltuples < 0, meaning "unknown". In this case we can use a hack
@@ -442,7 +442,7 @@ static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
  */
 static void estimate_costs(PlannerInfo* root, RelOptInfo* baserel,
                            Cost* startup_cost, Cost* total_cost) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     /* TODO: consider whether more precise estimation of cost is worth doing
      */
@@ -459,7 +459,7 @@ static void estimate_costs(PlannerInfo* root, RelOptInfo* baserel,
  */
 static void get_target_list(PlannerInfo* root, RelOptInfo* baserel,
                             Bitmapset* attrs_used, List** attrs_to_retrieve) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     RangeTblEntry* rte = planner_rt_fetch(baserel->relid, root);
 
@@ -494,7 +494,7 @@ static void get_target_list(PlannerInfo* root, RelOptInfo* baserel,
 
 static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
                                         Relation rel, List* attrs_to_retrieve) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     TupleDesc tupdesc = RelationGetDescr(rel);
 
     Datum* values = (Datum*)palloc0(tupdesc->natts * sizeof(Datum));
@@ -516,7 +516,6 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
             Assert(i <= tupdesc->natts);
             FormData_pg_attribute attr = tupdesc->attrs[i - 1];
             char* attname = NameStr(attr.attname);
-            ereport(DEBUG1, errmsg("i %d, attname %s", i, attname));
             nulls[i - 1] = scalardb_result_is_null(result, attname);
             values[i - 1] =
                 convert_result_column_to_datum(result, attname, attr.atttypid);
@@ -540,7 +539,7 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
 
 static Datum convert_result_column_to_datum(jobject result, char* attname,
                                             Oid atttypid) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     switch (atttypid) {
     case BOOLOID: {
         bool val = scalardb_result_get_boolean(result, attname);

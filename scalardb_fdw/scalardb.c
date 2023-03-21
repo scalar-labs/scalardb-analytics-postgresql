@@ -103,7 +103,7 @@ static char* get_class_name(jclass class);
     }
 
 void scalardb_initialize(ScalarDbFdwOptions* opts) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
 
     initialize_jvm(opts);
     initialize_references();
@@ -118,7 +118,7 @@ void scalardb_initialize(ScalarDbFdwOptions* opts) {
 }
 
 extern jobject scalardb_scan_all(char* namespace, char* table_name) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring namespace_str = (*env)->NewStringUTF(env, namespace);
     jstring table_name_str = (*env)->NewStringUTF(env, table_name);
     clear_exception();
@@ -130,7 +130,7 @@ extern jobject scalardb_scan_all(char* namespace, char* table_name) {
 }
 
 extern jobject scalardb_scanner_one(jobject scanner) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     clear_exception();
     jobject o = (*env)->CallObjectMethod(env, scanner, Scanner_one);
     catch_exception();
@@ -138,37 +138,37 @@ extern jobject scalardb_scanner_one(jobject scanner) {
 }
 
 extern void scalardb_scanner_close(jobject scanner) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     clear_exception();
     (*env)->CallVoidMethod(env, scanner, Closeable_close);
     catch_exception();
 }
 
 extern int scalardb_list_size(jobject list) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jint size = (*env)->CallIntMethod(env, list, List_size);
     return (int)size;
 }
 
 extern jobject scalardb_list_iterator(jobject list) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     return (*env)->CallObjectMethod(env, list, List_iterator);
 }
 
 extern bool scalardb_iterator_has_next(jobject iterator) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jboolean b = (*env)->CallBooleanMethod(env, iterator, Iterator_hasNext);
     return b == JNI_TRUE;
 }
 
 extern bool scalardb_optional_is_present(jobject optional) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jboolean b = (*env)->CallBooleanMethod(env, optional, Optional_isPresent);
     return b == JNI_TRUE;
 }
 
 extern jobject scalardb_optional_get(jobject optional) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     clear_exception();
     jobject o = (*env)->CallObjectMethod(env, optional, Optional_get);
     catch_exception();
@@ -176,12 +176,12 @@ extern jobject scalardb_optional_get(jobject optional) {
 }
 
 extern jobject scalardb_iterator_next(jobject iterator) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     return (*env)->CallObjectMethod(env, iterator, Iterator_next);
 }
 
 extern bool scalardb_result_is_null(jobject result, char* attname) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     jboolean b =
         (*env)->CallBooleanMethod(env, result, Result_isNull, attname_str);
@@ -189,7 +189,7 @@ extern bool scalardb_result_is_null(jobject result, char* attname) {
 }
 
 extern bool scalardb_result_get_boolean(jobject result, char* attname) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     jboolean b =
         (*env)->CallBooleanMethod(env, result, Result_getBoolean, attname_str);
@@ -197,34 +197,34 @@ extern bool scalardb_result_get_boolean(jobject result, char* attname) {
 }
 
 extern int scalardb_result_get_int(jobject result, char* attname) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     return (int)(*env)->CallIntMethod(env, result, Result_getInt, attname_str);
 }
 
 extern long scalardb_result_get_bigint(jobject result, char* attname) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     return (long)(*env)->CallLongMethod(env, result, Result_getBigInt,
                                         attname_str);
 }
 
 extern float scalardb_result_get_float(jobject result, char* attname) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     return (float)(*env)->CallFloatMethod(env, result, Result_getFloat,
                                           attname_str);
 }
 
 extern double scalardb_result_get_double(jobject result, char* attname) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     return (double)(*env)->CallDoubleMethod(env, result, Result_getDouble,
                                             attname_str);
 }
 
 extern text* scalardb_result_get_text(jobject result, char* attname) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     jstring str =
         (*env)->CallObjectMethod(env, result, Result_getText, attname_str);
@@ -232,7 +232,7 @@ extern text* scalardb_result_get_text(jobject result, char* attname) {
 }
 
 extern bytea* scalardb_result_get_blob(jobject result, char* attname) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     jstring attname_str = (*env)->NewStringUTF(env, attname);
     jbyteArray bytes = (jbyteArray)(*env)->CallObjectMethod(
         env, result, Result_getBlobAsBytes, attname_str);
@@ -240,13 +240,13 @@ extern bytea* scalardb_result_get_blob(jobject result, char* attname) {
 }
 
 extern int scalardb_result_columns_size(jobject result) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
     return (int)(*env)->CallStaticIntMethod(
         env, ScalarDbUtils_class, ScalarDbUtils_getResultColumnsSize, result);
 }
 
 static void initialize_jvm(ScalarDbFdwOptions* opts) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     static bool already_initialized = false;
 
@@ -284,18 +284,18 @@ static void initialize_jvm(ScalarDbFdwOptions* opts) {
                 ERROR,
                 errmsg("Failed to create Java VM. JNI error code: %d", res));
         }
-        ereport(DEBUG1, errmsg("Successfully created a JVM with %s heapsize",
+        ereport(DEBUG3, errmsg("Successfully created a JVM with %s heapsize",
                                max_heap_size));
         on_proc_exit(on_proc_exit_cb, 0);
         already_initialized = true;
     } else {
         jint GetEnvStat = (*jvm)->GetEnv(jvm, (void**)&env, JNI_VERSION);
         if (GetEnvStat == JNI_EDETACHED) {
-            ereport(DEBUG1, errmsg("GetEnv: JNI_EDETACHED; the current "
+            ereport(DEBUG3, errmsg("GetEnv: JNI_EDETACHED; the current "
                                    "thread is not attached to the VM"));
             attach_jvm();
         } else if (GetEnvStat == JNI_OK) {
-            ereport(DEBUG1, errmsg("GetEnv: JNI_OK"));
+            ereport(DEBUG3, errmsg("GetEnv: JNI_OK"));
         } else if (GetEnvStat == JNI_EVERSION) {
             ereport(ERROR, errmsg("GetEnv: JNI_EVERSION; the specified "
                                   "version is not supported"));
@@ -307,17 +307,17 @@ static void initialize_jvm(ScalarDbFdwOptions* opts) {
 }
 
 static void destroy_jvm() {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
     (*jvm)->DestroyJavaVM(jvm);
 }
 
 static void attach_jvm() {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
     (*jvm)->AttachCurrentThread(jvm, (void**)&env, NULL);
 }
 
 static void initialize_references() {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     // java.lang.Object
     register_java_class(Object_class, "java/lang/Object");
@@ -389,14 +389,9 @@ static void initialize_references() {
                                "()Ljava/util/Optional;");
 }
 
-static void clear_exception() {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
-    (*env)->ExceptionClear(env);
-}
+static void clear_exception() { (*env)->ExceptionClear(env); }
 
 static void catch_exception() {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
-
     if ((*env)->ExceptionCheck(env)) {
         jthrowable exc = (*env)->ExceptionOccurred(env);
 
@@ -411,8 +406,6 @@ static void catch_exception() {
 }
 
 static char* convert_string_to_cstring(jstring java_string) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
-
     char* ret = NULL;
 
     if (!((*env)->IsInstanceOf(env, java_string, String_class))) {
@@ -430,8 +423,6 @@ static char* convert_string_to_cstring(jstring java_string) {
 }
 
 static text* convert_string_to_text(jstring java_string) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
-
     text* ret = NULL;
 
     if (!((*env)->IsInstanceOf(env, java_string, String_class))) {
@@ -455,8 +446,6 @@ static text* convert_string_to_text(jstring java_string) {
 }
 
 static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes) {
-    ereport(DEBUG1, errmsg("entering function %s", __func__));
-
     bytea* ret = NULL;
 
     if (bytes != NULL) {
