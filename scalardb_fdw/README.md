@@ -1,4 +1,4 @@
-# ScalarDB FDW
+# Get started with FDW for ScalarDB
 
 This PostgreSQL extension implements a Foreign Data Wrapper (FDW) for [ScalarDB](https://scalar-labs.com/products/scalardb).
 
