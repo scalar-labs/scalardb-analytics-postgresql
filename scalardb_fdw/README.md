@@ -36,7 +36,7 @@ This section describes some common build errors that you might encounter.
 
 Normally, the build script finds the path for `libjvm.so` and properly sets it as a library search path. However, if you encounter the error `ld: library not found for -ljvm`, please copy the `libjvm.so` file to the default library search path. For example:
 
-```console
+````console
 ln -s /<PATH_TO_YOUR_LIBJVM_FILE>/libjvm.so /usr/lib64/libjvm.so
 
 ## Usage
@@ -57,13 +57,13 @@ To create an extension, run the following command:```
 
 ```sql
 CREATE EXTENSION scalardb_fdw;
-```
+````
 
 #### 3. Create a foreign server
 
 To create a foreign server, run the following command:
 
-```sql
+````sql
 CREATE SERVER scalardb FOREIGN DATA WRAPPER scalardb_fdw OPTIONS (
     jar_file_path '/path/to/scalardb-3.8.0.jar',
     config_file_path '/path/to/scalardb.properties'
@@ -75,7 +75,7 @@ To create user mapping, run the following command:
 
 ```sql
 CREATE USER MAPPING FOR PUBLIC SERVER scalardb;
-```
+````
 
 #### 5. Create a foreign table
 
@@ -114,11 +114,11 @@ You can set the following options for FDW for ScalarDB.
 
 You can set the following options on a ScalarDB foreign server object:
 
-| Name               | Required     | Type     | Description                                                                                   |
-| ------------------ | ------------ | -------- | --------------------------------------------------------------------------------------------- |
-| `jar_file_path`    | **Yes** | `string` | The path to the ScalarDB JAR file. Note that this JAR also must be a fat JAR, which contains all its dependencies. |
-| `config_file_path` | **Yes** | `string` | The path to the ScalarDB config file.                                                         |
-| `max_heap_size`    |        No      | `string` | The maximum heap size of JVM. The format is the same as `-Xmx`.  
+| Name               | Required | Type     | Description                                                                                                        |
+| ------------------ | -------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `jar_file_path`    | **Yes**  | `string` | The path to the ScalarDB JAR file. Note that this JAR also must be a fat JAR, which contains all its dependencies. |
+| `config_file_path` | **Yes**  | `string` | The path to the ScalarDB config file.                                                                              |
+| `max_heap_size`    | No       | `string` | The maximum heap size of JVM. The format is the same as `-Xmx`.                                                    |
 
 #### `CREATE USER MAPPING`
 
@@ -128,18 +128,18 @@ Currently, no options exist for `CREATE USER MAPPING`.
 
 The following options can be set on a ScalarDB foreign table object:
 
-| Name         | Required     | Type     | Description                                            |
-| ------------ | ------------ | -------- | ------------------------------------------------------ |
-| `name_space` | **Yes** | `string` | The name of the namespace of the table in the ScalarDB instance. |
-| `table_name` | **Yes** | `string` | The name of the table in the ScalarDB instance.                  |
+| Name         | Required | Type     | Description                                                      |
+| ------------ | -------- | -------- | ---------------------------------------------------------------- |
+| `name_space` | **Yes**  | `string` | The name of the namespace of the table in the ScalarDB instance. |
+| `table_name` | **Yes**  | `string` | The name of the table in the ScalarDB instance.                  |
 
 #### Column
 
-| Name                      | Required | Type      | Description                                                                                                                                       |
-| ------------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scalardb_partition_key`  |     No     | `boolean` | This specifies that the column is a partition key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set. |
-| `scalardb_clustering_key` |     No     | `boolean` | This specifies that the column is a clustering key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set. |
-| `scalardb_index_key`      |     No     | `boolean` | This specifies that the column is an index key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set.      |
+| Name                      | Required | Type      | Description                                                                                                                                            |
+| ------------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `scalardb_partition_key`  | No       | `boolean` | This specifies that the column is a partition key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set.  |
+| `scalardb_clustering_key` | No       | `boolean` | This specifies that the column is a clustering key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set. |
+| `scalardb_index_key`      | No       | `boolean` | This specifies that the column is an index key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set.     |
 
 ### Data-type mapping
 
