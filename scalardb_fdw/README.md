@@ -2,7 +2,9 @@
 
 This PostgreSQL extension implements a Foreign Data Wrapper (FDW) for [ScalarDB](https://scalar-labs.com/products/scalardb).
 
-## Prerequisite
+## Prerequisites
+
+You must have the following prerequisites set up in your environment.
 
 ### JDK
 
