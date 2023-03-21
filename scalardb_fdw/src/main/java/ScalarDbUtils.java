@@ -8,16 +8,13 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.service.StorageFactory;
 
 public class ScalarDbUtils {
-  static StorageFactory storageFactory;
   static DistributedStorage storage;
 
   static void initialize(String configFilePath) throws IOException {
     // We don't need to synchronize here because only single postgres worker call
     // this from at once
-    if (storageFactory == null) {
-      storageFactory = StorageFactory.create(configFilePath);
-    }
     if (storage == null) {
+      StorageFactory storageFactory = StorageFactory.create(configFilePath);
       storage = storageFactory.getStorage();
     }
   }
