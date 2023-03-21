@@ -57,6 +57,9 @@ typedef struct {
     AttInMetadata* attinmeta; /* attribute datatype conversion metadata */
 
     jobject scanner; /* Java instance of com.scalar.db.api.Scanner */
+
+    MemoryContext
+        per_tuple_context; /* memory context for per-tuple temporary data*/
 } ScalarDbFdwScanState;
 
 enum ScanFdwPrivateIndex {
@@ -298,9 +301,13 @@ static void scalardbBeginForeignScan(ForeignScanState* node, int eflags) {
     fdw_state->attinmeta =
         TupleDescGetAttInMetadata(RelationGetDescr(fdw_state->rel));
 
-    scalardb_initialize(&fdw_state->options);
-
     fdw_state->scanner = NULL;
+
+    fdw_state->per_tuple_context = AllocSetContextCreate(
+        estate->es_query_cxt, "scalardb_fdw per_tuple_context",
+        ALLOCSET_DEFAULT_SIZES);
+
+    scalardb_initialize(&fdw_state->options);
 }
 
 static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
@@ -320,12 +327,16 @@ static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
         return ExecClearTuple(slot);
     }
 
+    MemoryContext old_context =
+        MemoryContextSwitchTo(fdw_state->per_tuple_context);
+
     jobject result = scalardb_optional_get(result_optional);
     HeapTuple tuple =
         make_tuple_from_result(result, scalardb_result_columns_size(result),
                                fdw_state->rel, fdw_state->attrs_to_retrieve);
 
     scalardb_scanner_release_result();
+    MemoryContextSwitchTo(old_context);
 
     ExecStoreHeapTuple(tuple, slot, false);
 
