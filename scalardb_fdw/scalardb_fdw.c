@@ -325,6 +325,8 @@ static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
         make_tuple_from_result(result, scalardb_result_columns_size(result),
                                fdw_state->rel, fdw_state->attrs_to_retrieve);
 
+    scalardb_scanner_release_result();
+
     ExecStoreHeapTuple(tuple, slot, false);
 
     return slot;

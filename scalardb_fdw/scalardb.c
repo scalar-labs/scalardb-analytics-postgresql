@@ -21,6 +21,8 @@
 
 #define DEFAULT_MAX_HEAP_SIZE "1g"
 
+#define LOCAL_FRAME_CAPACITY 128
+
 static __thread JNIEnv* env = NULL;
 static JavaVM* jvm;
 
@@ -140,10 +142,26 @@ extern jobject scalardb_scan_all(char* namespace, char* table_name) {
 
 extern jobject scalardb_scanner_one(jobject scanner) {
     ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+    clear_exception();
+    (*env)->PushLocalFrame(env, LOCAL_FRAME_CAPACITY);
+    catch_exception();
+
     clear_exception();
     jobject o = (*env)->CallObjectMethod(env, scanner, Scanner_one);
     catch_exception();
     return o;
+}
+
+/*
+ * Release all object references created from Result object by popping the
+ * current local references in JVM.
+ * It is caller's responsibility to ensure that the local frame for the Result
+ * object has been created in scalardb_scanner_one in ahead
+ */
+extern void scalardb_scanner_release_result() {
+    ereport(DEBUG5, errmsg("entering function %s", __func__));
+    (*env)->PopLocalFrame(env, NULL);
 }
 
 extern void scalardb_scanner_close(jobject scanner) {
