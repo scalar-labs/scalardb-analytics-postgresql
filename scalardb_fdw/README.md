@@ -36,8 +36,9 @@ This section describes some common build errors that you might encounter.
 
 Normally, the build script finds the path for `libjvm.so` and properly sets it as a library search path. However, if you encounter the error `ld: library not found for -ljvm`, please copy the `libjvm.so` file to the default library search path. For example:
 
-````console
+```console
 ln -s /<PATH_TO_YOUR_LIBJVM_FILE>/libjvm.so /usr/lib64/libjvm.so
+```
 
 ## Usage
 
@@ -53,21 +54,22 @@ For details on how to install the extension, see the [Build and installation](#b
 
 #### 2. Create an extension
 
-To create an extension, run the following command:```
+To create an extension, run the following command:
 
 ```sql
 CREATE EXTENSION scalardb_fdw;
-````
+```
 
 #### 3. Create a foreign server
 
 To create a foreign server, run the following command:
 
-````sql
+```sql
 CREATE SERVER scalardb FOREIGN DATA WRAPPER scalardb_fdw OPTIONS (
     jar_file_path '/path/to/scalardb-3.8.0.jar',
     config_file_path '/path/to/scalardb.properties'
 );
+```
 
 #### 4. Create user mapping
 
@@ -75,7 +77,7 @@ To create user mapping, run the following command:
 
 ```sql
 CREATE USER MAPPING FOR PUBLIC SERVER scalardb;
-````
+```
 
 #### 5. Create a foreign table
 
@@ -167,7 +169,7 @@ Before testing FDW for ScalarDB, you must have a running ScalarDB instance that 
 
 If you want to reset the instances, you can run the following command, then the above setup command again.
 
-```
+```console
 ./test/cleanup.sh
 ```
 
@@ -183,3 +185,7 @@ make USE_PGXS=1 installcheck
 
 - This extension aims to enable analytical query processing on ScalarDB-managed databases. Therefore, this extension only supports reading data from ScalarDB.
 - Currently, this extension always reads all records from the underlying databases, no matter what selection exists in queries.
+
+```
+
+```
