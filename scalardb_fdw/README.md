@@ -8,9 +8,7 @@ You must have the following prerequisites set up in your environment.
 
 ### JDK
 
-You need to install JDK whose version is compatible with ScalarDB.
-
-You also need to set `JAVA_HOME` environment variable, which points to your JDK installation directory.
+You must install a version of the Java Development Kit (JDK) that is compatible with ScalarDB. In addition, you must set the `JAVA_HOME` environment variable, which points to your JDK installation directory.
 
 Note that since these extions use JNI internally, the dynamic library of the JVM, such as `libjvm.so`, must be found in the library search paths.
 
