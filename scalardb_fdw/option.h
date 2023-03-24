@@ -6,7 +6,6 @@
 #include "nodes/pg_list.h"
 
 typedef struct {
-    char* jar_file_path;
     char* config_file_path;
     char* max_heap_size;
 

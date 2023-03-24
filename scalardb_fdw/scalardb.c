@@ -8,7 +8,7 @@
 
 #define Str(arg) #arg
 #define StrValue(arg) Str(arg)
-#define STR_DATA_MODULE_DIR StrValue(DATA_MODULE_DIR)
+#define STR_SCALARDB_JAR_PATH StrValue(SCALARDB_JAR_PATH)
 
 /* a length of "-Djava.class.path=" */
 #define JAVA_CLASS_PATH_STR_LEN 18
@@ -280,12 +280,13 @@ static void initialize_jvm(ScalarDbFdwOptions* opts) {
     static bool already_initialized = false;
 
     if (already_initialized == false) {
-        size_t classpath_len =
-            JAVA_CLASS_PATH_STR_LEN + strlen(opts->jar_file_path) +
-            CLASSPATH_SEP_STR_LEN + strlen(STR_DATA_MODULE_DIR) + NULL_STR_LEN;
+        size_t classpath_len = JAVA_CLASS_PATH_STR_LEN +
+                               strlen(STR_SCALARDB_JAR_PATH) + NULL_STR_LEN;
         char* classpath = (char*)palloc0(classpath_len);
-        snprintf(classpath, classpath_len, "-Djava.class.path=%s:%s",
-                 opts->jar_file_path, STR_DATA_MODULE_DIR);
+        snprintf(classpath, classpath_len, "-Djava.class.path=%s",
+                 STR_SCALARDB_JAR_PATH);
+
+        ereport(DEBUG3, errmsg("classpath: %s", classpath));
 
         char* max_heap_size =
             opts->max_heap_size ? opts->max_heap_size : DEFAULT_MAX_HEAP_SIZE;

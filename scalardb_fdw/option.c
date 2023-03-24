@@ -28,7 +28,6 @@ struct OptionEntry {
  * Valid options for scalardb_fdw.
  */
 static struct OptionEntry valid_options[] = {
-    {"jar_file_path", ForeignServerRelationId},
     {"config_file_path", ForeignServerRelationId},
     {"max_heap_size", ForeignServerRelationId},
 
@@ -59,7 +58,6 @@ Datum scalardb_fdw_validator(PG_FUNCTION_ARGS) {
     List* options_list = untransformRelOptions(PG_GETARG_DATUM(0));
     Oid catalog = PG_GETARG_OID(1);
 
-    char* jar_file_path = NULL;
     char* config_file_path = NULL;
     char* namespace = NULL;
     char* table_name = NULL;
@@ -93,23 +91,7 @@ Datum scalardb_fdw_validator(PG_FUNCTION_ARGS) {
                      : errhint("There are no valid options in this context.")));
         }
 
-        if (strcmp(def->defname, "jar_file_path") == 0) {
-            if (!has_privs_of_role(GetUserId(),
-#if PG_VERSION_NUM >= 140000
-                                   ROLE_PG_READ_SERVER_FILES
-#else
-                                   DEFAULT_ROLE_READ_SERVER_FILES
-#endif
-                                   )) {
-                ereport(
-                    ERROR,
-                    (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-                     errmsg("only superuser or a role with privileges of the "
-                            "pg_read_server_files role may specify the "
-                            "jar_file_path")));
-            }
-            jar_file_path = defGetString(def);
-        } else if (strcmp(def->defname, "config_file_path") == 0) {
+        if (strcmp(def->defname, "config_file_path") == 0) {
             if (!has_privs_of_role(GetUserId(),
 #if PG_VERSION_NUM >= 140000
                                    ROLE_PG_READ_SERVER_FILES
@@ -137,12 +119,6 @@ Datum scalardb_fdw_validator(PG_FUNCTION_ARGS) {
             // Accept only boolean value
             defGetBoolean(def);
         }
-    }
-
-    if (catalog == ForeignServerRelationId && jar_file_path == NULL) {
-        ereport(ERROR, (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
-                        errmsg("jar_file_path is required for a foreign server "
-                               "of scalardb_fdw")));
     }
 
     if (catalog == ForeignServerRelationId && config_file_path == NULL) {
@@ -191,7 +167,6 @@ void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions* opts) {
     ForeignDataWrapper* wrapper;
     List* options;
 
-    opts->jar_file_path = NULL;
     opts->config_file_path = NULL;
     opts->max_heap_size = NULL;
     opts->namespace = NULL;
@@ -213,9 +188,7 @@ void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions* opts) {
     foreach (cell, options) {
         DefElem* def = (DefElem*)lfirst(cell);
 
-        if (strcmp(def->defname, "jar_file_path") == 0) {
-            opts->jar_file_path = defGetString(def);
-        } else if (strcmp(def->defname, "config_file_path") == 0) {
+        if (strcmp(def->defname, "config_file_path") == 0) {
             opts->config_file_path = defGetString(def);
         } else if (strcmp(def->defname, "max_heap_size") == 0) {
             opts->max_heap_size = defGetString(def);
