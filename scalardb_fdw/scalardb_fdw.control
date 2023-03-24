@@ -1,0 +1,5 @@
+# scalardb_fdw extension
+comment = 'foreign-data wrapper for ScalarDB'
+default_version = '1.0'
+module_pathname = '$libdir/scalardb_fdw'
+relocatable = true
