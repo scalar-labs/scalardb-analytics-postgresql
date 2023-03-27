@@ -1,9 +1,7 @@
 \getenv abs_srcdir PG_ABS_SRCDIR
-\set jar_file_path :abs_srcdir '/test/scalardb-3.8.0-all.jar'
 \set config_file_path :abs_srcdir '/test/client.properties'
 CREATE EXTENSION scalardb_fdw;
 CREATE SERVER scalardb FOREIGN DATA WRAPPER scalardb_fdw OPTIONS (
-    jar_file_path :'jar_file_path',
     config_file_path :'config_file_path'
 );
 CREATE USER MAPPING FOR PUBLIC SERVER scalardb;

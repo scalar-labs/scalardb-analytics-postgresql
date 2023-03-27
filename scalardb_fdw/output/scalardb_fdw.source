@@ -1,6 +1,5 @@
 CREATE EXTENSION scalardb_fdw;
 CREATE SERVER scalardb FOREIGN DATA WRAPPER scalardb_fdw OPTIONS (
-    jar_file_path '@abs_srcdir@/test/scalardb-3.8.0-all.jar',
     config_file_path '@abs_srcdir@/test/client.properties'
 );
 CREATE USER MAPPING FOR PUBLIC SERVER scalardb;

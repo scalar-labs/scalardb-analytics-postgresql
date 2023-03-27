@@ -12,10 +12,6 @@ You must install a version of the Java Development Kit (JDK) that is compatible 
 
 Note that since these extensions use the Java Native Interface (JNI) internally, you must include the dynamic library of the Java virtual machine (JVM), such as `libjvm.so`, in the library search path.
 
-### ScalarDB
-
-You have to download the [ScalarDB](https://scalar-labs.com/products/scalardb) library jar. You can put it in an arbitrary path. Note that the jar file must be a **fat-jar**, which contains all its dependencies.
-
 ### PostgreSQL
 
 This extension supports PostgreSQL 13 or later. For details on how to install PostgreSQL, see the official documentation at [Server Administration](https://www.postgresql.org/docs/current/admin.html).
@@ -66,7 +62,6 @@ To create a foreign server, run the following command:
 
 ```sql
 CREATE SERVER scalardb FOREIGN DATA WRAPPER scalardb_fdw OPTIONS (
-    jar_file_path '/path/to/scalardb-3.8.0.jar',
     config_file_path '/path/to/scalardb.properties'
 );
 ```
@@ -116,11 +111,10 @@ You can set the following options for ScalarDB FDW objects.
 
 You can set the following options on a ScalarDB foreign server object:
 
-| Name               | Required | Type     | Description                                                                                                        |
-| ------------------ | -------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
-| `jar_file_path`    | **Yes**  | `string` | The path to the ScalarDB JAR file. Note that this JAR also must be a fat JAR, which contains all its dependencies. |
-| `config_file_path` | **Yes**  | `string` | The path to the ScalarDB config file.                                                                              |
-| `max_heap_size`    | No       | `string` | The maximum heap size of JVM. The format is the same as `-Xmx`.                                                    |
+| Name               | Required | Type     | Description                                                     |
+| ------------------ | -------- | -------- | --------------------------------------------------------------- |
+| `config_file_path` | **Yes**  | `string` | The path to the ScalarDB config file.                           |
+| `max_heap_size`    | No       | `string` | The maximum heap size of JVM. The format is the same as `-Xmx`. |
 
 #### `CREATE USER MAPPING`
 

@@ -4,15 +4,19 @@ OBJS = scalardb_fdw.o option.o scalardb.o
 EXTENSION = scalardb_fdw
 DATA = scalardb_fdw--1.0.sql
 
-DATA_built = build/classes/java/main/ScalarDbUtils.class
+scalardb_version = 3.8.0
+
+scalardb_jar = scalardb-$(scalardb_version)-all.jar
+scalardb_jar_built = build/libs/$(scalardb_jar)
+scalardb_jar_path = $(DESTDIR)$(datadir)/$(datamoduledir)/$(scalardb_jar)
+
+DATA_built = $(scalardb_jar_built)
 
 REGRESS = scalardb_fdw
 
-DATA_MODULE_DIR = $(DESTDIR)$(datadir)/$(datamoduledir)
-
 OS = $(shell uname | tr '[:upper:]' '[:lower:]')
 
-PG_CPPFLAGS = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(OS) -D'DATA_MODULE_DIR=$(DATA_MODULE_DIR)'
+PG_CPPFLAGS = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(OS) -D'SCALARDB_JAR_PATH=$(scalardb_jar_path)'
 
 libjvm_path = $(shell find $(JAVA_HOME) -name libjvm\.*)
 
@@ -20,12 +24,12 @@ SHLIB_LINK+=-L$(dir $(libjvm_path)) -ljvm
 
 EXTRA_CLEAN = build
 
-JAVA_CLASSES = $(wildcard build/classes/java/main/*.class)
+JAVA_SOURCES = $(wildcard src/main/java/*.java)
 
-build/classes/java/main/%.class: src/main/java/%.java
-	./gradlew classes
+$(scalardb_jar_built): $(JAVA_SOURCES)
+	./gradlew shadowJar -PscalarDbVersion=$(scalardb_version)
 
-all: $(JAVA_CLASSES)
+all: $(scalardb_jar_built)
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

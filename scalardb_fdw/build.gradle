@@ -1,11 +1,30 @@
+buildscript {
+    repositories {
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+    ext {
+        shadowPluginVersion = '7.1.2'
+    }
+}
+
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
 }
+
+apply plugin: 'java'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation "com.scalar-labs:scalardb:3.8.0"
+    implementation "com.scalar-labs:scalardb:${scalarDbVersion}"
+}
+
+shadowJar {
+    archiveBaseName = "scalardb"
+    archiveVersion = "${scalarDbVersion}"
 }
