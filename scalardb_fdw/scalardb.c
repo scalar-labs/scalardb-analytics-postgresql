@@ -66,18 +66,18 @@ static jclass Scanner_class;
 static jmethodID Scanner_one;
 
 static void initialize_jvm(ScalarDbFdwOptions* opts);
-static void destroy_jvm();
-static void attach_jvm();
-static void initialize_references();
+static void destroy_jvm(void);
+static void attach_jvm(void);
+static void initialize_references(void);
 
-static void clear_exception();
-static void catch_exception();
+static void clear_exception(void);
+static void catch_exception(void);
 
 static char* convert_string_to_cstring(jobject java_cstring);
 static text* convert_string_to_text(jobject java_cstring);
 static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes);
 
-static void on_proc_exit_cb();
+static void on_proc_exit_cb(int code, Datum arg);
 
 static char* get_class_name(jclass class);
 
@@ -105,9 +105,10 @@ static char* get_class_name(jclass class);
     }
 
 void scalardb_initialize(ScalarDbFdwOptions* opts) {
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
-
     static bool already_initialized = false;
+    jstring config_file_path;
+
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     if (already_initialized == true) {
         ereport(DEBUG3, errmsg("scalardb has already been initialized"));
@@ -118,8 +119,7 @@ void scalardb_initialize(ScalarDbFdwOptions* opts) {
     initialize_references();
 
     // TODO: skip after second call
-    jstring config_file_path =
-        (*env)->NewStringUTF(env, opts->config_file_path);
+    config_file_path = (*env)->NewStringUTF(env, opts->config_file_path);
     clear_exception();
     (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
                                    ScalarDbUtils_initialize, config_file_path);
@@ -129,18 +129,25 @@ void scalardb_initialize(ScalarDbFdwOptions* opts) {
 }
 
 extern jobject scalardb_scan_all(char* namespace, char* table_name) {
+    jstring namespace_str;
+    jstring table_name_str;
+    jobject scanner;
+
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring namespace_str = (*env)->NewStringUTF(env, namespace);
-    jstring table_name_str = (*env)->NewStringUTF(env, table_name);
+
+    namespace_str = (*env)->NewStringUTF(env, namespace);
+    table_name_str = (*env)->NewStringUTF(env, table_name);
     clear_exception();
-    jobject scanner = (*env)->CallStaticObjectMethod(
-        env, ScalarDbUtils_class, ScalarDbUtils_scanAll, namespace_str,
-        table_name_str);
+    scanner = (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
+                                             ScalarDbUtils_scanAll,
+                                             namespace_str, table_name_str);
     catch_exception();
     return scanner;
 }
 
 extern jobject scalardb_scanner_one(jobject scanner) {
+    jobject o;
+
     ereport(DEBUG5, errmsg("entering function %s", __func__));
 
     clear_exception();
@@ -148,7 +155,7 @@ extern jobject scalardb_scanner_one(jobject scanner) {
     catch_exception();
 
     clear_exception();
-    jobject o = (*env)->CallObjectMethod(env, scanner, Scanner_one);
+    o = (*env)->CallObjectMethod(env, scanner, Scanner_one);
     catch_exception();
     return o;
 }
@@ -174,8 +181,9 @@ extern void scalardb_scanner_close(jobject scanner) {
 }
 
 extern int scalardb_list_size(jobject list) {
+    jint size;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jint size = (*env)->CallIntMethod(env, list, List_size);
+    size = (*env)->CallIntMethod(env, list, List_size);
     return (int)size;
 }
 
@@ -185,21 +193,24 @@ extern jobject scalardb_list_iterator(jobject list) {
 }
 
 extern bool scalardb_iterator_has_next(jobject iterator) {
+    jboolean b;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jboolean b = (*env)->CallBooleanMethod(env, iterator, Iterator_hasNext);
+    b = (*env)->CallBooleanMethod(env, iterator, Iterator_hasNext);
     return b == JNI_TRUE;
 }
 
 extern bool scalardb_optional_is_present(jobject optional) {
+    jboolean b;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jboolean b = (*env)->CallBooleanMethod(env, optional, Optional_isPresent);
+    b = (*env)->CallBooleanMethod(env, optional, Optional_isPresent);
     return b == JNI_TRUE;
 }
 
 extern jobject scalardb_optional_get(jobject optional) {
+    jobject o;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
     clear_exception();
-    jobject o = (*env)->CallObjectMethod(env, optional, Optional_get);
+    o = (*env)->CallObjectMethod(env, optional, Optional_get);
     catch_exception();
     return o;
 }
@@ -210,60 +221,69 @@ extern jobject scalardb_iterator_next(jobject iterator) {
 }
 
 extern bool scalardb_result_is_null(jobject result, char* attname) {
+    jstring attname_str;
+    jboolean b;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring attname_str = (*env)->NewStringUTF(env, attname);
-    jboolean b =
-        (*env)->CallBooleanMethod(env, result, Result_isNull, attname_str);
+    attname_str = (*env)->NewStringUTF(env, attname);
+    b = (*env)->CallBooleanMethod(env, result, Result_isNull, attname_str);
     return b == JNI_TRUE;
 }
 
 extern bool scalardb_result_get_boolean(jobject result, char* attname) {
+    jstring attname_str;
+    jboolean b;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring attname_str = (*env)->NewStringUTF(env, attname);
-    jboolean b =
-        (*env)->CallBooleanMethod(env, result, Result_getBoolean, attname_str);
+    attname_str = (*env)->NewStringUTF(env, attname);
+    b = (*env)->CallBooleanMethod(env, result, Result_getBoolean, attname_str);
     return b == JNI_TRUE;
 }
 
 extern int scalardb_result_get_int(jobject result, char* attname) {
+    jstring attname_str;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring attname_str = (*env)->NewStringUTF(env, attname);
+    attname_str = (*env)->NewStringUTF(env, attname);
     return (int)(*env)->CallIntMethod(env, result, Result_getInt, attname_str);
 }
 
 extern long scalardb_result_get_bigint(jobject result, char* attname) {
+    jstring attname_str;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring attname_str = (*env)->NewStringUTF(env, attname);
+    attname_str = (*env)->NewStringUTF(env, attname);
     return (long)(*env)->CallLongMethod(env, result, Result_getBigInt,
                                         attname_str);
 }
 
 extern float scalardb_result_get_float(jobject result, char* attname) {
+    jstring attname_str;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring attname_str = (*env)->NewStringUTF(env, attname);
+    attname_str = (*env)->NewStringUTF(env, attname);
     return (float)(*env)->CallFloatMethod(env, result, Result_getFloat,
                                           attname_str);
 }
 
 extern double scalardb_result_get_double(jobject result, char* attname) {
+    jstring attname_str;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring attname_str = (*env)->NewStringUTF(env, attname);
+    attname_str = (*env)->NewStringUTF(env, attname);
     return (double)(*env)->CallDoubleMethod(env, result, Result_getDouble,
                                             attname_str);
 }
 
 extern text* scalardb_result_get_text(jobject result, char* attname) {
+    jstring attname_str;
+    jstring str;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring attname_str = (*env)->NewStringUTF(env, attname);
-    jstring str =
-        (*env)->CallObjectMethod(env, result, Result_getText, attname_str);
+    attname_str = (*env)->NewStringUTF(env, attname);
+    str = (*env)->CallObjectMethod(env, result, Result_getText, attname_str);
     return convert_string_to_text(str);
 }
 
 extern bytea* scalardb_result_get_blob(jobject result, char* attname) {
+    jstring attname_str;
+    jbyteArray bytes;
     ereport(DEBUG5, errmsg("entering function %s", __func__));
-    jstring attname_str = (*env)->NewStringUTF(env, attname);
-    jbyteArray bytes = (jbyteArray)(*env)->CallObjectMethod(
+    attname_str = (*env)->NewStringUTF(env, attname);
+    bytes = (jbyteArray)(*env)->CallObjectMethod(
         env, result, Result_getBlobAsBytes, attname_str);
     return convert_jbyteArray_to_bytea(bytes);
 }
@@ -275,40 +295,47 @@ extern int scalardb_result_columns_size(jobject result) {
 }
 
 static void initialize_jvm(ScalarDbFdwOptions* opts) {
+    static bool already_initialized = false;
+    size_t classpath_len;
+    char* classpath;
+    char* max_heap_size;
+    JavaVMOption* options;
+    size_t max_heap_size_option_len;
+    char* max_heap_size_option;
+    JavaVMInitArgs vm_args;
+    jint res;
+    jint GetEnvStat;
+
     ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    static bool already_initialized = false;
-
     if (already_initialized == false) {
-        size_t classpath_len = JAVA_CLASS_PATH_STR_LEN +
-                               strlen(STR_SCALARDB_JAR_PATH) + NULL_STR_LEN;
-        char* classpath = (char*)palloc0(classpath_len);
+        classpath_len = JAVA_CLASS_PATH_STR_LEN +
+                        strlen(STR_SCALARDB_JAR_PATH) + NULL_STR_LEN;
+        classpath = (char*)palloc0(classpath_len);
         snprintf(classpath, classpath_len, "-Djava.class.path=%s",
                  STR_SCALARDB_JAR_PATH);
 
         ereport(DEBUG3, errmsg("classpath: %s", classpath));
 
-        char* max_heap_size =
+        max_heap_size =
             opts->max_heap_size ? opts->max_heap_size : DEFAULT_MAX_HEAP_SIZE;
 
-        JavaVMOption* options =
-            (JavaVMOption*)palloc0(sizeof(JavaVMOption) * 2);
-        size_t max_heap_size_option_len =
+        options = (JavaVMOption*)palloc0(sizeof(JavaVMOption) * 2);
+        max_heap_size_option_len =
             MAX_HEAP_SIZE_STR_LEN + strlen(max_heap_size) + NULL_STR_LEN;
-        char* max_heap_size_option = (char*)palloc0(max_heap_size_option_len);
+        max_heap_size_option = (char*)palloc0(max_heap_size_option_len);
         snprintf(max_heap_size_option, max_heap_size_option_len, "-Xmx%s",
                  max_heap_size);
 
         options[0].optionString = classpath;
         options[1].optionString = max_heap_size_option;
 
-        JavaVMInitArgs vm_args;
         vm_args.nOptions = 2;
         vm_args.version = JNI_VERSION;
         vm_args.options = options;
         vm_args.ignoreUnrecognized = JNI_FALSE;
 
-        jint res = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
+        res = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
         if (res < 0) {
             ereport(
                 ERROR,
@@ -319,7 +346,7 @@ static void initialize_jvm(ScalarDbFdwOptions* opts) {
         on_proc_exit(on_proc_exit_cb, 0);
         already_initialized = true;
     } else {
-        jint GetEnvStat = (*jvm)->GetEnv(jvm, (void**)&env, JNI_VERSION);
+        GetEnvStat = (*jvm)->GetEnv(jvm, (void**)&env, JNI_VERSION);
         if (GetEnvStat == JNI_EDETACHED) {
             ereport(DEBUG3, errmsg("GetEnv: JNI_EDETACHED; the current "
                                    "thread is not attached to the VM"));
@@ -493,7 +520,7 @@ static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes) {
     return ret;
 }
 
-static void on_proc_exit_cb() {
+static void on_proc_exit_cb(int code, Datum arg) {
     (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
                                    ScalarDbUtils_closeStorage);
     destroy_jvm();
