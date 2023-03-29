@@ -51,13 +51,14 @@ jobs:
           distribution: "temurin"
 
       - name: Get ScalarDB version
-        run: echo "SCALARDB_VERSION=$(make scalardb-version)" >> $GITHUB_ENV
+        id: get_scalardb_version
+        run: echo "scalardb_version=$(make scalardb-version)" >> $GITHUB_OUTPUT
 
       - name: Build Java codes
         uses: gradle/gradle-build-action@v2
         with:
           build-root-directory: scalardb_fdw
-          arguments: shadowJar shadowJar -PscalarDbVersion=${{ env.SCALARDB_VERSION }}
+          arguments: shadowJar shadowJar -PscalarDbVersion=${{ steps.get_scalardb_version.outputs.scalardb_version }}
 
       - name: Set up ScalarDB config file
         run: |
