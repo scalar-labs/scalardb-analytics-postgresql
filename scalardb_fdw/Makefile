@@ -31,6 +31,9 @@ $(scalardb_jar_built): $(JAVA_SOURCES)
 
 all: $(scalardb_jar_built)
 
+scalardb-version:
+	@echo $(scalardb_version)
+
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)

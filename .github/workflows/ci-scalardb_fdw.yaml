@@ -1,0 +1,83 @@
+name: CI for ScalarDB FDW
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "scalardb_fdw/**"
+  pull_request:
+    paths:
+      - "scalardb_fdw/**"
+
+jobs:
+  regression-test:
+    strategy:
+      matrix:
+        pg: [15, 14, 13]
+
+    runs-on: ubuntu-latest
+    container: pgxn/pgxn-tools
+
+    defaults:
+      run:
+        working-directory: scalardb_fdw
+
+    services:
+      cassandra:
+        image: cassandra:3.11.11
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Install Node JS
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_19.x | bash -
+          apt-get install -y nodejs
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: "8"
+          distribution: "temurin"
+
+      - name: Get ScalarDB version
+        run: echo "SCALARDB_VERSION=$(make scalardb-version)" >> $GITHUB_ENV
+
+      - name: Build Java codes
+        uses: gradle/gradle-build-action@v2
+        with:
+          build-root-directory: scalardb_fdw
+          arguments: shadowJar shadowJar -PscalarDbVersion=${{ env.SCALARDB_VERSION }}
+
+      - name: Set up ScalarDB config file
+        run: |
+          mv ./test/ci.properties ./test/client.properties
+
+      - name: Load test data
+        run: |
+          java -jar "./test/scalardb-schema-loader-3.8.0.jar" \
+              --config "./test/client.properties" \
+              -f "./test/schema.json" \
+              --coordinator
+          java -jar "./test/scalardb-sql-cli-3.8.0-all.jar" \
+              --config "./test/client.properties" \
+              -f "./test/test-data.sql"
+
+      - name: Link libjvm to the library search path
+        run: ln -s $JAVA_HOME/jre/lib/amd64/server/libjvm.so /usr/local/lib/libjvm.so
+
+      - name: Start PostgreSQL ${{ matrix.pg }}
+        run: pg-start ${{ matrix.pg }}
+
+      - name: Test on PostgreSQL ${{ matrix.pg }}
+        run: pg-build-test
