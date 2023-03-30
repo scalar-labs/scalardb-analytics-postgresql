@@ -58,7 +58,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           build-root-directory: scalardb_fdw
-          arguments: shadowJar shadowJar -PscalarDbVersion=${{ steps.get_scalardb_version.outputs.scalardb_version }}
+          arguments: shadowJar -PscalarDbVersion=${{ steps.get_scalardb_version.outputs.scalardb_version }}
 
       - name: Set up ScalarDB config file
         run: |
