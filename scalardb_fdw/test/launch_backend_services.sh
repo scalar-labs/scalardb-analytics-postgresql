@@ -32,7 +32,7 @@ check_postgresql() {
         count=$(echo "$count + 1" | bc)
         sleep 1
     done
-    echo 'ERROR: PostgreSQL container has not became ready after 10 seconds' 1>&2
+    echo 'ERROR: PostgreSQL container has not become ready after 10 seconds' 1>&2
     exit 1
 }
 
