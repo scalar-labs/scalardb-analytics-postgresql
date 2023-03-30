@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eu -o pipefail
 
 script_dir=$(dirname "$0")
 
@@ -16,7 +16,7 @@ check_cassandra() {
         count=$(echo "$count + 1" | bc)
         sleep 1
     done
-    echo 'ERROR: Cassandra container has not became ready after 10 seconds' 1>&2
+    echo 'ERROR: Cassandra container has not become ready after 10 seconds' 1>&2
     exit 1
 }
 
