@@ -31,16 +31,12 @@ $(scalardb_jar_built): $(JAVA_SOURCES)
 
 all: $(scalardb_jar_built)
 
-ifdef USE_PGXS
+scalardb-version:
+	@echo $(scalardb_version)
+
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
-else
-subdir = contrib/scalardb_fdw
-top_builddir = ../..
-include $(top_builddir)/src/Makefile.global
-include $(top_srcdir)/contrib/contrib-global.mk
-endif
 
 ifeq ($(MAJORVERSION),15)
 	REGRESS := scalardb_fdw.pg$(MAJORVERSION)

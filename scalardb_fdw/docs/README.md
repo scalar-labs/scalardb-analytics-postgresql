@@ -18,10 +18,10 @@ This extension supports PostgreSQL 13 or later. For details on how to install Po
 
 ## Build and installation
 
-You can build and install this extension by running the following command. You may not need to set `USE_PGXS` if you are familiar with the PostgreSQL extension.
+You can build and install this extension by running the following command.
 
 ```console
-make USE_PGXS=1 install
+make install
 ```
 
 ### Common build errors
@@ -172,7 +172,7 @@ If you want to reset the instances, you can run the following command, then the 
 You can run regression tests by running the following command **after** you have installed the FDW extension.
 
 ```console
-make USE_PGXS=1 installcheck
+make installcheck
 ```
 
 ## Limitations

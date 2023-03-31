@@ -53,8 +53,6 @@ PG_FUNCTION_INFO_V1(scalardb_fdw_validator);
  * Raise an ERROR if the option or its value is considered invalid.
  */
 Datum scalardb_fdw_validator(PG_FUNCTION_ARGS) {
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
-
     List* options_list = untransformRelOptions(PG_GETARG_DATUM(0));
     Oid catalog = PG_GETARG_OID(1);
 
@@ -63,6 +61,9 @@ Datum scalardb_fdw_validator(PG_FUNCTION_ARGS) {
     char* table_name = NULL;
 
     ListCell* cell;
+
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
+
     foreach (cell, options_list) {
         DefElem* def = (DefElem*)lfirst(cell);
 
@@ -166,6 +167,7 @@ void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions* opts) {
     ForeignServer* server;
     ForeignDataWrapper* wrapper;
     List* options;
+    ListCell* cell;
 
     opts->config_file_path = NULL;
     opts->max_heap_size = NULL;
@@ -184,7 +186,6 @@ void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions* opts) {
     options = list_concat(options, server->options);
     options = list_concat(options, table->options);
 
-    ListCell* cell;
     foreach (cell, options) {
         DefElem* def = (DefElem*)lfirst(cell);
 
