@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - "scalardb_fdw/**"
+  workflow_dispatch:
 
 jobs:
   regression-test:
