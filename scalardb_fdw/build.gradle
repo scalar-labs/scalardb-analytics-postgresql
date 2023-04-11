@@ -10,6 +10,8 @@ subprojects {
     apply plugin: 'java'
 
     ext {
+        scalarDbVersion = '3.8.0'
+        slf4jVersion = '1.7.36'
         shadowPluginVersion = '7.1.2'
     }
 

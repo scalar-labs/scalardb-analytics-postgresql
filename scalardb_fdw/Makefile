@@ -27,7 +27,7 @@ EXTRA_CLEAN = build
 JAVA_SOURCES = $(wildcard src/main/java/*.java)
 
 $(scalardb_jar_built): $(JAVA_SOURCES)
-	./gradlew scalardb-utils:shadowJar -PscalarDbVersion=$(scalardb_version)
+	./gradlew scalardb-utils:shadowJar
 
 all: $(scalardb_jar_built)
 
