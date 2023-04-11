@@ -4,11 +4,13 @@ set -eu -o pipefail
 
 script_dir=$(dirname "$0")
 
+compose="docker compose -f "${script_dir}/docker-compose.yaml""
+
 check_cassandra() {
     local count=0
     echo '- waiting for Cassandra container to accept connection'
     while [ "$count" -lt 10 ]; do
-        if cqlsh -e 'exit' 2>/dev/null; then
+        if $compose exec backend-cassandra cqlsh -e 'exit' 2>/dev/null; then
             echo '- Cassandra container is ready'
             return
         fi
@@ -24,7 +26,7 @@ check_postgresql() {
     local count=0
     echo '- waiting for PostgreSQL container to accept connection'
     while [ "$count" -lt 10 ]; do
-        if env PGPASSWORD=postgres psql -p 5434 -h localhost -U postgres -c 'select 1' >/dev/null 2>&1; then
+        if env $compose exec backend-postgres psql -U postgres -c 'select 1' >/dev/null 2>&1; then
             echo '- PostgreSQL container is ready'
             return
         fi
@@ -37,7 +39,7 @@ check_postgresql() {
 }
 
 echo '- launch Cassandra and PostgreSQL containers as ScalarDB backends'
-docker compose -f "${script_dir}/docker-compose.yaml" up -d
+$compose up -d
 
 check_postgresql
 check_cassandra
