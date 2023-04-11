@@ -409,7 +409,8 @@ static void initialize_references() {
                                "()V");
 
     // ScalarDbUtils
-    register_java_class(ScalarDbUtils_class, "ScalarDbUtils");
+    register_java_class(ScalarDbUtils_class,
+                        "com/scalar/db/analytics/postgresql/ScalarDbUtils");
     register_java_static_method(ScalarDbUtils_initialize, ScalarDbUtils_class,
                                 "initialize", "(Ljava/lang/String;)V");
     register_java_static_method(ScalarDbUtils_closeStorage, ScalarDbUtils_class,

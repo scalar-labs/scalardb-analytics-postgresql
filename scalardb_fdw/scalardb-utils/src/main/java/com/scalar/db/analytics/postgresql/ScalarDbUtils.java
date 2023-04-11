@@ -1,3 +1,5 @@
+package com.scalar.db.analytics.postgresql;
+
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
