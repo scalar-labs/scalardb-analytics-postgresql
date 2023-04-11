@@ -10,3 +10,12 @@ shadowJar {
     archiveBaseName = "scalardb"
     archiveVersion = "${scalarDbVersion}"
 }
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        googleJavaFormat(googleJavaFormatVersion)
+    }
+}

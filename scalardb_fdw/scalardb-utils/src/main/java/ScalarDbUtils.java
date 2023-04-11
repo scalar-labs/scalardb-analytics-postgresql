@@ -1,11 +1,10 @@
-import java.io.IOException;
-
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Result;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
+import java.io.IOException;
 
 public class ScalarDbUtils {
   static DistributedStorage storage;
@@ -20,11 +19,7 @@ public class ScalarDbUtils {
   }
 
   static Scanner scanAll(String namespace, String tableName) throws ExecutionException {
-    Scan scan = Scan.newBuilder()
-        .namespace(namespace)
-        .table(tableName)
-        .all()
-        .build();
+    Scan scan = Scan.newBuilder().namespace(namespace).table(tableName).all().build();
     return storage.scan(scan);
   }
 
