@@ -161,6 +161,7 @@ public class TestDataLoader {
                 .floatValue("c_float_col", 1.0f)
                 .doubleValue("c_double_col", 1.0)
                 .textValue("c_text_col", "test")
+                .blobValue("c_blob_col", new byte[]{1, 2, 3})
                 .build();
         tx.put(put);
     }
@@ -177,6 +178,7 @@ public class TestDataLoader {
                 .floatValue("p_float_col", 1.0f)
                 .doubleValue("p_double_col", 1.0)
                 .textValue("p_text_col", "test")
+                .blobValue("p_blob_col", new byte[]{1, 2, 3})
                 .build();
         tx.put(put);
     }
