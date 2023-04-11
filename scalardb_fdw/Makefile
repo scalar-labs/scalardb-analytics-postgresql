@@ -7,7 +7,7 @@ DATA = scalardb_fdw--1.0.sql
 scalardb_version = 3.8.0
 
 scalardb_jar = scalardb-$(scalardb_version)-all.jar
-scalardb_jar_built = build/libs/$(scalardb_jar)
+scalardb_jar_built = scalardb-utils/build/libs/$(scalardb_jar)
 scalardb_jar_path = $(DESTDIR)$(datadir)/$(datamoduledir)/$(scalardb_jar)
 
 DATA_built = $(scalardb_jar_built)
@@ -27,7 +27,7 @@ EXTRA_CLEAN = build
 JAVA_SOURCES = $(wildcard src/main/java/*.java)
 
 $(scalardb_jar_built): $(JAVA_SOURCES)
-	./gradlew shadowJar -PscalarDbVersion=$(scalardb_version)
+	./gradlew scalardb-utils:shadowJar -PscalarDbVersion=$(scalardb_version)
 
 all: $(scalardb_jar_built)
 
