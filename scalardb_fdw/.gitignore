@@ -16,3 +16,4 @@ regression.diffs
 regression.out
 sql/scalardb_fdw.sql
 expected/scalardb_fdw.out
+test/work/

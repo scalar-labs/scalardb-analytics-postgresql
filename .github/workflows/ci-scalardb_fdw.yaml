@@ -67,13 +67,7 @@ jobs:
 
       - name: Load test data
         run: |
-          java -jar "./test/scalardb-schema-loader-3.8.0.jar" \
-              --config "./test/client.properties" \
-              -f "./test/schema.json" \
-              --coordinator
-          java -jar "./test/scalardb-sql-cli-3.8.0-all.jar" \
-              --config "./test/client.properties" \
-              -f "./test/test-data.sql"
+          ./test/load_test_data.sh
 
       - name: Link libjvm to the library search path
         run: ln -s $JAVA_HOME/jre/lib/amd64/server/libjvm.so /usr/local/lib/libjvm.so
