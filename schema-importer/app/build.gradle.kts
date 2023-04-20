@@ -1,10 +1,8 @@
 plugins {
     id("org.jetbrains.kotlin.jvm") version "1.8.20"
     id("com.github.johnrengelman.shadow") version "7.1.2"
-    id("com.ncorti.ktfmt.gradle") version "0.12.0"
 
     application
-    java
 }
 
 group = "com.scalar-labs"
@@ -15,9 +13,8 @@ repositories {
     mavenCentral()
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+kotlin {
+    jvmToolchain(8)
 }
 
 dependencies {
@@ -34,15 +31,11 @@ application {
     mainClass.set("com.scalar.db.analytics.postgresql.schemaimporter.MainKt")
 }
 
-tasks.named<Jar>("shadowJar") {
+tasks.shadowJar {
     archiveBaseName.set("scalardb-analytics-postgresql-schema-importer")
     archiveClassifier.set("")
 }
 
-tasks.named<Test>("test") {
+tasks.test {
     useJUnitPlatform()
-}
-
-ktfmt {
-    kotlinLangStyle()
 }
