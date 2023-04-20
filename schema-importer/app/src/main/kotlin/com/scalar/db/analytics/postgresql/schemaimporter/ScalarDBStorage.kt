@@ -72,13 +72,14 @@ sealed interface ScalarDBStorage {
                 val storages =
                     multiStorageConfig.databasePropertiesMap
                         .map { (name, props) ->
+                            val name = name!!
                             val dbConfig = DatabaseConfig(props)
                             val serverName = "multi_storage_$name"
                             when (dbConfig.storage) {
-                                "jdbc" -> name!! to JDBC(dbConfig, serverName)
-                                "cassandra" -> name!! to Cassandra(dbConfig, serverName)
-                                "dynamo" -> name!! to DynamoDB(dbConfig, serverName)
-                                "cosmos" -> name!! to Cosmos(dbConfig, serverName)
+                                "jdbc" -> name to JDBC(dbConfig, serverName)
+                                "cassandra" -> name to Cassandra(dbConfig, serverName)
+                                "dynamo" -> name to DynamoDB(dbConfig, serverName)
+                                "cosmos" -> name to Cosmos(dbConfig, serverName)
                                 "multi-storage" ->
                                     throw IllegalArgumentException("MultiStorage cannot be nested")
                                 else ->
