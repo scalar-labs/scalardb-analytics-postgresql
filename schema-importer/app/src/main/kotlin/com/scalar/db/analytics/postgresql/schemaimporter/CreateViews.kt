@@ -1,6 +1,8 @@
 package com.scalar.db.analytics.postgresql.schemaimporter
 
 import com.scalar.db.api.DistributedStorageAdmin
+import com.scalar.db.transaction.consensuscommit.Attribute
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils
 
 class CreateViews(
     private val ctx: DatabaseContext,
@@ -31,23 +33,23 @@ class CreateViews(
                 val pks = metadata.partitionKeyNames
                 val cks = metadata.clusteringKeyNames
                 val columns = metadata.columnNames
-                val transactionEnabled = columns.contains(Constant.TX_STATE_COL)
+                val transactionEnabled = ConsensusCommitUtils.isTransactionTableMetadata(metadata)
 
                 val indent = "    "
                 val columnsList =
                     columns
-                        .filter { isUserColumn(it) }
+                        .filter { !ConsensusCommitUtils.isTransactionMetaColumn(it, metadata) }
                         .joinToString(",\n") { c ->
                             if (transactionEnabled.not() || pks.contains(c) || cks.contains(c)) {
                                 "${indent}$c"
                             } else {
-                                "${indent}CASE WHEN ${Constant.TX_STATE_COL} = 3 THEN $c ELSE before_$c END AS $c"
+                                "${indent}CASE WHEN ${Attribute.STATE} = 3 THEN $c ELSE ${Attribute.BEFORE_PREFIX}$c END AS $c"
                             }
                         }
 
                 val whereClause =
                     if (transactionEnabled) {
-                        "WHERE ${Constant.TX_STATE_COL} = 3 OR before_tx_state IS NOT NULL"
+                        "WHERE ${Attribute.STATE} = 3 OR ${Attribute.BEFORE_STATE} IS NOT NULL"
                     } else ""
 
                 val viewName = "$ns.$tableName"

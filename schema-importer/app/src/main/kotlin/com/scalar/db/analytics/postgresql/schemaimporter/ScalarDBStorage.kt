@@ -71,8 +71,8 @@ sealed interface ScalarDBStorage {
                 val multiStorageConfig = MultiStorageConfig(config)
                 val storages =
                     multiStorageConfig.databasePropertiesMap
-                        .map { (name, props) ->
-                            val name = name!!
+                        .map { (nullableName, props) ->
+                            val name = nullableName!!
                             val dbConfig = DatabaseConfig(props)
                             val serverName = "multi_storage_$name"
                             when (dbConfig.storage) {

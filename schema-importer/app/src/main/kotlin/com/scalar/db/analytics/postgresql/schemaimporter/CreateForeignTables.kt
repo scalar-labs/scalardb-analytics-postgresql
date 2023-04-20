@@ -3,6 +3,7 @@ package com.scalar.db.analytics.postgresql.schemaimporter
 import com.scalar.db.api.DistributedStorageAdmin
 import com.scalar.db.api.TableMetadata
 import com.scalar.db.io.DataType
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils
 
 class CreateForeignTables(
     private val ctx: DatabaseContext,
@@ -58,7 +59,7 @@ class CreateForeignTables(
         storage: ScalarDBStorage.SingleStorage
     ): List<Pair<String, String>> =
         metadata.columnNames
-            .filter { storage.useNativeFdw || isUserColumn(it) }
+            .filter { storage.useNativeFdw || !ConsensusCommitUtils.isTransactionMetaColumn(it, metadata) }
             .map { col ->
                 val typ = metadata.getColumnDataType(col)
                 col to getPgType(typ)
