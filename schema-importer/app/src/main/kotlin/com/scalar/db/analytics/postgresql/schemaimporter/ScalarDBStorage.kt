@@ -23,7 +23,7 @@ sealed interface ScalarDBStorage {
             get() =
                 config.contactPoints.let {
                     if (it.size != 1) {
-                        throw IllegalArgumentException("JDBC only supports a single contact point")
+                        throw IllegalArgumentException("JDBC only supports a single contact point. Got ${it.joinToString(",")}")
                     }
                     it.first()
                 }
