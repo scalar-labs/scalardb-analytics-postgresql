@@ -29,7 +29,13 @@ class Import : CliktCommand() {
         get() = "jdbc:postgresql://$host:$port/$database"
 
     override fun run() {
-        val param = Parameter(configPath, namespaces, url, user, password)
+        val param = Parameter(
+            configPath = configPath,
+            namespaces = namespaces,
+            url = url,
+            user = user,
+            password = password
+        )
         importSchema(param)
     }
 }
