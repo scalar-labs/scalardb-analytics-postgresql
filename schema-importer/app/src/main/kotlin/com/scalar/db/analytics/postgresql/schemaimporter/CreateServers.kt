@@ -10,10 +10,10 @@ class CreateServers(
     fun run() {
         when (storage) {
             is ScalarDBStorage.SingleStorage ->
-                if (storage.useNativeFdw) {
-                    createServerWithNativeFdw(storage)
-                } else {
+                if (useScalarDBFdw(storage)) {
                     createServerWithScalarDBFdw(storage, configPath)
+                } else {
+                    createServerWithNativeFdw(storage)
                 }
             is ScalarDBStorage.MultiStorage -> createServerForMultiStorage(storage)
         }
@@ -21,10 +21,10 @@ class CreateServers(
 
     private fun createServerForMultiStorage(multiStorage: ScalarDBStorage.MultiStorage) {
         for ((_, storage) in multiStorage.storages) {
-            if (storage.useNativeFdw) {
-                createServerWithNativeFdw(storage)
-            } else {
+            if (useScalarDBFdw(storage)){
                 createServerWithScalarDBFdw(storage, configPath)
+            } else {
+                createServerWithNativeFdw(storage)
             }
         }
     }

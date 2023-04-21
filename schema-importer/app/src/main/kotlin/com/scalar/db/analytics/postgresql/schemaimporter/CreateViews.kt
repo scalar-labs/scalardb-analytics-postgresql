@@ -19,7 +19,7 @@ class CreateViews(
                 }
 
             /** View is not needed for storages that use scalardb_fdw to access */
-            if (storageForNamespace.useNativeFdw.not()) {
+            if (useScalarDBFdw(storageForNamespace)) {
                 continue
             }
 

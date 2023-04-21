@@ -5,11 +5,9 @@ import com.scalar.db.storage.multistorage.MultiStorageConfig
 
 /** ScalarDBStorage */
 sealed interface ScalarDBStorage {
-    interface SingleStorage : ScalarDBStorage {
+    sealed interface SingleStorage : ScalarDBStorage {
         /** Foreign server name for this storage */
         val serverName: String
-        /** Whether to use native FDW or ScalarDB FDW */
-        val useNativeFdw: Boolean
         /** Corresponding configuration for this storage */
         val config: DatabaseConfig
         val name: String
@@ -18,7 +16,6 @@ sealed interface ScalarDBStorage {
 
     class JDBC(override val config: DatabaseConfig, override val serverName: String = "jdbc") :
         SingleStorage {
-        override val useNativeFdw: Boolean = true
         val url: String
             get() =
                 config.contactPoints.let {
@@ -33,8 +30,6 @@ sealed interface ScalarDBStorage {
         override val config: DatabaseConfig,
         override val serverName: String = "cassandra"
     ) : SingleStorage {
-        override val useNativeFdw: Boolean = true
-
         val host: String
             get() = config.contactPoints.joinToString(",")
 
@@ -45,14 +40,9 @@ sealed interface ScalarDBStorage {
     class DynamoDB(
         override val config: DatabaseConfig,
         override val serverName: String = "dynamodb"
-    ) : SingleStorage {
-        override val useNativeFdw: Boolean = false
-    }
+    ) : SingleStorage
 
-    class Cosmos(override val config: DatabaseConfig, override val serverName: String = "cosmos") :
-        SingleStorage {
-        override val useNativeFdw: Boolean = false
-    }
+    class Cosmos(override val config: DatabaseConfig, override val serverName: String = "cosmos") : SingleStorage
 
     class MultiStorage(
         val storages: Map<String, SingleStorage>,
@@ -105,5 +95,27 @@ sealed interface ScalarDBStorage {
                 else -> throw IllegalArgumentException("${config.storage} is not supported yet")
             }
         }
+    }
+}
+
+const val SCALARDB_FDW: String = "scalardb_fdw"
+const val JDBC_FDW: String = "jdbc_fdw"
+const val CASSANDRA_FDW: String = "cassandra2_fdw"
+
+fun useScalarDBFdw(storage: ScalarDBStorage.SingleStorage): Boolean =
+    singleStorageToFdw(storage) == SCALARDB_FDW
+
+fun singleStorageToFdw(storage: ScalarDBStorage.SingleStorage): String =
+    when (storage) {
+        is ScalarDBStorage.JDBC -> JDBC_FDW
+        is ScalarDBStorage.Cassandra -> CASSANDRA_FDW
+        is ScalarDBStorage.DynamoDB -> SCALARDB_FDW
+        is ScalarDBStorage.Cosmos -> SCALARDB_FDW
+    }
+
+fun storageToFdw(storage: ScalarDBStorage): Set<String> {
+    return when (storage) {
+        is ScalarDBStorage.SingleStorage -> setOf(singleStorageToFdw(storage))
+        is ScalarDBStorage.MultiStorage -> storage.storages.values.map { singleStorageToFdw(it) }.toSet()
     }
 }

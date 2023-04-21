@@ -26,7 +26,7 @@ class CreateForeignTables(
                             "Table metadata not found: $ns.$tableName"
                         )
                 val foreignTableName =
-                    if (storageForNamespace.useNativeFdw) "$ns._$tableName" else "$ns.$tableName"
+                    if (useScalarDBFdw(storageForNamespace)) "$ns.$tableName" else "$ns._$tableName"
                 val columnDefinitions =
                     getForeignTableColumnDefinitions(metadata, storageForNamespace)
                 val options = getForeignTableOptions(ns, tableName, storageForNamespace)
@@ -59,7 +59,7 @@ class CreateForeignTables(
         storage: ScalarDBStorage.SingleStorage
     ): List<Pair<String, String>> =
         metadata.columnNames
-            .filter { storage.useNativeFdw || !ConsensusCommitUtils.isTransactionMetaColumn(it, metadata) }
+            .filter { !useScalarDBFdw(storage)  || !ConsensusCommitUtils.isTransactionMetaColumn(it, metadata) }
             .map { col ->
                 val typ = metadata.getColumnDataType(col)
                 col to getPgType(typ)
@@ -81,10 +81,10 @@ class CreateForeignTables(
         tableName: String,
         storage: ScalarDBStorage.SingleStorage
     ): Set<String> =
-        if (storage.useNativeFdw) {
-            getForeignTableOptionsForNativeFdw(namespace, tableName, storage)
-        } else {
+        if (useScalarDBFdw(storage)) {
             getForeignTableOptionsForScalarDBFdw(namespace, tableName)
+        } else {
+            getForeignTableOptionsForNativeFdw(namespace, tableName, storage)
         }
 
     private fun getForeignTableOptionsForNativeFdw(

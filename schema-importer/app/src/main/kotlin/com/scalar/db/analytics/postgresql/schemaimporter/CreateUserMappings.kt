@@ -9,10 +9,10 @@ class CreateUserMappings(
     fun run() {
         when (storage) {
             is ScalarDBStorage.SingleStorage ->
-                if (storage.useNativeFdw) {
-                    createSingleUserMapping(storage)
-                } else {
+                if (useScalarDBFdw(storage)) {
                     createEmptyUserMapping(storage)
+                } else {
+                    createSingleUserMapping(storage)
                 }
             is ScalarDBStorage.MultiStorage -> createMultipleUserMappings(storage)
         }
@@ -41,10 +41,10 @@ class CreateUserMappings(
 
     private fun createMultipleUserMappings(multiStorage: ScalarDBStorage.MultiStorage) {
         for ((_, storage) in multiStorage.storages) {
-            if (storage.useNativeFdw) {
-                createSingleUserMapping(storage)
-            } else {
+            if (useScalarDBFdw(storage)) {
                 createEmptyUserMapping(storage)
+            } else {
+                createSingleUserMapping(storage)
             }
         }
     }
