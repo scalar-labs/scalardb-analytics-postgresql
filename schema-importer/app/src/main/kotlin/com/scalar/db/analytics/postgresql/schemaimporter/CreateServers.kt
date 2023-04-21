@@ -29,7 +29,7 @@ class CreateServers(
         }
     }
 
-    private fun createServerForCassandra(storage: ScalarDBStorage.Cassandra) =
+    private fun createServerForCassandra(storage: ScalarDBStorage.Cassandra): Unit =
         ctx.useStatement {
             it.executeUpdate(
                 """
@@ -41,7 +41,7 @@ class CreateServers(
             )
         }
 
-    private fun createServerForJDBC(storage: ScalarDBStorage.JDBC) {
+    private fun createServerForJDBC(storage: ScalarDBStorage.JDBC): Unit {
         val url = storage.url
 
         val driverName =
@@ -73,7 +73,7 @@ class CreateServers(
         }
     }
 
-    private fun createServerWithNativeFdw(storage: ScalarDBStorage.SingleStorage) =
+    private fun createServerWithNativeFdw(storage: ScalarDBStorage.SingleStorage): Unit =
         when (storage) {
             is ScalarDBStorage.JDBC -> createServerForJDBC(storage)
             is ScalarDBStorage.Cassandra -> createServerForCassandra(storage)

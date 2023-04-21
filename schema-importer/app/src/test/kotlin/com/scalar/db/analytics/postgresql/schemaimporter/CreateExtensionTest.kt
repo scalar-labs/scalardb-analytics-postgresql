@@ -92,8 +92,8 @@ class CreateExtensionTest {
             mapOf(
                 "jdbc" to ScalarDBStorage.JDBC(jdbcConfig),
                 "cassandra" to ScalarDBStorage.Cassandra(cassandraConfig),
-                "cosmos" to ScalarDBStorage.Cosmos(cassandraConfig),
-                "dynamodb" to ScalarDBStorage.DynamoDB(cassandraConfig),
+                "cosmos" to ScalarDBStorage.Cosmos(cosmosConfig),
+                "dynamodb" to ScalarDBStorage.DynamoDB(dynamodbConfig),
             )
 
         val namespaceStorageMap =
