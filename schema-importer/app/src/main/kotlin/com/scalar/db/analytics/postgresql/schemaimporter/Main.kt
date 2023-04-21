@@ -13,6 +13,14 @@ class Main : CliktCommand(name = "scalardb-analytics-postgresql-schema-importer"
 class Import : CliktCommand() {
     private val configPath: Path by
         option("--config", help = "Path to the ScalarDB configuration file").path().required()
+    private val configPathOnPostgresHost: Path? by
+        option(
+                "--config-on-postgres-host",
+                help =
+                    "Path to the ScalarDB configuration file on the PostgreSQL-running host. If this is not specified, the same value as --config will be used."
+            )
+            .path()
+
     private val namespaces: Set<String> by
         option("-n", "--namespace", help = "Namespaces to import into the analytics instance")
             .multiple(required = true)
@@ -29,19 +37,22 @@ class Import : CliktCommand() {
         get() = "jdbc:postgresql://$host:$port/$database"
 
     override fun run() {
-        val param = Parameter(
-            configPath = configPath,
-            namespaces = namespaces,
-            url = url,
-            user = user,
-            password = password
-        )
+        val param =
+            Parameter(
+                configPath = configPath,
+                configPathOnPostgresHost = configPathOnPostgresHost,
+                namespaces = namespaces,
+                url = url,
+                user = user,
+                password = password
+            )
         importSchema(param)
     }
 }
 
 data class Parameter(
     val configPath: Path,
+    val configPathOnPostgresHost: Path?,
     val namespaces: Set<String>,
     val url: String,
     val user: String,

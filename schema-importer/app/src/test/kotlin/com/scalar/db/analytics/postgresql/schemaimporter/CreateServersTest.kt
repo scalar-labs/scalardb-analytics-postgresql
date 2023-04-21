@@ -285,4 +285,27 @@ class CreateServersTest {
         }
         confirmVerified(statement)
     }
+
+    @Test
+    fun `run should create a foreign server of scalardb_fdw with the path specified as --config-path-on-postgres-host`() {
+        val config = mockk<DatabaseConfig>()
+        val storage = ScalarDBStorage.Cosmos(config)
+        val path = Paths.get("/absolute/path/to/config.properties")
+        val configPathOnPostgresHost = Paths.get("/absolute/path/on/postgres/host/to/config.properties")
+
+        CreateServers(ctx, storage, path, configPathOnPostgresHost).run()
+
+        verify {
+            statement.executeUpdate(
+                """
+                |CREATE SERVER IF NOT EXISTS cosmos
+                |FOREIGN DATA WRAPPER scalardb_fdw
+                |OPTIONS (config_file_path '/absolute/path/on/postgres/host/to/config.properties');
+                """
+                    .trimMargin()
+            )
+            statement.close()
+        }
+        confirmVerified(statement)
+    }
 }

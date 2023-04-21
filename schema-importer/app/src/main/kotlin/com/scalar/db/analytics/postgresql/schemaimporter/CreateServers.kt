@@ -5,13 +5,19 @@ import java.nio.file.Path
 class CreateServers(
     private val ctx: DatabaseContext,
     private val storage: ScalarDBStorage,
-    private val configPath: Path
+    configPath: Path,
+    configPathOnPostgresHost: Path? = null,
 ) {
+    private val configPathForScalarDBFdw =
+        configPathOnPostgresHost ?:
+        // Only configPath is converted to an absolute path because configPathOnPostgres is a path on a remote host
+        configPath.toAbsolutePath().normalize()
+
     fun run() {
         when (storage) {
             is ScalarDBStorage.SingleStorage ->
                 if (useScalarDBFdw(storage)) {
-                    createServerWithScalarDBFdw(storage, configPath)
+                    createServerWithScalarDBFdw(storage)
                 } else {
                     createServerWithNativeFdw(storage)
                 }
@@ -22,7 +28,7 @@ class CreateServers(
     private fun createServerForMultiStorage(multiStorage: ScalarDBStorage.MultiStorage) {
         for ((_, storage) in multiStorage.storages) {
             if (useScalarDBFdw(storage)){
-                createServerWithScalarDBFdw(storage, configPath)
+                createServerWithScalarDBFdw(storage)
             } else {
                 createServerWithNativeFdw(storage)
             }
@@ -80,16 +86,13 @@ class CreateServers(
                 throw IllegalArgumentException("Native FDW of ${storage.name} is not supported yet")
         }
 
-    private fun createServerWithScalarDBFdw(
-        storage: ScalarDBStorage.SingleStorage,
-        configPath: Path
-    ) =
+    private fun createServerWithScalarDBFdw(storage: ScalarDBStorage.SingleStorage) =
         ctx.useStatement {
             it.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS ${storage.serverName}
                 |FOREIGN DATA WRAPPER scalardb_fdw
-                |OPTIONS (config_file_path '${configPath.toAbsolutePath()}');
+                |OPTIONS (config_file_path '${configPathForScalarDBFdw.toAbsolutePath()}');
                 """
                     .trimMargin()
             )
