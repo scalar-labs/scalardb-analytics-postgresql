@@ -4,13 +4,14 @@ import com.scalar.db.config.DatabaseConfig
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Paths
 import java.sql.Connection
+import java.sql.ResultSet
 import java.sql.Statement
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
-import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
 class CreateServersTest {
@@ -22,12 +23,15 @@ class CreateServersTest {
 
     @BeforeTest
     fun setup() {
+        val rs = mockk<ResultSet>()
+
         every { connection.createStatement() } returns statement
         every { statement.executeUpdate(any()) } returns 0
-        ctx = DatabaseContext(connection)
+        every { statement.executeQuery(any()) } returns rs
+        every { rs.next() } returns true andThen false
+        every { rs.getString("setting") } returns "/path/to/postgresql/share/dir"
 
-        mockkStatic(::getRunningJarFile)
-        every { getRunningJarFile() } returns "/path/to/jar"
+        ctx = DatabaseContext(connection)
     }
 
     @Test
@@ -40,13 +44,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
+            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'org.postgresql.Driver',
-                |  jarfile '/path/to/jar',
+                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
                 |  url 'jdbc:postgresql://host:port/database',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
@@ -69,13 +74,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
+            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'com.mysql.jdbc.Driver',
-                |  jarfile '/path/to/jar',
+                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
                 |  url 'jdbc:mysql://host:port/database',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
@@ -97,13 +103,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
+            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'oracle.jdbc.OracleDriver',
-                |  jarfile '/path/to/jar',
+                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
                 |  url 'jdbc:oracle:thin:@//host:port:SID',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
@@ -126,13 +133,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
+            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'com.microsoft.sqlserver.jdbc.SQLServerDriver',
-                |  jarfile '/path/to/jar',
+                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
                 |  url 'jdbc:sqlserver://host;DatabaseName=database',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
@@ -250,13 +258,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
+            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'org.postgresql.Driver',
-                |  jarfile '/path/to/jar',
+                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
                 |  url 'jdbc:postgresql://host:port/database',
                 |  querytimeout '60',
                 |  maxheapsize '1024'

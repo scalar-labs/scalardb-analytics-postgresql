@@ -53,9 +53,8 @@ class CreateServers(
                 else -> throw IllegalArgumentException("Unsupported JDBC URL: $url")
             }
 
-        val jarFile = getRunningJarFile()
-
         ctx.useStatement {
+            val jarFile = findScalarDBFdwJarFile(it)
             it.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS ${storage.serverName}
