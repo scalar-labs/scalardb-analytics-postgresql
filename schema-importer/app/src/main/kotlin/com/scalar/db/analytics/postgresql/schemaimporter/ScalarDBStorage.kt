@@ -14,7 +14,7 @@ sealed interface ScalarDBStorage {
             get() = config.storage
     }
 
-    class JDBC(override val config: DatabaseConfig, override val serverName: String = "jdbc") :
+    class Jdbc(override val config: DatabaseConfig, override val serverName: String = "jdbc") :
         SingleStorage {
         val url: String
             get() =
@@ -66,7 +66,7 @@ sealed interface ScalarDBStorage {
                             val dbConfig = DatabaseConfig(props)
                             val serverName = "multi_storage_$name"
                             when (dbConfig.storage) {
-                                "jdbc" -> name to JDBC(dbConfig, serverName)
+                                "jdbc" -> name to Jdbc(dbConfig, serverName)
                                 "cassandra" -> name to Cassandra(dbConfig, serverName)
                                 "dynamo" -> name to DynamoDB(dbConfig, serverName)
                                 "cosmos" -> name to Cosmos(dbConfig, serverName)
@@ -87,7 +87,7 @@ sealed interface ScalarDBStorage {
     companion object {
         fun fromConfig(config: DatabaseConfig): ScalarDBStorage {
             return when (config.storage) {
-                "jdbc" -> JDBC(config)
+                "jdbc" -> Jdbc(config)
                 "cassandra" -> Cassandra(config)
                 "dynamo" -> DynamoDB(config)
                 "cosmos" -> Cosmos(config)
@@ -107,7 +107,7 @@ fun useScalarDBFdw(storage: ScalarDBStorage.SingleStorage): Boolean =
 
 fun singleStorageToFdw(storage: ScalarDBStorage.SingleStorage): String =
     when (storage) {
-        is ScalarDBStorage.JDBC -> JDBC_FDW
+        is ScalarDBStorage.Jdbc -> JDBC_FDW
         is ScalarDBStorage.Cassandra -> CASSANDRA_FDW
         is ScalarDBStorage.DynamoDB -> SCALARDB_FDW
         is ScalarDBStorage.Cosmos -> SCALARDB_FDW

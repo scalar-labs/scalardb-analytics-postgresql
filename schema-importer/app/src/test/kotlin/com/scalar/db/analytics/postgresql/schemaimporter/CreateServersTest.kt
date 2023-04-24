@@ -38,7 +38,7 @@ class CreateServersTest {
     fun `run should create a foreign server for PostgreSQL using jdbc_fdw`() {
         val config = mockk<DatabaseConfig>()
         every { config.contactPoints } returns listOf("jdbc:postgresql://host:port/database")
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         val path = Paths.get("/absolute/path/to/config.properties")
 
         CreateServers(ctx, storage, path).run()
@@ -68,7 +68,7 @@ class CreateServersTest {
     fun `run should create a foreign server for MySQL using jdbc_fdw`() {
         val config = mockk<DatabaseConfig>()
         every { config.contactPoints } returns listOf("jdbc:mysql://host:port/database")
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         val path = Paths.get("/absolute/path/to/config.properties")
 
         CreateServers(ctx, storage, path).run()
@@ -97,7 +97,7 @@ class CreateServersTest {
     fun `run should create a foreign server for Oracle using jdbc_fdw`() {
         val config = mockk<DatabaseConfig>()
         every { config.contactPoints } returns listOf("jdbc:oracle:thin:@//host:port:SID")
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         val path = Paths.get("/absolute/path/to/config.properties")
 
         CreateServers(ctx, storage, path).run()
@@ -127,7 +127,7 @@ class CreateServersTest {
     fun `run should create a foreign server for SQL Server using jdbc_fdw`() {
         val config = mockk<DatabaseConfig>()
         every { config.contactPoints } returns listOf("jdbc:sqlserver://host;DatabaseName=database")
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         val path = Paths.get("/absolute/path/to/config.properties")
 
         CreateServers(ctx, storage, path).run()
@@ -157,7 +157,7 @@ class CreateServersTest {
     fun `run should throw IllegalArgumentException for an unsupported JDBC database type`() {
         val config = mockk<DatabaseConfig>()
         every { config.contactPoints } returns listOf("jdbc:db2://host:port/database")
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         val path = Paths.get("/absolute/path/to/config.properties")
 
         assertFailsWith<IllegalArgumentException> { CreateServers(ctx, storage, path).run() }
@@ -242,7 +242,7 @@ class CreateServersTest {
 
         val storages =
             mapOf(
-                "jdbc" to ScalarDBStorage.JDBC(jdbcConfig),
+                "jdbc" to ScalarDBStorage.Jdbc(jdbcConfig),
                 "cassandra" to ScalarDBStorage.Cassandra(cassandraConfig),
             )
 

@@ -78,7 +78,7 @@ class CreateForeignTablesTest {
     @Test
     fun `run should create a foreign table including log data for jdbc storage `() {
         val config = mockk<DatabaseConfig>()
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         CreateForeignTables(ctx, setOf("ns_for_jdbc"), storage, admin).run()
 
         verify {
@@ -236,7 +236,7 @@ class CreateForeignTablesTest {
 
         val storages =
             mapOf(
-                "jdbc" to ScalarDBStorage.JDBC(jdbcConfig),
+                "jdbc" to ScalarDBStorage.Jdbc(jdbcConfig),
                 "cassandra" to ScalarDBStorage.Cassandra(cassandraConfig),
                 "cosmos" to ScalarDBStorage.Cosmos(cosmosConfig),
                 "dynamodb" to ScalarDBStorage.DynamoDB(dynamodbConfig),

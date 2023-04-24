@@ -93,7 +93,7 @@ class CreateForeignTables(
         storage: ScalarDBStorage.SingleStorage
     ): Set<String> =
         when (storage) {
-            is ScalarDBStorage.JDBC -> setOf("schema_name '$namespace'", "table_name '$tableName'")
+            is ScalarDBStorage.Jdbc -> setOf("schema_name '$namespace'", "table_name '$tableName'")
             is ScalarDBStorage.Cassandra ->
                 setOf("schema_name '$namespace'", "table_name '$tableName'")
             else ->

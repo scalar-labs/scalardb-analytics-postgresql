@@ -47,7 +47,7 @@ class CreateServers(
             )
         }
 
-    private fun createServerForJDBC(storage: ScalarDBStorage.JDBC): Unit {
+    private fun createServerForJdbc(storage: ScalarDBStorage.Jdbc): Unit {
         val url = storage.url
 
         val driverName =
@@ -80,7 +80,7 @@ class CreateServers(
 
     private fun createServerWithNativeFdw(storage: ScalarDBStorage.SingleStorage): Unit =
         when (storage) {
-            is ScalarDBStorage.JDBC -> createServerForJDBC(storage)
+            is ScalarDBStorage.Jdbc -> createServerForJdbc(storage)
             is ScalarDBStorage.Cassandra -> createServerForCassandra(storage)
             else ->
                 throw IllegalArgumentException("Native FDW of ${storage.name} is not supported yet")

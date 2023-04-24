@@ -35,7 +35,7 @@ class CreateUserMappingsTest {
         every { config.contactPoints } returns listOf("jdbc:postgresql://host:port/database")
         every { config.username } returns Optional.of("user")
         every { config.password } returns Optional.of("password")
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         CreateUserMappings(ctx, storage).run()
 
         verify {

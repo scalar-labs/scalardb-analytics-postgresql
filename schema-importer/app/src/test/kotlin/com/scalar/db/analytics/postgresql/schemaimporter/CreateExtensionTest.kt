@@ -32,7 +32,7 @@ class CreateExtensionTest {
     @Test
     fun `run should create jdbc_fdw extension for jdbc storage`() {
         val config = mockk<DatabaseConfig>()
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         CreateExtension(ctx, storage).run()
 
         verify {
@@ -90,7 +90,7 @@ class CreateExtensionTest {
 
         val storages =
             mapOf(
-                "jdbc" to ScalarDBStorage.JDBC(jdbcConfig),
+                "jdbc" to ScalarDBStorage.Jdbc(jdbcConfig),
                 "cassandra" to ScalarDBStorage.Cassandra(cassandraConfig),
                 "cosmos" to ScalarDBStorage.Cosmos(cosmosConfig),
                 "dynamodb" to ScalarDBStorage.DynamoDB(dynamodbConfig),

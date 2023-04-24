@@ -77,7 +77,7 @@ class CreateViewsTest {
     @Test
     fun `run should create view for jdbc storage`() {
         val config = mockk<DatabaseConfig>()
-        val storage = ScalarDBStorage.JDBC(config)
+        val storage = ScalarDBStorage.Jdbc(config)
         CreateViews(ctx, setOf("ns_for_jdbc"), storage, admin).run()
         verify {
             statement.executeUpdate(
@@ -158,7 +158,7 @@ class CreateViewsTest {
 
         val storages =
             mapOf(
-                "jdbc" to ScalarDBStorage.JDBC(jdbcConfig),
+                "jdbc" to ScalarDBStorage.Jdbc(jdbcConfig),
                 "cassandra" to ScalarDBStorage.Cassandra(cassandraConfig),
                 "cosmos" to ScalarDBStorage.Cosmos(cosmosConfig),
                 "dynamodb" to ScalarDBStorage.DynamoDB(dynamodbConfig),
