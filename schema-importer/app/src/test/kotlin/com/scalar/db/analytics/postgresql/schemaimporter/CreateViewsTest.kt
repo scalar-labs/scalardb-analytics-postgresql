@@ -87,15 +87,15 @@ class CreateViewsTest {
                 |    pk,
                 |    ck1,
                 |    ck2,
-                |    CASE WHEN tx_state = 3 THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 THEN blob_col ELSE before_blob_col END AS blob_col
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
                 |FROM ns_for_jdbc._jdbc_table
-                |WHERE tx_state = 3 OR before_tx_state IS NOT NULL;
+                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
                     .trimMargin()
             )
@@ -117,15 +117,15 @@ class CreateViewsTest {
                 |    pk,
                 |    ck1,
                 |    ck2,
-                |    CASE WHEN tx_state = 3 THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 THEN blob_col ELSE before_blob_col END AS blob_col
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
                 |FROM ns_for_cassandra._cassandra_table
-                |WHERE tx_state = 3 OR before_tx_state IS NOT NULL;
+                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
                     .trimMargin()
             )
@@ -193,15 +193,15 @@ class CreateViewsTest {
                 |    pk,
                 |    ck1,
                 |    ck2,
-                |    CASE WHEN tx_state = 3 THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 THEN blob_col ELSE before_blob_col END AS blob_col
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
                 |FROM ns_for_jdbc._jdbc_table
-                |WHERE tx_state = 3 OR before_tx_state IS NOT NULL;
+                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
                     .trimMargin()
             )
@@ -212,15 +212,15 @@ class CreateViewsTest {
                 |    pk,
                 |    ck1,
                 |    ck2,
-                |    CASE WHEN tx_state = 3 THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 THEN blob_col ELSE before_blob_col END AS blob_col
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
                 |FROM ns_for_cassandra._cassandra_table
-                |WHERE tx_state = 3 OR before_tx_state IS NOT NULL;
+                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
                     .trimMargin()
             )

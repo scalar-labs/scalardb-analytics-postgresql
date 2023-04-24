@@ -43,13 +43,22 @@ class CreateViews(
                             if (transactionEnabled.not() || pks.contains(c) || cks.contains(c)) {
                                 "${indent}$c"
                             } else {
-                                "${indent}CASE WHEN ${Attribute.STATE} = 3 THEN $c ELSE ${Attribute.BEFORE_PREFIX}$c END AS $c"
+                                "${indent}CASE " +
+                                // Use the current value if the row is in COMMITTED state
+                                "WHEN ${Attribute.STATE} = 3 OR ${Attribute.STATE} IS NULL THEN $c " +
+                                // Use the value in the before image if the row is under transaction processing
+                                "ELSE ${Attribute.BEFORE_PREFIX}$c END AS $c"
                             }
                         }
 
                 val whereClause =
                     if (transactionEnabled) {
-                        "WHERE ${Attribute.STATE} = 3 OR ${Attribute.BEFORE_STATE} IS NOT NULL"
+                        // In COMMITTED state
+                        "WHERE ${Attribute.STATE} = 3 OR " +
+                        // Committed before being integrated with ScalarDB.
+                        "${Attribute.STATE} IS NULL OR " +
+                        // Committed in the past
+                        "${Attribute.BEFORE_STATE} = 3"
                     } else ""
 
                 val viewName = "$ns.$tableName"
