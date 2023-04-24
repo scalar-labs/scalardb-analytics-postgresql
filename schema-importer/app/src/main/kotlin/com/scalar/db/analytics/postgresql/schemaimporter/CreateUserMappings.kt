@@ -25,7 +25,7 @@ class CreateUserMappings(
             it.executeUpdate(
                 """
                 |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER ${storage.serverName}
-                |OPTIONS (user '$user', password '$password');
+                |OPTIONS (username '$user', password '$password');
                 """
                     .trimMargin()
             )

@@ -42,7 +42,7 @@ class CreateUserMappingsTest {
             statement.executeUpdate(
                 """
                |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER jdbc
-               |OPTIONS (user 'user', password 'password');
+               |OPTIONS (username 'user', password 'password');
                 """
                     .trimMargin()
             )
@@ -63,7 +63,7 @@ class CreateUserMappingsTest {
             statement.executeUpdate(
                 """
                |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER cassandra
-               |OPTIONS (user 'user', password 'password');
+               |OPTIONS (username 'user', password 'password');
                 """
                     .trimMargin()
             )
