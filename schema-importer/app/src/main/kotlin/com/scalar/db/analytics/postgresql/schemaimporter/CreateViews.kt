@@ -7,22 +7,10 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils
 class CreateViews(
     private val ctx: DatabaseContext,
     private val namespaces: Set<String>,
-    private val storage: ScalarDBStorage,
     private val admin: DistributedStorageAdmin
 ) {
     fun run() {
         for (ns in namespaces) {
-            val storageForNamespace: ScalarDBStorage.SingleStorage =
-                when (storage) {
-                    is ScalarDBStorage.MultiStorage -> storage.getStorageForNamespace(ns)
-                    is ScalarDBStorage.SingleStorage -> storage
-                }
-
-            /** View is not needed for storages that use scalardb_fdw to access */
-            if (useScalarDBFdw(storageForNamespace)) {
-                continue
-            }
-
             for (tableName in admin.getNamespaceTableNames(ns)) {
                 val metadata =
                     admin.getTableMetadata(ns, tableName)

@@ -13,7 +13,7 @@ fun importSchema(param: Parameter) {
             CreateSchema(ctx, param.namespaces).run()
             CreateUserMappings(ctx, storage).run()
             CreateForeignTables(ctx, param.namespaces, storage, admin).run()
-            CreateViews(ctx, param.namespaces, storage, admin).run()
+            CreateViews(ctx, param.namespaces, admin).run()
         }
     }
 }

@@ -25,10 +25,9 @@ class CreateForeignTables(
                         ?: throw IllegalArgumentException(
                             "Table metadata not found: $ns.$tableName"
                         )
-                val foreignTableName =
-                    if (useScalarDBFdw(storageForNamespace)) "$ns.$tableName" else "$ns._$tableName"
+                val foreignTableName = "$ns._$tableName"
                 val columnDefinitions =
-                    getForeignTableColumnDefinitions(metadata, storageForNamespace)
+                    getForeignTableColumnDefinitions(metadata)
                 val options = getForeignTableOptions(ns, tableName, storageForNamespace)
                 ctx.useStatement {
                     it.executeUpdate(
@@ -47,19 +46,16 @@ class CreateForeignTables(
 
     private fun getForeignTableColumnDefinitions(
         metadata: TableMetadata,
-        storage: ScalarDBStorage.SingleStorage,
         indent: String = "    "
     ): String =
-        getColumnInfoList(metadata, storage).joinToString(",\n") { (col, typ) ->
+        getColumnInfoList(metadata).joinToString(",\n") { (col, typ) ->
             "$indent$col $typ"
         }
 
     private fun getColumnInfoList(
         metadata: TableMetadata,
-        storage: ScalarDBStorage.SingleStorage
     ): List<Pair<String, String>> =
         metadata.columnNames
-            .filter { !useScalarDBFdw(storage)  || !ConsensusCommitUtils.isTransactionMetaColumn(it, metadata) }
             .map { col ->
                 val typ = metadata.getColumnDataType(col)
                 col to getPgType(typ)

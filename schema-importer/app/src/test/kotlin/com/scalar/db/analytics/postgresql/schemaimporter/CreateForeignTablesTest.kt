@@ -76,7 +76,7 @@ class CreateForeignTablesTest {
     }
 
     @Test
-    fun `run should create a foreign table including log data for jdbc storage `() {
+    fun `run should create a foreign table including log data for jdbc storage`() {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.Jdbc(config)
         CreateForeignTables(ctx, setOf("ns_for_jdbc"), storage, admin).run()
@@ -168,7 +168,7 @@ class CreateForeignTablesTest {
         confirmVerified(statement)
     }
     @Test
-    fun `run should create a foreign table without log data for cosmos storage`() {
+    fun `run should create a foreign table including log data for cosmos storage`() {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.Cosmos(config)
         CreateForeignTables(ctx, setOf("ns_for_cosmos"), storage, admin).run()
@@ -176,7 +176,7 @@ class CreateForeignTablesTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE FOREIGN TABLE IF NOT EXISTS ns_for_cosmos.cosmos_table (
+                |CREATE FOREIGN TABLE IF NOT EXISTS ns_for_cosmos._cosmos_table (
                 |    pk int,
                 |    ck1 int,
                 |    ck2 int,
@@ -186,7 +186,24 @@ class CreateForeignTablesTest {
                 |    float_col float,
                 |    double_col double precision,
                 |    text_col text,
-                |    blob_col bytea
+                |    blob_col bytea,
+                |    tx_id text,
+                |    tx_state int,
+                |    tx_version int,
+                |    tx_prepared_at bigint,
+                |    tx_committed_at bigint,
+                |    before_tx_id text,
+                |    before_tx_state int,
+                |    before_tx_version int,
+                |    before_tx_prepared_at bigint,
+                |    before_tx_committed_at bigint,
+                |    before_boolean_col int,
+                |    before_int_col int,
+                |    before_bigint_col bigint,
+                |    before_float_col float,
+                |    before_double_col double precision,
+                |    before_text_col text,
+                |    before_blob_col bytea
                 |) SERVER cosmos 
                 |OPTIONS (namespace 'ns_for_cosmos', table_name 'cosmos_table');
                 """
@@ -198,7 +215,7 @@ class CreateForeignTablesTest {
     }
 
     @Test
-    fun `run should create a foreign table without log data for dynamodb storage`() {
+    fun `run should create a foreign table including log data for dynamodb storage`() {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.DynamoDB(config)
         CreateForeignTables(ctx, setOf("ns_for_dynamodb"), storage, admin).run()
@@ -206,7 +223,7 @@ class CreateForeignTablesTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE FOREIGN TABLE IF NOT EXISTS ns_for_dynamodb.dynamodb_table (
+                |CREATE FOREIGN TABLE IF NOT EXISTS ns_for_dynamodb._dynamodb_table (
                 |    pk int,
                 |    ck1 int,
                 |    ck2 int,
@@ -216,7 +233,24 @@ class CreateForeignTablesTest {
                 |    float_col float,
                 |    double_col double precision,
                 |    text_col text,
-                |    blob_col bytea
+                |    blob_col bytea,
+                |    tx_id text,
+                |    tx_state int,
+                |    tx_version int,
+                |    tx_prepared_at bigint,
+                |    tx_committed_at bigint,
+                |    before_tx_id text,
+                |    before_tx_state int,
+                |    before_tx_version int,
+                |    before_tx_prepared_at bigint,
+                |    before_tx_committed_at bigint,
+                |    before_boolean_col int,
+                |    before_int_col int,
+                |    before_bigint_col bigint,
+                |    before_float_col float,
+                |    before_double_col double precision,
+                |    before_text_col text,
+                |    before_blob_col bytea
                 |) SERVER dynamodb 
                 |OPTIONS (namespace 'ns_for_dynamodb', table_name 'dynamodb_table');
                 """
@@ -338,7 +372,7 @@ class CreateForeignTablesTest {
             )
             statement.executeUpdate(
                 """
-                |CREATE FOREIGN TABLE IF NOT EXISTS ns_for_cosmos.cosmos_table (
+                |CREATE FOREIGN TABLE IF NOT EXISTS ns_for_cosmos._cosmos_table (
                 |    pk int,
                 |    ck1 int,
                 |    ck2 int,
@@ -348,7 +382,24 @@ class CreateForeignTablesTest {
                 |    float_col float,
                 |    double_col double precision,
                 |    text_col text,
-                |    blob_col bytea
+                |    blob_col bytea,
+                |    tx_id text,
+                |    tx_state int,
+                |    tx_version int,
+                |    tx_prepared_at bigint,
+                |    tx_committed_at bigint,
+                |    before_tx_id text,
+                |    before_tx_state int,
+                |    before_tx_version int,
+                |    before_tx_prepared_at bigint,
+                |    before_tx_committed_at bigint,
+                |    before_boolean_col int,
+                |    before_int_col int,
+                |    before_bigint_col bigint,
+                |    before_float_col float,
+                |    before_double_col double precision,
+                |    before_text_col text,
+                |    before_blob_col bytea
                 |) SERVER cosmos 
                 |OPTIONS (namespace 'ns_for_cosmos', table_name 'cosmos_table');
                 """
@@ -356,7 +407,7 @@ class CreateForeignTablesTest {
             )
             statement.executeUpdate(
                 """
-                |CREATE FOREIGN TABLE IF NOT EXISTS ns_for_dynamodb.dynamodb_table (
+                |CREATE FOREIGN TABLE IF NOT EXISTS ns_for_dynamodb._dynamodb_table (
                 |    pk int,
                 |    ck1 int,
                 |    ck2 int,
@@ -366,7 +417,24 @@ class CreateForeignTablesTest {
                 |    float_col float,
                 |    double_col double precision,
                 |    text_col text,
-                |    blob_col bytea
+                |    blob_col bytea,
+                |    tx_id text,
+                |    tx_state int,
+                |    tx_version int,
+                |    tx_prepared_at bigint,
+                |    tx_committed_at bigint,
+                |    before_tx_id text,
+                |    before_tx_state int,
+                |    before_tx_version int,
+                |    before_tx_prepared_at bigint,
+                |    before_tx_committed_at bigint,
+                |    before_boolean_col int,
+                |    before_int_col int,
+                |    before_bigint_col bigint,
+                |    before_float_col float,
+                |    before_double_col double precision,
+                |    before_text_col text,
+                |    before_blob_col bytea
                 |) SERVER dynamodb 
                 |OPTIONS (namespace 'ns_for_dynamodb', table_name 'dynamodb_table');
                 """

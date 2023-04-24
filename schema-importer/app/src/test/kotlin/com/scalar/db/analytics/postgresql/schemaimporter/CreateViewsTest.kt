@@ -78,7 +78,7 @@ class CreateViewsTest {
     fun `run should create view for jdbc storage`() {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.Jdbc(config)
-        CreateViews(ctx, setOf("ns_for_jdbc"), storage, admin).run()
+        CreateViews(ctx, setOf("ns_for_jdbc"), admin).run()
         verify {
             statement.executeUpdate(
                 """
@@ -108,7 +108,7 @@ class CreateViewsTest {
     fun `run should create view for cassandra storage`() {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.Cassandra(config)
-        CreateViews(ctx, setOf("ns_for_cassandra"), storage, admin).run()
+        CreateViews(ctx, setOf("ns_for_cassandra"), admin).run()
         verify {
             statement.executeUpdate(
                 """
@@ -134,18 +134,62 @@ class CreateViewsTest {
         confirmVerified(statement)
     }
     @Test
-    fun `run should not create view for cosmos storage`() {
+    fun `run should create view for cosmos storage`() {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.Cosmos(config)
-        CreateViews(ctx, setOf("ns_for_cosmos"), storage, admin).run()
+        CreateViews(ctx, setOf("ns_for_cosmos"), admin).run()
+        verify {
+            statement.executeUpdate(
+                """
+                |CREATE OR REPLACE VIEW ns_for_cosmos.cosmos_table AS
+                |SELECT
+                |    pk,
+                |    ck1,
+                |    ck2,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
+                |FROM ns_for_cosmos._cosmos_table
+                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                """
+                    .trimMargin()
+            )
+            statement.close()
+        }
         confirmVerified(statement)
     }
 
     @Test
-    fun `run should not create view for dynamodb storage`() {
+    fun `run should create view for dynamodb storage`() {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.Cosmos(config)
-        CreateViews(ctx, setOf("ns_for_dynamodb"), storage, admin).run()
+        CreateViews(ctx, setOf("ns_for_dynamodb"), admin).run()
+        verify {
+            statement.executeUpdate(
+                """
+                |CREATE OR REPLACE VIEW ns_for_dynamodb.dynamodb_table AS
+                |SELECT
+                |    pk,
+                |    ck1,
+                |    ck2,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
+                |FROM ns_for_dynamodb._dynamodb_table
+                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                """
+                    .trimMargin()
+            )
+            statement.close()
+        }
         confirmVerified(statement)
     }
 
@@ -181,7 +225,6 @@ class CreateViewsTest {
                     "ns_for_cosmos",
                     "ns_for_dynamodb",
                 ),
-                storage,
                 admin
             )
             .run()
@@ -220,6 +263,44 @@ class CreateViewsTest {
                 |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
                 |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
                 |FROM ns_for_cassandra._cassandra_table
+                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                """
+                    .trimMargin()
+            )
+            statement.executeUpdate(
+                """
+                |CREATE OR REPLACE VIEW ns_for_cosmos.cosmos_table AS
+                |SELECT
+                |    pk,
+                |    ck1,
+                |    ck2,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
+                |FROM ns_for_cosmos._cosmos_table
+                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                """
+                    .trimMargin()
+            )
+            statement.executeUpdate(
+                """
+                |CREATE OR REPLACE VIEW ns_for_dynamodb.dynamodb_table AS
+                |SELECT
+                |    pk,
+                |    ck1,
+                |    ck2,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
+                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
+                |FROM ns_for_dynamodb._dynamodb_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
                     .trimMargin()
