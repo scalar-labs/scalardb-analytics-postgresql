@@ -22,9 +22,9 @@ fun <T> useStorageAdmin(configPath: Path, f: (DistributedStorageAdmin) -> T): T 
 const val ScalarDBFdwJarFile: String = "scalardb-all.jar"
 
 fun findScalarDBFdwJarFile(statement: Statement, filename: String = ScalarDBFdwJarFile): String =
-    "${findPostgreExtensionDir(statement)}/$filename"
+    "${findPostgresExtensionDir(statement)}/$filename"
 
-private fun findPostgreExtensionDir(statement: Statement): String {
+private fun findPostgresExtensionDir(statement: Statement): String {
     val rs = statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
     var stat = rs.next()
     if (!stat) {
