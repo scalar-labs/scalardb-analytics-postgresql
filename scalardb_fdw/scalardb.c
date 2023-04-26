@@ -1,6 +1,7 @@
 #include "scalardb.h"
 
 #include "storage/ipc.h"
+#include "utils/builtins.h"
 #include "utils/elog.h"
 #include "utils/errcodes.h"
 
@@ -80,6 +81,9 @@ static bytea* convert_jbyteArray_to_bytea(jbyteArray bytes);
 static void on_proc_exit_cb(int code, Datum arg);
 
 static char* get_class_name(jclass class);
+
+Datum scalardb_fdw_get_jar_file_path(PG_FUNCTION_ARGS);
+PG_FUNCTION_INFO_V1(scalardb_fdw_get_jar_file_path);
 
 #define register_java_class(jclass_ref, class_fqdn)                            \
     {                                                                          \
@@ -533,4 +537,8 @@ static char* get_class_name(jclass class) {
         (*env)->GetMethodID(env, cls, "getName", "()Ljava/lang/String;");
     jstring name = (*env)->CallObjectMethod(env, class, getName);
     return convert_string_to_cstring(name);
+}
+
+Datum scalardb_fdw_get_jar_file_path(PG_FUNCTION_ARGS) {
+    return CStringGetTextDatum(STR_SCALARDB_JAR_PATH);
 }

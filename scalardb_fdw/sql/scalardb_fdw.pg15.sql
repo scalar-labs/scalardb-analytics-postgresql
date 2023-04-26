@@ -65,3 +65,5 @@ CREATE FOREIGN TABLE postgresns_null_test (
 select * from postgresns_null_test;
 
 select p_pk from postgresns_test;
+
+select proname, prosrc, probin from pg_proc where proname = 'scalardb_fdw_get_jar_file_path';
