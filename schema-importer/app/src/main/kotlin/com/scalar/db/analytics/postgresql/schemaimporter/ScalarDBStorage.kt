@@ -114,8 +114,15 @@ fun singleStorageToFdw(storage: ScalarDBStorage.SingleStorage): String =
     }
 
 fun storageToFdw(storage: ScalarDBStorage): Set<String> {
-    return when (storage) {
+    val fdws = when (storage) {
         is ScalarDBStorage.SingleStorage -> setOf(singleStorageToFdw(storage))
         is ScalarDBStorage.MultiStorage -> storage.storages.values.map { singleStorageToFdw(it) }.toSet()
+    }
+
+    return if (fdws.contains(JDBC_FDW)) {
+        // JDBC_FDW requires SCALARDB_FDW installed
+        fdws + SCALARDB_FDW
+    } else {
+        fdws
     }
 }

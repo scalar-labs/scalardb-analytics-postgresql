@@ -30,13 +30,14 @@ class CreateExtensionTest {
     }
 
     @Test
-    fun `run should create jdbc_fdw extension for jdbc storage`() {
+    fun `run should create jdbc_fdw and scalardb_fdw extension for jdbc storage`() {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.Jdbc(config)
         CreateExtension(ctx, storage).run()
 
         verify {
             statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"jdbc_fdw\";")
+            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"scalardb_fdw\";")
             statement.close()
         }
         confirmVerified(statement)
