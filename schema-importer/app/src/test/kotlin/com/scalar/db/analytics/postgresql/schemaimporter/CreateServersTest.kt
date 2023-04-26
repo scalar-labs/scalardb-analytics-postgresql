@@ -27,9 +27,9 @@ class CreateServersTest {
 
         every { connection.createStatement() } returns statement
         every { statement.executeUpdate(any()) } returns 0
-        every { statement.executeQuery(any()) } returns rs
+        every { statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;") } returns rs
         every { rs.next() } returns true andThen false
-        every { rs.getString("setting") } returns "/path/to/postgresql/share/dir"
+        every { rs.getString("path") } returns "/path/to/scalardb/jar/file.jar"
 
         ctx = DatabaseContext(connection)
     }
@@ -44,14 +44,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
-            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
+            statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'org.postgresql.Driver',
-                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
+                |  jarfile '/path/to/scalardb/jar/file.jar',
                 |  url 'jdbc:postgresql://host:port/database',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
@@ -74,14 +74,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
-            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
+            statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'com.mysql.jdbc.Driver',
-                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
+                |  jarfile '/path/to/scalardb/jar/file.jar',
                 |  url 'jdbc:mysql://host:port/database',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
@@ -103,14 +103,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
-            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
+            statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'oracle.jdbc.OracleDriver',
-                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
+                |  jarfile '/path/to/scalardb/jar/file.jar',
                 |  url 'jdbc:oracle:thin:@//host:port:SID',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
@@ -133,14 +133,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
-            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
+            statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'com.microsoft.sqlserver.jdbc.SQLServerDriver',
-                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
+                |  jarfile '/path/to/scalardb/jar/file.jar',
                 |  url 'jdbc:sqlserver://host;DatabaseName=database',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
@@ -258,14 +258,14 @@ class CreateServersTest {
         CreateServers(ctx, storage, path).run()
 
         verify {
-            statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
+            statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
                 |CREATE SERVER IF NOT EXISTS jdbc
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'org.postgresql.Driver',
-                |  jarfile '/path/to/postgresql/share/dir/extension/scalardb-all.jar',
+                |  jarfile '/path/to/scalardb/jar/file.jar',
                 |  url 'jdbc:postgresql://host:port/database',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
