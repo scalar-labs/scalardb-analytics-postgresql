@@ -50,6 +50,7 @@ RUN apt-get update \
     && make USE_PGXS=1 install \
 
     # cleanup
+    && cd /tmp \
     && rm -rf /tmp/* \
     && apt-get purge -y --auto-remove \
         wget \
