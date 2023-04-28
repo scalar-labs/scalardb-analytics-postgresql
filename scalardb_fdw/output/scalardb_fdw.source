@@ -72,3 +72,9 @@ select p_pk from postgresns_test;
     1
 (1 row)
 
+select proname, prosrc, probin from pg_proc where proname = 'scalardb_fdw_get_jar_file_path';
+            proname             |             prosrc             |        probin        
+--------------------------------+--------------------------------+----------------------
+ scalardb_fdw_get_jar_file_path | scalardb_fdw_get_jar_file_path | $libdir/scalardb_fdw
+(1 row)
+

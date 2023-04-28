@@ -76,8 +76,6 @@ class CreateViewsTest {
 
     @Test
     fun `run should create view for jdbc storage`() {
-        val config = mockk<DatabaseConfig>()
-        val storage = ScalarDBStorage.Jdbc(config)
         CreateViews(ctx, setOf("ns_for_jdbc"), admin).run()
         verify {
             statement.executeUpdate(
@@ -106,8 +104,6 @@ class CreateViewsTest {
 
     @Test
     fun `run should create view for cassandra storage`() {
-        val config = mockk<DatabaseConfig>()
-        val storage = ScalarDBStorage.Cassandra(config)
         CreateViews(ctx, setOf("ns_for_cassandra"), admin).run()
         verify {
             statement.executeUpdate(
@@ -135,8 +131,6 @@ class CreateViewsTest {
     }
     @Test
     fun `run should create view for cosmos storage`() {
-        val config = mockk<DatabaseConfig>()
-        val storage = ScalarDBStorage.Cosmos(config)
         CreateViews(ctx, setOf("ns_for_cosmos"), admin).run()
         verify {
             statement.executeUpdate(
@@ -165,8 +159,6 @@ class CreateViewsTest {
 
     @Test
     fun `run should create view for dynamodb storage`() {
-        val config = mockk<DatabaseConfig>()
-        val storage = ScalarDBStorage.Cosmos(config)
         CreateViews(ctx, setOf("ns_for_dynamodb"), admin).run()
         verify {
             statement.executeUpdate(
@@ -195,28 +187,6 @@ class CreateViewsTest {
 
     @Test
     fun `run should create required views for multi storage`() {
-        val jdbcConfig = mockk<DatabaseConfig>()
-        val cassandraConfig = mockk<DatabaseConfig>()
-        val cosmosConfig = mockk<DatabaseConfig>()
-        val dynamodbConfig = mockk<DatabaseConfig>()
-
-        val storages =
-            mapOf(
-                "jdbc" to ScalarDBStorage.Jdbc(jdbcConfig),
-                "cassandra" to ScalarDBStorage.Cassandra(cassandraConfig),
-                "cosmos" to ScalarDBStorage.Cosmos(cosmosConfig),
-                "dynamodb" to ScalarDBStorage.DynamoDB(dynamodbConfig),
-            )
-
-        val namespaceStorageMap =
-            mapOf(
-                "ns_for_jdbc" to "jdbc",
-                "ns_for_cassandra" to "cassandra",
-                "ns_for_cosmos" to "cosmos",
-                "ns_for_dynamodb" to "dynamodb",
-            )
-
-        val storage = ScalarDBStorage.MultiStorage(storages, namespaceStorageMap)
         CreateViews(
                 ctx,
                 setOf(

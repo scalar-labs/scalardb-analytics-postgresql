@@ -17,25 +17,19 @@ fun <T> useStorageAdmin(configPath: Path, f: (DistributedStorageAdmin) -> T): T 
     return ret
 }
 
-// TODO: Using the constant filename make this tightly coupled with the installation of scalardb_fdw.
-//       We should find a better way to do this.
-const val ScalarDBFdwJarFile: String = "scalardb-all.jar"
-
-fun findScalarDBFdwJarFile(statement: Statement, filename: String = ScalarDBFdwJarFile): String =
-    "${findPostgresExtensionDir(statement)}/$filename"
-
-private fun findPostgresExtensionDir(statement: Statement): String {
-    val rs = statement.executeQuery("select setting from pg_config where name = 'SHAREDIR';")
+fun findScalarDBFdwJarFile(statement: Statement): String {
+    val rs = statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
     var stat = rs.next()
     if (!stat) {
-        throw RuntimeException("Failed to find the SHAREDIR of PostgreSQL")
+        throw RuntimeException("Failed to find the jar file of scalardb_fdw")
     } else {
-        val shareDir = rs.getString("setting")
+        val path = rs.getString("path")
         stat = rs.next()
         if (stat) {
-            throw RuntimeException("Found multiple rows for SHAREDIR of PostgreSQL")
+            val secondPath = rs.getString("path")
+            throw RuntimeException("Found multiple rows for the jar file of scalardb_fdw: $path, $secondPath")
         } else {
-            return "$shareDir/extension"
+            return path
         }
     }
 }
