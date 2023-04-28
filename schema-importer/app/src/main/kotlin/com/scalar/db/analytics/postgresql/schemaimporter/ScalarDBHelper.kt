@@ -26,7 +26,8 @@ fun findScalarDBFdwJarFile(statement: Statement): String {
         val path = rs.getString("path")
         stat = rs.next()
         if (stat) {
-            throw RuntimeException("Found multiple rows for the jar file of scalardb_fdw")
+            val secondPath = rs.getString("path")
+            throw RuntimeException("Found multiple rows for the jar file of scalardb_fdw: $path, $secondPath")
         } else {
             return path
         }
