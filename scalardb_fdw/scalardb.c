@@ -1,5 +1,6 @@
 #include "scalardb.h"
 
+#include "jni.h"
 #include "storage/ipc.h"
 #include "utils/builtins.h"
 #include "utils/elog.h"
@@ -19,6 +20,8 @@
 #define NULL_STR_LEN 1
 /* a length of "-Xmx" */
 #define MAX_HEAP_SIZE_STR_LEN 4
+/* a length of "file:/" */
+#define FILE_URL_PREFIX_LEN 5
 
 #define DEFAULT_MAX_HEAP_SIZE "1g"
 
@@ -69,7 +72,10 @@ static jmethodID Scanner_one;
 static void initialize_jvm(ScalarDbFdwOptions* opts);
 static void destroy_jvm(void);
 static void attach_jvm(void);
-static void initialize_references(void);
+static void get_jni_env(void);
+static void initialize_standard_references(void);
+static void initialize_scalardb_references(void);
+static void add_classpath_to_system_class_loader(char* classpath);
 
 static void clear_exception(void);
 static void catch_exception(void);
@@ -120,7 +126,9 @@ void scalardb_initialize(ScalarDbFdwOptions* opts) {
     }
 
     initialize_jvm(opts);
-    initialize_references();
+    initialize_standard_references();
+    add_classpath_to_system_class_loader(STR_SCALARDB_JAR_PATH);
+    initialize_scalardb_references();
 
     // TODO: skip after second call
     config_file_path = (*env)->NewStringUTF(env, opts->config_file_path);
@@ -299,72 +307,50 @@ extern int scalardb_result_columns_size(jobject result) {
 }
 
 static void initialize_jvm(ScalarDbFdwOptions* opts) {
-    static bool already_initialized = false;
-    size_t classpath_len;
-    char* classpath;
     char* max_heap_size;
-    JavaVMOption* options;
     size_t max_heap_size_option_len;
     char* max_heap_size_option;
+    JavaVMOption* options;
     JavaVMInitArgs vm_args;
     jint res;
-    jint GetEnvStat;
 
     ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    if (already_initialized == false) {
-        classpath_len = JAVA_CLASS_PATH_STR_LEN +
-                        strlen(STR_SCALARDB_JAR_PATH) + NULL_STR_LEN;
-        classpath = (char*)palloc0(classpath_len);
-        snprintf(classpath, classpath_len, "-Djava.class.path=%s",
-                 STR_SCALARDB_JAR_PATH);
+    max_heap_size =
+        opts->max_heap_size ? opts->max_heap_size : DEFAULT_MAX_HEAP_SIZE;
+    max_heap_size_option_len =
+        MAX_HEAP_SIZE_STR_LEN + strlen(max_heap_size) + NULL_STR_LEN;
+    max_heap_size_option = (char*)palloc0(max_heap_size_option_len);
+    snprintf(max_heap_size_option, max_heap_size_option_len, "-Xmx%s",
+             max_heap_size);
 
-        ereport(DEBUG3, errmsg("classpath: %s", classpath));
+    options = (JavaVMOption*)palloc0(sizeof(JavaVMOption) * 1);
+    options[0].optionString = max_heap_size_option;
 
-        max_heap_size =
-            opts->max_heap_size ? opts->max_heap_size : DEFAULT_MAX_HEAP_SIZE;
+    vm_args.nOptions = 1;
+    vm_args.version = JNI_VERSION;
+    vm_args.options = options;
+    vm_args.ignoreUnrecognized = JNI_FALSE;
 
-        options = (JavaVMOption*)palloc0(sizeof(JavaVMOption) * 2);
-        max_heap_size_option_len =
-            MAX_HEAP_SIZE_STR_LEN + strlen(max_heap_size) + NULL_STR_LEN;
-        max_heap_size_option = (char*)palloc0(max_heap_size_option_len);
-        snprintf(max_heap_size_option, max_heap_size_option_len, "-Xmx%s",
-                 max_heap_size);
-
-        options[0].optionString = classpath;
-        options[1].optionString = max_heap_size_option;
-
-        vm_args.nOptions = 2;
-        vm_args.version = JNI_VERSION;
-        vm_args.options = options;
-        vm_args.ignoreUnrecognized = JNI_FALSE;
-
-        res = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
-        if (res < 0) {
-            ereport(
-                ERROR,
-                errmsg("Failed to create Java VM. JNI error code: %d", res));
-        }
+    res = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
+    if (res == 0) {
         ereport(DEBUG3, errmsg("Successfully created a JVM with %s heapsize",
                                max_heap_size));
-        on_proc_exit(on_proc_exit_cb, 0);
-        already_initialized = true;
-    } else {
-        GetEnvStat = (*jvm)->GetEnv(jvm, (void**)&env, JNI_VERSION);
-        if (GetEnvStat == JNI_EDETACHED) {
-            ereport(DEBUG3, errmsg("GetEnv: JNI_EDETACHED; the current "
-                                   "thread is not attached to the VM"));
-            attach_jvm();
-        } else if (GetEnvStat == JNI_OK) {
-            ereport(DEBUG3, errmsg("GetEnv: JNI_OK"));
-        } else if (GetEnvStat == JNI_EVERSION) {
-            ereport(ERROR, errmsg("GetEnv: JNI_EVERSION; the specified "
-                                  "version is not supported"));
-        } else {
+    } else if (res == JNI_EEXIST) {
+        ereport(DEBUG3, errmsg("Java VM has already been created. "
+                               "Re-use the existing Java VM."));
+        res = JNI_GetCreatedJavaVMs(&jvm, 1, NULL);
+        if (res < 0) {
             ereport(ERROR,
-                    errmsg("GetEnv returned unknown code: %d", GetEnvStat));
+                    errmsg("Failed to get created Java VM. JNI error code %d",
+                           res));
         }
+        get_jni_env();
+    } else if (res < 0) {
+        ereport(ERROR,
+                errmsg("Failed to create Java VM. JNI error code: %d", res));
     }
+    on_proc_exit(on_proc_exit_cb, 0);
 }
 
 static void destroy_jvm() {
@@ -377,7 +363,23 @@ static void attach_jvm() {
     (*jvm)->AttachCurrentThread(jvm, (void**)&env, NULL);
 }
 
-static void initialize_references() {
+static void get_jni_env() {
+    jint GetEnvStat = (*jvm)->GetEnv(jvm, (void**)&env, JNI_VERSION);
+    if (GetEnvStat == JNI_EDETACHED) {
+        ereport(DEBUG3, errmsg("GetEnv: JNI_EDETACHED; the current "
+                               "thread is not attached to the VM"));
+        attach_jvm();
+    } else if (GetEnvStat == JNI_OK) {
+        ereport(DEBUG3, errmsg("GetEnv: JNI_OK"));
+    } else if (GetEnvStat == JNI_EVERSION) {
+        ereport(ERROR, errmsg("GetEnv: JNI_EVERSION; the specified "
+                              "version is not supported"));
+    } else {
+        ereport(ERROR, errmsg("GetEnv returned unknown code: %d", GetEnvStat));
+    }
+}
+
+static void initialize_standard_references() {
     ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     // java.lang.Object
@@ -411,6 +413,10 @@ static void initialize_references() {
     register_java_class(Closeable_class, "java/io/Closeable");
     register_java_class_method(Closeable_close, Closeable_class, "close",
                                "()V");
+}
+
+static void initialize_scalardb_references() {
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
 
     // ScalarDbUtils
     register_java_class(ScalarDbUtils_class,
@@ -449,6 +455,54 @@ static void initialize_references() {
     register_java_class(Scanner_class, "com/scalar/db/api/Scanner");
     register_java_class_method(Scanner_one, Scanner_class, "one",
                                "()Ljava/util/Optional;");
+}
+
+static void add_classpath_to_system_class_loader(char* classpath) {
+    int url_classpath_len;
+    char* url_classpath;
+    jclass ClassLoader_class;
+    jmethodID ClassLoader_getSystemClassLoader;
+    jobject system_class_loader;
+    jclass URLClassLoader_class;
+    jmethodID URLClassLoader_addURL;
+    jclass URL_class;
+    jmethodID URL_constructor;
+    jobject url;
+
+    ereport(DEBUG3, errmsg("entering function %s", __func__));
+
+    url_classpath_len = FILE_URL_PREFIX_LEN + strlen(classpath) + NULL_STR_LEN;
+    url_classpath = (char*)palloc0(url_classpath_len);
+    snprintf(url_classpath, url_classpath_len, "file:%s", classpath);
+
+    ereport(DEBUG3,
+            errmsg("Add classpath to System Class Loader: %s", url_classpath));
+
+    register_java_class(ClassLoader_class, "java/lang/ClassLoader");
+    register_java_static_method(ClassLoader_getSystemClassLoader,
+                                ClassLoader_class, "getSystemClassLoader",
+                                "()Ljava/lang/ClassLoader;");
+    register_java_class(URLClassLoader_class, "java/net/URLClassLoader");
+    register_java_class_method(URLClassLoader_addURL, URLClassLoader_class,
+                               "addURL", "(Ljava/net/URL;)V");
+    register_java_class(URL_class, "java/net/URL");
+    register_java_class_method(URL_constructor, URL_class, "<init>",
+                               "(Ljava/lang/String;)V");
+
+    clear_exception();
+    system_class_loader = (*env)->CallStaticObjectMethod(
+        env, ClassLoader_class, ClassLoader_getSystemClassLoader);
+    catch_exception();
+
+    clear_exception();
+    url = (*env)->NewObject(env, URL_class, URL_constructor,
+                            (*env)->NewStringUTF(env, url_classpath));
+    catch_exception();
+
+    clear_exception();
+    (*env)->CallVoidMethod(env, system_class_loader, URLClassLoader_addURL,
+                           url);
+    catch_exception();
 }
 
 static void clear_exception() { (*env)->ExceptionClear(env); }
