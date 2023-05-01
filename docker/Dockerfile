@@ -21,7 +21,7 @@ RUN apt-get update \
 
     # jdbc_fdw
     && cd /tmp \
-    && ln -s /usr/local/openjdk-8/jre/lib/aarch64/server/libjvm.so /usr/lib \
+    && ln -s $(find /usr/local/openjdk-8 -name libjvm.so) /usr/lib \
     && wget -q https://github.com/pgspider/jdbc_fdw/archive/refs/tags/v${JDBC_FDW_VERSION}.tar.gz \
     && tar zxf v${JDBC_FDW_VERSION}.tar.gz \
     && cd jdbc_fdw-${JDBC_FDW_VERSION} \
