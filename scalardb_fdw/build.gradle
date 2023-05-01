@@ -15,7 +15,7 @@ subprojects {
     apply plugin: 'com.diffplug.spotless'
 
     ext {
-        scalarDbVersion = '3.8.0'
+        scalarDbVersion = '3.9.0'
         slf4jVersion = '1.7.36'
         shadowPluginVersion = '7.1.2'
         googleJavaFormatVersion = '1.7'
