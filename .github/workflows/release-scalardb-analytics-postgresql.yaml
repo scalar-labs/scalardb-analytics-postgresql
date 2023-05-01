@@ -73,6 +73,7 @@ jobs:
 
       - name: Build images
         run: ./gradlew docker
+        working-directory: ./schema-importer
 
       - name: Push images
         run: |
