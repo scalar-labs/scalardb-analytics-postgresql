@@ -1,0 +1,79 @@
+name: Build and push the Docker images of ScalarDB Analytics with PostgreSQL
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  release-scalardb-analytics-postgresql:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set version
+        id: version
+        run: |
+          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Check out codes
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Build and push the image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./scalardb_fdw
+          file: ./docker/Dockerfile
+          push: true
+          tags: ghcr.io/scalar-labs/scalardb-analytics-postgresql:${{ steps.version.outputs.version }}
+          platforms: linux/amd64,linux/arm64/v8
+
+  release-schema-importer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set version
+        id: version
+        run: |
+          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Check out codes
+        uses: actions/checkout@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Build images
+        run: ./gradlew docker
+
+      - name: Push images
+        run: |
+          docker push ghcr.io/scalar-labs/scalardb-analytics-postgresql-schema-importer:${{ steps.version.outputs.version }}
