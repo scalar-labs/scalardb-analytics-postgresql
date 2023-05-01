@@ -8,7 +8,7 @@ plugins {
 
 group = "com.scalar-labs"
 
-project.version = "0.0.1-SNAPSHOT"
+project.version = "3.9.0"
 
 repositories {
     mavenCentral()
@@ -19,7 +19,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.scalar-labs:scalardb:3.8.0")
+    implementation("com.scalar-labs:scalardb:3.9.0")
     implementation("com.github.ajalt.clikt:clikt:3.5.2")
     implementation("org.postgresql:postgresql:42.5.1")
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
