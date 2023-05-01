@@ -1,7 +1,9 @@
 package com.scalar.db.analytics.postgresql.schemaimporter
 
+import mu.KotlinLogging
 import java.nio.file.Path
 
+private val logger = KotlinLogging.logger{}
 class CreateServers(
     private val ctx: DatabaseContext,
     private val storage: ScalarDBStorage,
@@ -15,18 +17,21 @@ class CreateServers(
 
     fun run() {
         when (storage) {
-            is ScalarDBStorage.SingleStorage ->
+            is ScalarDBStorage.SingleStorage -> {
+                logger.info { "Creating server: ${storage.name} as ${storage.serverName}" }
                 if (useScalarDBFdw(storage)) {
                     createServerWithScalarDBFdw(storage)
                 } else {
                     createServerWithNativeFdw(storage)
                 }
+            }
             is ScalarDBStorage.MultiStorage -> createServerForMultiStorage(storage)
         }
     }
 
     private fun createServerForMultiStorage(multiStorage: ScalarDBStorage.MultiStorage) {
-        for ((_, storage) in multiStorage.storages) {
+        for ((name, storage) in multiStorage.storages) {
+            logger.info { "Creating server: $name as ${storage.serverName}" }
             if (useScalarDBFdw(storage)){
                 createServerWithScalarDBFdw(storage)
             } else {
@@ -37,7 +42,7 @@ class CreateServers(
 
     private fun createServerForCassandra(storage: ScalarDBStorage.Cassandra): Unit =
         ctx.useStatement {
-            it.executeUpdate(
+            executeUpdateWithLogging(it, logger,
                 """
                 |CREATE SERVER IF NOT EXISTS ${storage.serverName}
                 |FOREIGN DATA WRAPPER cassandra2_fdw
@@ -61,7 +66,7 @@ class CreateServers(
 
         ctx.useStatement {
             val jarFile = findScalarDBFdwJarFile(it)
-            it.executeUpdate(
+            executeUpdateWithLogging(it, logger,
                 """
                 |CREATE SERVER IF NOT EXISTS ${storage.serverName}
                 |FOREIGN DATA WRAPPER jdbc_fdw
@@ -88,7 +93,7 @@ class CreateServers(
 
     private fun createServerWithScalarDBFdw(storage: ScalarDBStorage.SingleStorage) =
         ctx.useStatement {
-            it.executeUpdate(
+            executeUpdateWithLogging(it, logger,
                 """
                 |CREATE SERVER IF NOT EXISTS ${storage.serverName}
                 |FOREIGN DATA WRAPPER scalardb_fdw
