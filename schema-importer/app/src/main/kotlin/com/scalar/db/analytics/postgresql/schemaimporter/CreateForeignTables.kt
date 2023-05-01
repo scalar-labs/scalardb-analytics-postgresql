@@ -3,8 +3,9 @@ package com.scalar.db.analytics.postgresql.schemaimporter
 import com.scalar.db.api.DistributedStorageAdmin
 import com.scalar.db.api.TableMetadata
 import com.scalar.db.io.DataType
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils
+import mu.KotlinLogging
 
+private val logger = KotlinLogging.logger{}
 class CreateForeignTables(
     private val ctx: DatabaseContext,
     private val namespaces: Set<String>,
@@ -29,8 +30,10 @@ class CreateForeignTables(
                 val columnDefinitions =
                     getForeignTableColumnDefinitions(metadata)
                 val options = getForeignTableOptions(ns, tableName, storageForNamespace)
+
+                logger.info {"Creating foreign table: $foreignTableName for ${storageForNamespace.serverName}"}
                 ctx.useStatement {
-                    it.executeUpdate(
+                    executeUpdateWithLogging(it, logger,
                         """
                             |CREATE FOREIGN TABLE IF NOT EXISTS $foreignTableName (
                             |$columnDefinitions

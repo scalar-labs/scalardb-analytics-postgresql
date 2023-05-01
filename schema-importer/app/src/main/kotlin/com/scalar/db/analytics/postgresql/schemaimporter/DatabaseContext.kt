@@ -1,5 +1,6 @@
 package com.scalar.db.analytics.postgresql.schemaimporter
 
+import mu.KLogger
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.Statement
@@ -21,3 +22,8 @@ fun <T> useDatabaseContext(
         conn.commit()
         ret
     }
+
+fun executeUpdateWithLogging(stmt: Statement, logger: KLogger, sql: String) {
+    logger.debug { sql }
+    stmt.executeUpdate(sql)
+}

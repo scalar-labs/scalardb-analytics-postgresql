@@ -3,7 +3,9 @@ package com.scalar.db.analytics.postgresql.schemaimporter
 import com.scalar.db.api.DistributedStorageAdmin
 import com.scalar.db.transaction.consensuscommit.Attribute
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils
+import mu.KotlinLogging
 
+private val logger = KotlinLogging.logger{}
 class CreateViews(
     private val ctx: DatabaseContext,
     private val namespaces: Set<String>,
@@ -52,8 +54,9 @@ class CreateViews(
                 val viewName = "$ns.$tableName"
                 val rawTableName = "$ns._$tableName"
 
+                logger.info { "Creating view: $viewName for $rawTableName" }
                 ctx.useStatement {
-                    it.executeUpdate(
+                    executeUpdateWithLogging(it, logger,
                         """
                             |CREATE OR REPLACE VIEW $viewName AS
                             |SELECT

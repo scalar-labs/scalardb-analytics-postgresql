@@ -22,6 +22,9 @@ dependencies {
     implementation("com.scalar-labs:scalardb:3.8.0")
     implementation("com.github.ajalt.clikt:clikt:3.5.2")
     implementation("org.postgresql:postgresql:42.5.1")
+    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
+    implementation("org.slf4j:slf4j-api:2.0.7")
+    implementation("org.slf4j:slf4j-simple:2.0.7")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
