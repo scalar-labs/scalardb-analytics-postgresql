@@ -6,17 +6,17 @@
 #include "nodes/pg_list.h"
 
 typedef struct {
-    char* config_file_path;
-    char* max_heap_size;
+	char *config_file_path;
+	char *max_heap_size;
 
-    char* namespace;
-    char* table_name;
+	char *namespace;
+	char *table_name;
 
-    char* partition_key_column;
-    List* clustering_key_columns;
-    List* index_key_columns;
+	char *partition_key_column;
+	List *clustering_key_columns;
+	List *index_key_columns;
 } ScalarDbFdwOptions;
 
-void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions* opts);
+void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions *opts);
 
 #endif

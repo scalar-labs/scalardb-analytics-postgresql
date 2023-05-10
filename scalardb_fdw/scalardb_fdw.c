@@ -27,106 +27,109 @@ PG_MODULE_MAGIC;
  * baserel->fdw_private and fetched in scalardbGetForeignPaths.
  */
 typedef struct {
-    ScalarDbFdwOptions options;
+	ScalarDbFdwOptions options;
 
-    /* Bitmap of attr numbers we need to fetch from the remote server. */
-    Bitmapset* attrs_used;
+	/* Bitmap of attr numbers we need to fetch from the remote server. */
+	Bitmapset *attrs_used;
 
-    /*
+	/*
      * Restriction clauses, divided into safe and unsafe to pushdown subsets.
      * All entries in these lists should have RestrictInfo wrappers; that
      * improves efficiency of selectivity and cost estimation.
      */
-    List* remote_conds;
-    List* local_conds;
+	List *remote_conds;
+	List *local_conds;
 
-    BlockNumber pages; /* estimate of physical size */
-    double tuples;     /* estimate of number of data rows */
+	BlockNumber pages; /* estimate of physical size */
+	double tuples; /* estimate of number of data rows */
 } ScalarDbFdwPlanState;
 
 /*
  * FDW-specific information for ForeignScanState.fdw_state.
  */
 typedef struct {
-    ScalarDbFdwOptions options;
+	ScalarDbFdwOptions options;
 
-    /* extracted fdw_private data */
-    List* attrs_to_retrieve; /* list of retrieved attribute numbers */
+	/* extracted fdw_private data */
+	List *attrs_to_retrieve; /* list of retrieved attribute numbers */
 
-    Relation rel;             /* relcache entry for the foreign table */
-    AttInMetadata* attinmeta; /* attribute datatype conversion metadata */
+	Relation rel; /* relcache entry for the foreign table */
+	AttInMetadata *attinmeta; /* attribute datatype conversion metadata */
 
-    jobject scanner; /* Java instance of com.scalar.db.api.Scanner */
+	jobject scanner; /* Java instance of com.scalar.db.api.Scanner */
 
-    MemoryContext
-        per_tuple_context; /* memory context for per-tuple temporary data*/
+	MemoryContext
+		per_tuple_context; /* memory context for per-tuple temporary data*/
 } ScalarDbFdwScanState;
 
 enum ScanFdwPrivateIndex {
-    /* Integer list of attribute numbers retrieved by the SELECT */
-    ScanFdwPrivateAttrsToRetrieve
+	/* Integer list of attribute numbers retrieved by the SELECT */
+	ScanFdwPrivateAttrsToRetrieve
 };
 
-static void classify_conditions(PlannerInfo* root, RelOptInfo* baserel,
-                                List* input_conds, List** remote_conds,
-                                List** local_conds);
+static void classify_conditions(PlannerInfo *root, RelOptInfo *baserel,
+				List *input_conds, List **remote_conds,
+				List **local_conds);
 
-static bool is_foreign_expr(PlannerInfo* root, RelOptInfo* baserel, Expr* expr);
+static bool is_foreign_expr(PlannerInfo *root, RelOptInfo *baserel, Expr *expr);
 
-static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
-                          ScalarDbFdwPlanState* fdw_private);
-static void estimate_costs(PlannerInfo* root, RelOptInfo* baserel,
-                           Cost* startup_cost, Cost* total_cost);
+static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
+			  ScalarDbFdwPlanState *fdw_private);
+static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
+			   Cost *startup_cost, Cost *total_cost);
 
-static void get_target_list(PlannerInfo* root, RelOptInfo* baserel,
-                            Bitmapset* attrs_used, List** attrs_to_retrieve);
+static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
+			    Bitmapset *attrs_used, List **attrs_to_retrieve);
 
-static Datum convert_result_column_to_datum(jobject result, char* attname,
-                                            Oid atttypid);
+static Datum convert_result_column_to_datum(jobject result, char *attname,
+					    Oid atttypid);
 
 static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
-                                        Relation rel, List* attrs_to_retrieve);
+					Relation rel, List *attrs_to_retrieve);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_handler);
 
-Datum scalardb_fdw_handler(PG_FUNCTION_ARGS) {
-    FdwRoutine* routine = makeNode(FdwRoutine);
+Datum scalardb_fdw_handler(PG_FUNCTION_ARGS)
+{
+	FdwRoutine *routine = makeNode(FdwRoutine);
 
-    /* Functions for scanning foreign tables */
-    routine->GetForeignRelSize = scalardbGetForeignRelSize;
-    routine->GetForeignPaths = scalardbGetForeignPaths;
-    routine->GetForeignPlan = scalardbGetForeignPlan;
-    routine->BeginForeignScan = scalardbBeginForeignScan;
-    routine->IterateForeignScan = scalardbIterateForeignScan;
-    routine->ReScanForeignScan = scalardbReScanForeignScan;
-    routine->EndForeignScan = scalardbEndForeignScan;
+	/* Functions for scanning foreign tables */
+	routine->GetForeignRelSize = scalardbGetForeignRelSize;
+	routine->GetForeignPaths = scalardbGetForeignPaths;
+	routine->GetForeignPlan = scalardbGetForeignPlan;
+	routine->BeginForeignScan = scalardbBeginForeignScan;
+	routine->IterateForeignScan = scalardbIterateForeignScan;
+	routine->ReScanForeignScan = scalardbReScanForeignScan;
+	routine->EndForeignScan = scalardbEndForeignScan;
 
-    /* Support functions for EXPLAIN */
-    routine->ExplainForeignScan = scalardbExplainForeignScan;
+	/* Support functions for EXPLAIN */
+	routine->ExplainForeignScan = scalardbExplainForeignScan;
 
-    /* Support functions for ANALYZE */
-    routine->AnalyzeForeignTable = scalardbAnalyzeForeignTable;
-    PG_RETURN_POINTER(routine);
+	/* Support functions for ANALYZE */
+	routine->AnalyzeForeignTable = scalardbAnalyzeForeignTable;
+	PG_RETURN_POINTER(routine);
 }
 
-static void scalardbGetForeignRelSize(PlannerInfo* root, RelOptInfo* baserel,
-                                      Oid foreigntableid) {
-    ScalarDbFdwPlanState* fdw_private;
-    ListCell* lc;
+static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
+				      Oid foreigntableid)
+{
+	ScalarDbFdwPlanState *fdw_private;
+	ListCell *lc;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    baserel->rows = 0;
+	baserel->rows = 0;
 
-    fdw_private = palloc0(sizeof(ScalarDbFdwPlanState));
-    baserel->fdw_private = (void*)fdw_private;
+	fdw_private = palloc0(sizeof(ScalarDbFdwPlanState));
+	baserel->fdw_private = (void *)fdw_private;
 
-    get_scalardb_fdw_options(foreigntableid, &fdw_private->options);
+	get_scalardb_fdw_options(foreigntableid, &fdw_private->options);
 
-    classify_conditions(root, baserel, baserel->baserestrictinfo,
-                        &fdw_private->remote_conds, &fdw_private->local_conds);
+	classify_conditions(root, baserel, baserel->baserestrictinfo,
+			    &fdw_private->remote_conds,
+			    &fdw_private->local_conds);
 
-    /*
+	/*
      * Identify which attributes will need to be retrieved from the remote
      * server.  These include all attrs needed for joins or final output,
      * plus all attrs used in the local_conds.  (Note: if we end up using a
@@ -135,85 +138,89 @@ static void scalardbGetForeignRelSize(PlannerInfo* root, RelOptInfo* baserel,
      * the columns used in them.  Doesn't seem worth detecting that case
      * though.)
      */
-    fdw_private->attrs_used = NULL;
-    pull_varattnos((Node*)baserel->reltarget->exprs, baserel->relid,
-                   &fdw_private->attrs_used);
+	fdw_private->attrs_used = NULL;
+	pull_varattnos((Node *)baserel->reltarget->exprs, baserel->relid,
+		       &fdw_private->attrs_used);
 
-    foreach (lc, fdw_private->local_conds) {
-        RestrictInfo* rinfo = lfirst_node(RestrictInfo, lc);
+	foreach(lc, fdw_private->local_conds) {
+		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
 
-        pull_varattnos((Node*)rinfo->clause, baserel->relid,
-                       &fdw_private->attrs_used);
-    }
+		pull_varattnos((Node *)rinfo->clause, baserel->relid,
+			       &fdw_private->attrs_used);
+	}
 
-    /* Estimate relation size */
-    estimate_size(root, baserel, fdw_private);
+	/* Estimate relation size */
+	estimate_size(root, baserel, fdw_private);
 }
 
 /*
  * scalardbGetForeignPaths
  *		Create possible access paths for a scan on the foreign table
  */
-static void scalardbGetForeignPaths(PlannerInfo* root, RelOptInfo* baserel,
-                                    Oid foreigntableid) {
-    ForeignPath* path;
-    Cost startup_cost;
-    Cost total_cost;
+static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
+				    Oid foreigntableid)
+{
+	ForeignPath *path;
+	Cost startup_cost;
+	Cost total_cost;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    // ScalarDbFdwPlanState* fdw_private =
-    //     (ScalarDbFdwPlanState*)baserel->fdw_private;
+	// ScalarDbFdwPlanState* fdw_private =
+	//     (ScalarDbFdwPlanState*)baserel->fdw_private;
 
-    /* Estimate costs */
-    estimate_costs(root, baserel, &startup_cost, &total_cost);
+	/* Estimate costs */
+	estimate_costs(root, baserel, &startup_cost, &total_cost);
 
-    /* Create a ForeignPath node corresponding to Scan.all()
+	/* Create a ForeignPath node corresponding to Scan.all()
      * and add it as only possible path */
-    path = create_foreignscan_path(root, baserel, NULL, /* default pathtarget */
-                                   baserel->rows,       /* number of rows */
-                                   startup_cost,        /* startup cost */
-                                   total_cost,          /* total cost */
-                                   NIL,                 /* no pathkeys */
-                                   NULL, /* no outer rel either */
-                                   NULL, /* no extra plan */
-                                   NIL); /* no fdw_private */
-    add_path(baserel, (Path*)path);
-    /* TODO: support other type of Scan, including partitionKey() and
+	path = create_foreignscan_path(root, baserel,
+				       NULL, /* default pathtarget */
+				       baserel->rows, /* number of rows */
+				       startup_cost, /* startup cost */
+				       total_cost, /* total cost */
+				       NIL, /* no pathkeys */
+				       NULL, /* no outer rel either */
+				       NULL, /* no extra plan */
+				       NIL); /* no fdw_private */
+	add_path(baserel, (Path *)path);
+	/* TODO: support other type of Scan, including partitionKey() and
      * indexKey()
      */
-    /* TODO: support ordering push down */
+	/* TODO: support ordering push down */
 }
 
-static ForeignScan*
-scalardbGetForeignPlan(PlannerInfo* root, RelOptInfo* baserel,
-                       Oid foreigntableid, ForeignPath* best_path, List* tlist,
-                       List* scan_clauses, Plan* outer_plan) {
-    ScalarDbFdwPlanState* fdw_private;
-    ListCell* lc;
-    List* attrs_to_retrieve = NIL;
+static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
+					   RelOptInfo *baserel,
+					   Oid foreigntableid,
+					   ForeignPath *best_path, List *tlist,
+					   List *scan_clauses, Plan *outer_plan)
+{
+	ScalarDbFdwPlanState *fdw_private;
+	ListCell *lc;
+	List *attrs_to_retrieve = NIL;
 
-    Index scan_relid;
-    List* remote_exprs = NIL;
-    List* local_exprs = NIL;
-    List* fdw_recheck_quals = NIL;
+	Index scan_relid;
+	List *remote_exprs = NIL;
+	List *local_exprs = NIL;
+	List *fdw_recheck_quals = NIL;
 
-    List* fdw_private_for_scan = NIL;
+	List *fdw_private_for_scan = NIL;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    fdw_private = (ScalarDbFdwPlanState*)baserel->fdw_private;
+	fdw_private = (ScalarDbFdwPlanState *)baserel->fdw_private;
 
-    /* So far, baserel is always base relations because
+	/* So far, baserel is always base relations because
      * GetForeignJoinPaths nor GetForeignUpperPaths are not defined.
      */
 
-    /*
+	/*
      * For base relations, set scan_relid as the relid of the relation.
      */
-    scan_relid = baserel->relid;
+	scan_relid = baserel->relid;
 
-    /*
+	/*
      * In a base-relation scan, we must apply the given scan_clauses.
      *
      * Separate the scan_clauses into those that can be executed remotely
@@ -232,34 +239,35 @@ scalardbGetForeignPlan(PlannerInfo* root, RelOptInfo* baserel,
      * except for the additional decision about remote versus local
      * execution.
      */
-    foreach (lc, scan_clauses) {
-        RestrictInfo* rinfo = lfirst_node(RestrictInfo, lc);
+	foreach(lc, scan_clauses) {
+		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
 
-        /* Ignore any pseudoconstants, they're dealt with elsewhere */
-        if (rinfo->pseudoconstant)
-            continue;
+		/* Ignore any pseudoconstants, they're dealt with elsewhere */
+		if (rinfo->pseudoconstant)
+			continue;
 
-        if (list_member_ptr(fdw_private->remote_conds, rinfo))
-            remote_exprs = lappend(remote_exprs, rinfo->clause);
-        else if (list_member_ptr(fdw_private->local_conds, rinfo))
-            local_exprs = lappend(local_exprs, rinfo->clause);
-        else if (is_foreign_expr(root, baserel, rinfo->clause))
-            remote_exprs = lappend(remote_exprs, rinfo->clause);
-        else
-            local_exprs = lappend(local_exprs, rinfo->clause);
-    }
+		if (list_member_ptr(fdw_private->remote_conds, rinfo))
+			remote_exprs = lappend(remote_exprs, rinfo->clause);
+		else if (list_member_ptr(fdw_private->local_conds, rinfo))
+			local_exprs = lappend(local_exprs, rinfo->clause);
+		else if (is_foreign_expr(root, baserel, rinfo->clause))
+			remote_exprs = lappend(remote_exprs, rinfo->clause);
+		else
+			local_exprs = lappend(local_exprs, rinfo->clause);
+	}
 
-    /*
+	/*
      * For a base-relation scan, we have to support EPQ recheck, which
      * should recheck all the remote quals.
      */
-    fdw_recheck_quals = remote_exprs;
+	fdw_recheck_quals = remote_exprs;
 
-    get_target_list(root, baserel, fdw_private->attrs_used, &attrs_to_retrieve);
+	get_target_list(root, baserel, fdw_private->attrs_used,
+			&attrs_to_retrieve);
 
-    fdw_private_for_scan = list_make1(attrs_to_retrieve);
+	fdw_private_for_scan = list_make1(attrs_to_retrieve);
 
-    /*
+	/*
      * Create the ForeignScan node for the given relation.
      *
      * Note that the remote parameter expressions are stored in the
@@ -267,135 +275,144 @@ scalardbGetForeignPlan(PlannerInfo* root, RelOptInfo* baserel,
      * private state because then they wouldn't be subject to later planner
      * processing.
      */
-    return make_foreignscan(tlist, local_exprs, scan_relid,
-                            NIL, /* no expressions to evaluate */
-                            fdw_private_for_scan, /* private state */
-                            NIL,                  /* no custom tlist */
-                            fdw_recheck_quals,    /* remote quals */
-                            outer_plan);
+	return make_foreignscan(tlist, local_exprs, scan_relid,
+				NIL, /* no expressions to evaluate */
+				fdw_private_for_scan, /* private state */
+				NIL, /* no custom tlist */
+				fdw_recheck_quals, /* remote quals */
+				outer_plan);
 }
 
-static void scalardbBeginForeignScan(ForeignScanState* node, int eflags) {
-    EState* estate;
-    ForeignScan* fsplan;
-    RangeTblEntry* rte;
-    ScalarDbFdwScanState* fdw_state;
+static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
+{
+	EState *estate;
+	ForeignScan *fsplan;
+	RangeTblEntry *rte;
+	ScalarDbFdwScanState *fdw_state;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    estate = node->ss.ps.state;
+	estate = node->ss.ps.state;
 
-    fsplan = (ForeignScan*)node->ss.ps.plan;
+	fsplan = (ForeignScan *)node->ss.ps.plan;
 
-    /*
+	/*
      * Do nothing in EXPLAIN (no ANALYZE) case.  node->fdw_state stays NULL.
      */
-    if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
-        return;
+	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
+		return;
 
-    rte = rt_fetch(fsplan->scan.scanrelid, estate->es_range_table);
+	rte = rt_fetch(fsplan->scan.scanrelid, estate->es_range_table);
 
-    fdw_state = (ScalarDbFdwScanState*)palloc0(sizeof(ScalarDbFdwScanState));
-    node->fdw_state = (void*)fdw_state;
+	fdw_state =
+		(ScalarDbFdwScanState *)palloc0(sizeof(ScalarDbFdwScanState));
+	node->fdw_state = (void *)fdw_state;
 
-    get_scalardb_fdw_options(rte->relid, &fdw_state->options);
+	get_scalardb_fdw_options(rte->relid, &fdw_state->options);
 
-    /* Get private info created by planner functions. */
-    fdw_state->attrs_to_retrieve =
-        (List*)list_nth(fsplan->fdw_private, ScanFdwPrivateAttrsToRetrieve);
+	/* Get private info created by planner functions. */
+	fdw_state->attrs_to_retrieve = (List *)list_nth(
+		fsplan->fdw_private, ScanFdwPrivateAttrsToRetrieve);
 
-    /* Get info we'll need for input data conversion. */
-    fdw_state->rel = node->ss.ss_currentRelation;
-    fdw_state->attinmeta =
-        TupleDescGetAttInMetadata(RelationGetDescr(fdw_state->rel));
+	/* Get info we'll need for input data conversion. */
+	fdw_state->rel = node->ss.ss_currentRelation;
+	fdw_state->attinmeta =
+		TupleDescGetAttInMetadata(RelationGetDescr(fdw_state->rel));
 
-    fdw_state->scanner = NULL;
+	fdw_state->scanner = NULL;
 
-    fdw_state->per_tuple_context = AllocSetContextCreate(
-        estate->es_query_cxt, "scalardb_fdw per_tuple_context",
-        ALLOCSET_DEFAULT_SIZES);
+	fdw_state->per_tuple_context = AllocSetContextCreate(
+		estate->es_query_cxt, "scalardb_fdw per_tuple_context",
+		ALLOCSET_DEFAULT_SIZES);
 
-    scalardb_initialize(&fdw_state->options);
+	scalardb_initialize(&fdw_state->options);
 }
 
-static TupleTableSlot* scalardbIterateForeignScan(ForeignScanState* node) {
-    ScalarDbFdwScanState* fdw_state;
-    TupleTableSlot* slot;
-    jobject result_optional;
-    jobject result;
-    MemoryContext old_context;
-    HeapTuple tuple;
+static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
+{
+	ScalarDbFdwScanState *fdw_state;
+	TupleTableSlot *slot;
+	jobject result_optional;
+	jobject result;
+	MemoryContext old_context;
+	HeapTuple tuple;
 
-    ereport(DEBUG4, errmsg("entering function %s", __func__));
+	ereport(DEBUG4, errmsg("entering function %s", __func__));
 
-    fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
-    slot = node->ss.ss_ScanTupleSlot;
+	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
+	slot = node->ss.ss_ScanTupleSlot;
 
-    if (!fdw_state->scanner) {
-        fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
-                                               fdw_state->options.table_name);
-    }
+	if (!fdw_state->scanner) {
+		fdw_state->scanner =
+			scalardb_scan_all(fdw_state->options.namespace,
+					  fdw_state->options.table_name);
+	}
 
-    result_optional = scalardb_scanner_one(fdw_state->scanner);
+	result_optional = scalardb_scanner_one(fdw_state->scanner);
 
-    if (!scalardb_optional_is_present(result_optional)) {
-        return ExecClearTuple(slot);
-    }
+	if (!scalardb_optional_is_present(result_optional)) {
+		return ExecClearTuple(slot);
+	}
 
-    old_context = MemoryContextSwitchTo(fdw_state->per_tuple_context);
+	old_context = MemoryContextSwitchTo(fdw_state->per_tuple_context);
 
-    result = scalardb_optional_get(result_optional);
-    tuple =
-        make_tuple_from_result(result, scalardb_result_columns_size(result),
-                               fdw_state->rel, fdw_state->attrs_to_retrieve);
+	result = scalardb_optional_get(result_optional);
+	tuple = make_tuple_from_result(result,
+				       scalardb_result_columns_size(result),
+				       fdw_state->rel,
+				       fdw_state->attrs_to_retrieve);
 
-    scalardb_scanner_release_result();
-    MemoryContextSwitchTo(old_context);
+	scalardb_scanner_release_result();
+	MemoryContextSwitchTo(old_context);
 
-    ExecStoreHeapTuple(tuple, slot, false);
+	ExecStoreHeapTuple(tuple, slot, false);
 
-    return slot;
+	return slot;
 }
 
-static void scalardbReScanForeignScan(ForeignScanState* node) {
-    ScalarDbFdwScanState* fdw_state;
+static void scalardbReScanForeignScan(ForeignScanState *node)
+{
+	ScalarDbFdwScanState *fdw_state;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
-    if (!fdw_state->scanner)
-        scalardb_scanner_close(fdw_state->scanner);
+	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
+	if (!fdw_state->scanner)
+		scalardb_scanner_close(fdw_state->scanner);
 
-    fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
-                                           fdw_state->options.table_name);
+	fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
+					       fdw_state->options.table_name);
 }
 
-static void scalardbEndForeignScan(ForeignScanState* node) {
-    ScalarDbFdwScanState* fdw_state;
+static void scalardbEndForeignScan(ForeignScanState *node)
+{
+	ScalarDbFdwScanState *fdw_state;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    fdw_state = (ScalarDbFdwScanState*)node->fdw_state;
+	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
 
-    /* if fdw_state is NULL, we are in EXPLAIN; nothing to do */
-    if (fdw_state == NULL)
-        return;
+	/* if fdw_state is NULL, we are in EXPLAIN; nothing to do */
+	if (fdw_state == NULL)
+		return;
 
-    /* Close the scanner if open, to prevent accumulation of scanner */
-    if (fdw_state->scanner)
-        scalardb_scanner_close(fdw_state->scanner);
+	/* Close the scanner if open, to prevent accumulation of scanner */
+	if (fdw_state->scanner)
+		scalardb_scanner_close(fdw_state->scanner);
 
-    // TODO: consider whether DistributedStorage should be closed
-    // here
+	// TODO: consider whether DistributedStorage should be closed
+	// here
 }
 
-static void scalardbExplainForeignScan(ForeignScanState* node,
-                                       ExplainState* es) {}
+static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
+{
+}
 
 static bool scalardbAnalyzeForeignTable(Relation relation,
-                                        AcquireSampleRowsFunc* func,
-                                        BlockNumber* totalpages) {
-    return false;
+					AcquireSampleRowsFunc *func,
+					BlockNumber *totalpages)
+{
+	return false;
 }
 
 /*
@@ -404,33 +421,34 @@ static bool scalardbAnalyzeForeignTable(Relation relation,
  *	- remote_conds contains expressions that can be evaluated remotely
  *	- local_conds contains expressions that can't be evaluated remotely
  */
-static void classify_conditions(PlannerInfo* root, RelOptInfo* baserel,
-                                List* input_conds, List** remote_conds,
-                                List** local_conds) {
-    ListCell* lc;
+static void classify_conditions(PlannerInfo *root, RelOptInfo *baserel,
+				List *input_conds, List **remote_conds,
+				List **local_conds)
+{
+	ListCell *lc;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    *remote_conds = NIL;
-    *local_conds = NIL;
+	*remote_conds = NIL;
+	*local_conds = NIL;
 
-    foreach (lc, input_conds) {
-        RestrictInfo* ri = lfirst_node(RestrictInfo, lc);
+	foreach(lc, input_conds) {
+		RestrictInfo *ri = lfirst_node(RestrictInfo, lc);
 
-        if (is_foreign_expr(root, baserel, ri->clause))
-            *remote_conds = lappend(*remote_conds, ri);
-        else
-            *local_conds = lappend(*local_conds, ri);
-    }
+		if (is_foreign_expr(root, baserel, ri->clause))
+			*remote_conds = lappend(*remote_conds, ri);
+		else
+			*local_conds = lappend(*local_conds, ri);
+	}
 }
 
 /*
  * Returns true if given expr is safe to evaluate on the foreign server.
  */
-static bool is_foreign_expr(PlannerInfo* root, RelOptInfo* baserel,
-                            Expr* expr) {
-    /* TODO: implement this */
-    return false;
+static bool is_foreign_expr(PlannerInfo *root, RelOptInfo *baserel, Expr *expr)
+{
+	/* TODO: implement this */
+	return false;
 }
 
 /*
@@ -440,10 +458,11 @@ static bool is_foreign_expr(PlannerInfo* root, RelOptInfo* baserel,
  * fdw_private->pages and fdw_private->ntuples for later use in the cost
  * calculation.
  */
-static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
-                          ScalarDbFdwPlanState* fdw_private) {
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
-    /*
+static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
+			  ScalarDbFdwPlanState *fdw_private)
+{
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
+	/*
      * If the foreign table has never been ANALYZEd, it will have
      * reltuples < 0, meaning "unknown". In this case we can use a hack
      * similar to plancat.c's treatment of empty relations: use a minimum
@@ -451,21 +470,22 @@ static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
      * width estimate to get the corresponding number of tuples.
      */
 #if PG_VERSION_NUM >= 140000
-    if (baserel->tuples < 0) {
+	if (baserel->tuples < 0) {
 #else
-    if (baserel->pages == 0 && baserel->tuples == 0) {
+	if (baserel->pages == 0 && baserel->tuples == 0) {
 #endif
-        baserel->pages = 10;
-        baserel->tuples = (10.0 * BLCKSZ) / (baserel->reltarget->width +
-                                             sizeof(HeapTupleHeaderData));
-    } else {
-        /* TODO: support ANALYZEd table */
-        ereport(ERROR,
-                errmsg("foreign table of scalardb_fdw should not be ANALYZEd"));
-    }
+		baserel->pages = 10;
+		baserel->tuples =
+			(10.0 * BLCKSZ) / (baserel->reltarget->width +
+					   sizeof(HeapTupleHeaderData));
+	} else {
+		/* TODO: support ANALYZEd table */
+		ereport(ERROR,
+			errmsg("foreign table of scalardb_fdw should not be ANALYZEd"));
+	}
 
-    /* Estimate baserel size as best we can with local statistics. */
-    set_baserel_size_estimates(root, baserel);
+	/* Estimate baserel size as best we can with local statistics. */
+	set_baserel_size_estimates(root, baserel);
 }
 
 /*
@@ -473,17 +493,18 @@ static void estimate_size(PlannerInfo* root, RelOptInfo* baserel,
  *
  * Results are returned in *startup_cost and *total_cost.
  */
-static void estimate_costs(PlannerInfo* root, RelOptInfo* baserel,
-                           Cost* startup_cost, Cost* total_cost) {
-    int cost_per_tuple;
+static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
+			   Cost *startup_cost, Cost *total_cost)
+{
+	int cost_per_tuple;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    /* TODO: consider whether more precise estimation of cost is worth doing
+	/* TODO: consider whether more precise estimation of cost is worth doing
      */
-    cost_per_tuple = 1;
-    *startup_cost = 100; /* temporary default value */
-    *total_cost = *startup_cost + cost_per_tuple * baserel->tuples;
+	cost_per_tuple = 1;
+	*startup_cost = 100; /* temporary default value */
+	*total_cost = *startup_cost + cost_per_tuple * baserel->tuples;
 }
 
 /*
@@ -492,132 +513,136 @@ static void estimate_costs(PlannerInfo* root, RelOptInfo* baserel,
  * This retunrns an integer List of the columns being retrieved, which is
  * returned to *retrieved_attrs.
  */
-static void get_target_list(PlannerInfo* root, RelOptInfo* baserel,
-                            Bitmapset* attrs_used, List** attrs_to_retrieve) {
-    RangeTblEntry* rte;
-    Relation rel;
-    TupleDesc tupdesc;
-    bool have_wholerow;
+static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
+			    Bitmapset *attrs_used, List **attrs_to_retrieve)
+{
+	RangeTblEntry *rte;
+	Relation rel;
+	TupleDesc tupdesc;
+	bool have_wholerow;
 
-    ereport(DEBUG3, errmsg("entering function %s", __func__));
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-    rte = planner_rt_fetch(baserel->relid, root);
+	rte = planner_rt_fetch(baserel->relid, root);
 
-    /*
+	/*
      * Core code already has some lock on each rel being planned, so we can
      * use NoLock here.
      */
-    rel = table_open(rte->relid, NoLock);
-    tupdesc = RelationGetDescr(rel);
+	rel = table_open(rte->relid, NoLock);
+	tupdesc = RelationGetDescr(rel);
 
-    *attrs_to_retrieve = NIL;
+	*attrs_to_retrieve = NIL;
 
-    /* If there's a whole-row reference, we'll need all the columns. */
-    have_wholerow =
-        bms_is_member(0 - FirstLowInvalidHeapAttributeNumber, attrs_used);
+	/* If there's a whole-row reference, we'll need all the columns. */
+	have_wholerow = bms_is_member(0 - FirstLowInvalidHeapAttributeNumber,
+				      attrs_used);
 
-    for (int i = 1; i <= tupdesc->natts; i++) {
-        Form_pg_attribute attr = TupleDescAttr(tupdesc, i - 1);
+	for (int i = 1; i <= tupdesc->natts; i++) {
+		Form_pg_attribute attr = TupleDescAttr(tupdesc, i - 1);
 
-        /* Ignore dropped attributes. */
-        if (attr->attisdropped)
-            continue;
+		/* Ignore dropped attributes. */
+		if (attr->attisdropped)
+			continue;
 
-        if (have_wholerow ||
-            bms_is_member(i - FirstLowInvalidHeapAttributeNumber, attrs_used)) {
-            *attrs_to_retrieve = lappend_int(*attrs_to_retrieve, i);
-        }
-    }
-    table_close(rel, NoLock);
+		if (have_wholerow ||
+		    bms_is_member(i - FirstLowInvalidHeapAttributeNumber,
+				  attrs_used)) {
+			*attrs_to_retrieve = lappend_int(*attrs_to_retrieve, i);
+		}
+	}
+	table_close(rel, NoLock);
 }
 
 static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
-                                        Relation rel, List* attrs_to_retrieve) {
-    TupleDesc tupdesc;
-    Datum* values;
-    bool* nulls;
-    int count;
-    ListCell* lc;
-    FormData_pg_attribute attr;
-    char* attname;
-    HeapTuple tuple;
+					Relation rel, List *attrs_to_retrieve)
+{
+	TupleDesc tupdesc;
+	Datum *values;
+	bool *nulls;
+	int count;
+	ListCell *lc;
+	FormData_pg_attribute attr;
+	char *attname;
+	HeapTuple tuple;
 
-    ereport(DEBUG5, errmsg("entering function %s", __func__));
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
 
-    tupdesc = RelationGetDescr(rel);
+	tupdesc = RelationGetDescr(rel);
 
-    values = (Datum*)palloc0(tupdesc->natts * sizeof(Datum));
-    nulls = (bool*)palloc(tupdesc->natts * sizeof(bool));
+	values = (Datum *)palloc0(tupdesc->natts * sizeof(Datum));
+	nulls = (bool *)palloc(tupdesc->natts * sizeof(bool));
 
-    /* Initialize to nulls for any columns not present in result */
-    memset(nulls, true, tupdesc->natts * sizeof(bool));
+	/* Initialize to nulls for any columns not present in result */
+	memset(nulls, true, tupdesc->natts * sizeof(bool));
 
-    /*
+	/*
      * i indexes columns in the relation, j indexes columns in the PGresult.
      */
-    count = 0;
-    foreach (lc, attrs_to_retrieve) {
-        int i = lfirst_int(lc);
+	count = 0;
+	foreach(lc, attrs_to_retrieve) {
+		int i = lfirst_int(lc);
 
-        if (i > 0) {
-            /* ordinary column */
-            Assert(i <= tupdesc->natts);
-            attr = tupdesc->attrs[i - 1];
-            attname = NameStr(attr.attname);
-            nulls[i - 1] = scalardb_result_is_null(result, attname);
-            values[i - 1] =
-                convert_result_column_to_datum(result, attname, attr.atttypid);
-        }
+		if (i > 0) {
+			/* ordinary column */
+			Assert(i <= tupdesc->natts);
+			attr = tupdesc->attrs[i - 1];
+			attname = NameStr(attr.attname);
+			nulls[i - 1] = scalardb_result_is_null(result, attname);
+			values[i - 1] = convert_result_column_to_datum(
+				result, attname, attr.atttypid);
+		}
 
-        count++;
-    }
+		count++;
+	}
 
-    /* TODO: retrieve only used columns */
-    /*
+	/* TODO: retrieve only used columns */
+	/*
      * Check we got the expected number of columns.  Note: j == 0 and
      * PQnfields == 1 is expected, since deparse emits a NULL if no columns.
      */
-    // if (count > 0 && count != ncolumn)
-    //     elog(ERROR, "remote query result does not match the foreign table");
+	// if (count > 0 && count != ncolumn)
+	//     elog(ERROR, "remote query result does not match the foreign table");
 
-    tuple = heap_form_tuple(tupdesc, values, nulls);
+	tuple = heap_form_tuple(tupdesc, values, nulls);
 
-    return tuple;
+	return tuple;
 }
 
-static Datum convert_result_column_to_datum(jobject result, char* attname,
-                                            Oid atttypid) {
-    ereport(DEBUG5, errmsg("entering function %s", __func__));
-    switch (atttypid) {
-    case BOOLOID: {
-        bool val = scalardb_result_get_boolean(result, attname);
-        return BoolGetDatum(val);
-    }
-    case INT4OID: {
-        int val = scalardb_result_get_int(result, attname);
-        return Int32GetDatum(val);
-    }
-    case INT8OID: {
-        int val = scalardb_result_get_bigint(result, attname);
-        return Int64GetDatum(val);
-    }
-    case FLOAT4OID: {
-        int val = scalardb_result_get_float(result, attname);
-        return Float4GetDatum(val);
-    }
-    case FLOAT8OID: {
-        int val = scalardb_result_get_double(result, attname);
-        return Float8GetDatum(val);
-    }
-    case TEXTOID: {
-        text* val = scalardb_result_get_text(result, attname);
-        PG_RETURN_TEXT_P(val);
-    }
-    case BYTEAOID: {
-        bytea* val = scalardb_result_get_blob(result, attname);
-        PG_RETURN_BYTEA_P(val);
-    }
-    default:
-        ereport(ERROR, errmsg("Unsupported data type: %d", atttypid));
-    }
+static Datum convert_result_column_to_datum(jobject result, char *attname,
+					    Oid atttypid)
+{
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+	switch (atttypid) {
+	case BOOLOID: {
+		bool val = scalardb_result_get_boolean(result, attname);
+		return BoolGetDatum(val);
+	}
+	case INT4OID: {
+		int val = scalardb_result_get_int(result, attname);
+		return Int32GetDatum(val);
+	}
+	case INT8OID: {
+		int val = scalardb_result_get_bigint(result, attname);
+		return Int64GetDatum(val);
+	}
+	case FLOAT4OID: {
+		int val = scalardb_result_get_float(result, attname);
+		return Float4GetDatum(val);
+	}
+	case FLOAT8OID: {
+		int val = scalardb_result_get_double(result, attname);
+		return Float8GetDatum(val);
+	}
+	case TEXTOID: {
+		text *val = scalardb_result_get_text(result, attname);
+		PG_RETURN_TEXT_P(val);
+	}
+	case BYTEAOID: {
+		bytea *val = scalardb_result_get_blob(result, attname);
+		PG_RETURN_BYTEA_P(val);
+	}
+	default:
+		ereport(ERROR, errmsg("Unsupported data type: %d", atttypid));
+	}
 }
