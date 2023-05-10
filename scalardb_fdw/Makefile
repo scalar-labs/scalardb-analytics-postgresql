@@ -34,6 +34,9 @@ all: $(scalardb_jar_built)
 scalardb-version:
 	@echo $(scalardb_version)
 
+format:
+	clang-format -i *.c *.h
+
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
