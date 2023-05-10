@@ -3,13 +3,11 @@ package com.scalar.db.analytics.postgresql.schemaimporter
 import com.scalar.db.api.DistributedStorageAdmin
 import com.scalar.db.api.Scan
 import com.scalar.db.api.TableMetadata
-import com.scalar.db.config.DatabaseConfig
 import com.scalar.db.io.DataType
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.mockk
 import io.mockk.verify
 import java.sql.Connection
 import java.sql.Statement

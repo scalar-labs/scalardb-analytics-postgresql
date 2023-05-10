@@ -20,7 +20,9 @@ sealed interface ScalarDBStorage {
             get() =
                 config.contactPoints.let {
                     if (it.size != 1) {
-                        throw IllegalArgumentException("JDBC only supports a single contact point. Got ${it.joinToString(",")}")
+                        throw IllegalArgumentException(
+                            "JDBC only supports a single contact point. Got ${it.joinToString(",")}"
+                        )
                     }
                     it.first()
                 }
@@ -42,7 +44,8 @@ sealed interface ScalarDBStorage {
         override val serverName: String = "dynamodb"
     ) : SingleStorage
 
-    class Cosmos(override val config: DatabaseConfig, override val serverName: String = "cosmos") : SingleStorage
+    class Cosmos(override val config: DatabaseConfig, override val serverName: String = "cosmos") :
+        SingleStorage
 
     class MultiStorage(
         val storages: Map<String, SingleStorage>,
@@ -114,10 +117,12 @@ fun singleStorageToFdw(storage: ScalarDBStorage.SingleStorage): String =
     }
 
 fun storageToFdw(storage: ScalarDBStorage): Set<String> {
-    val fdws = when (storage) {
-        is ScalarDBStorage.SingleStorage -> setOf(singleStorageToFdw(storage))
-        is ScalarDBStorage.MultiStorage -> storage.storages.values.map { singleStorageToFdw(it) }.toSet()
-    }
+    val fdws =
+        when (storage) {
+            is ScalarDBStorage.SingleStorage -> setOf(singleStorageToFdw(storage))
+            is ScalarDBStorage.MultiStorage ->
+                storage.storages.values.map { singleStorageToFdw(it) }.toSet()
+        }
 
     return if (fdws.contains(JDBC_FDW)) {
         // JDBC_FDW requires SCALARDB_FDW installed

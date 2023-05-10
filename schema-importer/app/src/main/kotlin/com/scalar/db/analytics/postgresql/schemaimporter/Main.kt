@@ -33,7 +33,8 @@ class Import : CliktCommand() {
     private val user: String by option("--user", help = "PostgreSQL user").default("postgres")
     private val password: String by option("--password", help = "PostgreSQL password").default("")
 
-    private val debug: Boolean by option("--debug", help = "Enable debug mode").flag(default = false)
+    private val debug: Boolean by
+        option("--debug", help = "Enable debug mode").flag(default = false)
 
     private val url: String
         get() = "jdbc:postgresql://$host:$port/$database"
