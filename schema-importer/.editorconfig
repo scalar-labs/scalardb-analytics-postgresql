@@ -1,7 +1,3 @@
-[*.{c,h}]
-indent_style = tab
-indent_size = 8
-
 [{*.kt,*.kts}]
 indent_style = space
 insert_final_newline = true
