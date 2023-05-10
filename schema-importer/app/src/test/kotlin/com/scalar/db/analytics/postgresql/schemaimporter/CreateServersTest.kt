@@ -4,7 +4,6 @@ import com.scalar.db.config.DatabaseConfig
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Paths
 import java.sql.Connection
 import java.sql.ResultSet
@@ -12,6 +11,7 @@ import java.sql.Statement
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
 class CreateServersTest {
@@ -27,7 +27,8 @@ class CreateServersTest {
 
         every { connection.createStatement() } returns statement
         every { statement.executeUpdate(any()) } returns 0
-        every { statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;") } returns rs
+        every { statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;") } returns
+            rs
         every { rs.next() } returns true andThen false
         every { rs.getString("path") } returns "/path/to/scalardb/jar/file.jar"
 
@@ -291,7 +292,8 @@ class CreateServersTest {
         val config = mockk<DatabaseConfig>()
         val storage = ScalarDBStorage.Cosmos(config)
         val path = Paths.get("/absolute/path/to/config.properties")
-        val configPathOnPostgresHost = Paths.get("/absolute/path/on/postgres/host/to/config.properties")
+        val configPathOnPostgresHost =
+            Paths.get("/absolute/path/on/postgres/host/to/config.properties")
 
         CreateServers(ctx, storage, path, configPathOnPostgresHost).run()
 

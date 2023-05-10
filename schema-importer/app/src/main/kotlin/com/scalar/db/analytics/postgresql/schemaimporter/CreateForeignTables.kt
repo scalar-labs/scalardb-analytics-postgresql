@@ -5,7 +5,8 @@ import com.scalar.db.api.TableMetadata
 import com.scalar.db.io.DataType
 import mu.KotlinLogging
 
-private val logger = KotlinLogging.logger{}
+private val logger = KotlinLogging.logger {}
+
 class CreateForeignTables(
     private val ctx: DatabaseContext,
     private val namespaces: Set<String>,
@@ -27,13 +28,16 @@ class CreateForeignTables(
                             "Table metadata not found: $ns.$tableName"
                         )
                 val foreignTableName = "$ns._$tableName"
-                val columnDefinitions =
-                    getForeignTableColumnDefinitions(metadata)
+                val columnDefinitions = getForeignTableColumnDefinitions(metadata)
                 val options = getForeignTableOptions(ns, tableName, storageForNamespace)
 
-                logger.info {"Creating foreign table: $foreignTableName for ${storageForNamespace.serverName}"}
+                logger.info {
+                    "Creating foreign table: $foreignTableName for ${storageForNamespace.serverName}"
+                }
                 ctx.useStatement {
-                    executeUpdateWithLogging(it, logger,
+                    executeUpdateWithLogging(
+                        it,
+                        logger,
                         """
                             |CREATE FOREIGN TABLE IF NOT EXISTS $foreignTableName (
                             |$columnDefinitions
@@ -50,19 +54,15 @@ class CreateForeignTables(
     private fun getForeignTableColumnDefinitions(
         metadata: TableMetadata,
         indent: String = "    "
-    ): String =
-        getColumnInfoList(metadata).joinToString(",\n") { (col, typ) ->
-            "$indent$col $typ"
-        }
+    ): String = getColumnInfoList(metadata).joinToString(",\n") { (col, typ) -> "$indent$col $typ" }
 
     private fun getColumnInfoList(
         metadata: TableMetadata,
     ): List<Pair<String, String>> =
-        metadata.columnNames
-            .map { col ->
-                val typ = metadata.getColumnDataType(col)
-                col to getPgType(typ)
-            }
+        metadata.columnNames.map { col ->
+            val typ = metadata.getColumnDataType(col)
+            col to getPgType(typ)
+        }
 
     private fun getPgType(typ: DataType): String =
         when (typ) {

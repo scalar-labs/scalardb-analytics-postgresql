@@ -1,9 +1,9 @@
 package com.scalar.db.analytics.postgresql.schemaimporter
 
-import mu.KLogger
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.Statement
+import mu.KLogger
 
 class DatabaseContext(private val connection: Connection) {
     fun <T> useStatement(f: (Statement) -> T): T = this.connection.createStatement().use { f(it) }
