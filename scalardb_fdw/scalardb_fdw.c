@@ -377,7 +377,7 @@ static void scalardbReScanForeignScan(ForeignScanState *node)
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
 	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
-	if (!fdw_state->scanner)
+	if (fdw_state->scanner)
 		scalardb_scanner_close(fdw_state->scanner);
 
 	fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
