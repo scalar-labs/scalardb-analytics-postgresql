@@ -1,0 +1,59 @@
+# How to install ScalarDB Analytics with PostgreSQL in your local environment with Docker
+
+This documents explains how to set up a local environment that runs ScalarDB Analytics with PostgreSQL using the multi-storage back-end of Cassandra, PostgreSQL, and DynamoDB local server using [Docker Compose](https://docs.docker.com/compose/).
+
+## Prerequisites
+
+- [Docker Engine](https://docs.docker.com/engine/) and [Docker Compose](https://docs.docker.com/compose/).
+
+Follow the instructions on the Docker website according to your platform.
+
+## 1. Clone scalardb-analytics-postgresql-sample repository.
+
+[scalar-labs/scalardb-analytics-postgresql-sample](https://github.com/scalar-labs/scalardb-samples/scalardb-analytics-postgresql) repository is a project containing the sample configuration to set up ScalarDB Analytics with PostgreSQL.
+
+Determine the location on your local machine where you want to run the scalardb-analytics-postgresql-sample app. Then open the terminal, cd to the directory, then run the following commands:
+
+```shell
+$ git clone https://github.com/scalar-labs/scalardb-analytics-postgresql-sample.git
+$ cd scalardl-samples
+```
+
+## 2. Docker login
+
+`docker login` is required to start the ScalarDB Analytics with PostgreSQL Docker image. Because the [scalardb-analytics-postgresql](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-analytics-postgresql) repository on GitHub Container Registry is currently private, your GitHub account needs to be set with permissions to access the container images. Ask a person in charge to get your account ready. Note also that you need to use a personal access token (PAT) as a password to login `ghcr.io`. Please read [the official document](https://docs.github.com/en/packages/working-with-a-github-packages-registry/migrating-to-the-container-registry-from-the-docker-registry#authenticating-with-the-container-registry) for more detail.
+
+```shell
+# read:packages scope needs to be selected in a personal access token to login
+$ export CR_PAT=YOUR_PERSONAL_ACCESS_TOKEN
+$ echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
+```
+
+## 3. Start up ScalarDB Analytics with PostgreSQL services.
+
+The following command starts up PostgreSQL that serves ScalarDB Analytics with PostgreSQL along with the back-end servers of Cassandra, PostgreSQL, and DynamoDB local in the Docker containers. At the first time you run the command, the required Docker images will be downloaded from GitHub Container Registry.
+
+```shell
+$ docker-compose up
+```
+
+You may want to run the containers in the background. Add the -d (--detach) option:
+
+```shell
+$ docker-compose up -d
+```
+
+### 4. Run your analytical queries
+
+You have all required services running now. Then, please follow the [Getting Started with ScalarDB Analytics with PostgreSQL](./getting-started.md) to run actual analytical queries.
+
+### 5. Shut down ScalarDB Analytics with PostgreSQL services
+
+To shut down the containers:
+
+- If you started the containers in the foreground, type Ctrl+C in the terminal where docker-compose is running.
+- If you started the containers in the background, run the following command.
+
+```shell
+$ docker-compose down
+```
