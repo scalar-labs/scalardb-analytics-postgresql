@@ -21,7 +21,7 @@ $ cd scalardl-samples
 
 ## Step 2. Log in to Docker
 
-`docker login` is required to start the ScalarDB Analytics with PostgreSQL Docker image. Because the [scalardb-analytics-postgresql](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-analytics-postgresql) repository on GitHub Container Registry is currently private, your GitHub account needs to be set with permissions to access the container images. Ask a person in charge to get your account ready. Note also that you need to use a personal access token (PAT) as a password to login `ghcr.io`. Please read [the official document](https://docs.github.com/en/packages/working-with-a-github-packages-registry/migrating-to-the-container-registry-from-the-docker-registry#authenticating-with-the-container-registry) for more detail.
+`docker login` is required to start the ScalarDB Analytics with PostgreSQL Docker image. Because the [scalardb-analytics-postgresql](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-analytics-postgresql) repository in the GitHub Container Registry is currently private, your GitHub account needs permission to access the container images. To get permission for your account, please ask the person in charge of managing GitHub accounts in your organization. In addition, you will also need to use a personal access token (PAT) as a password to log in to `ghcr.io`. For more details, see the official documentation from GitHub at [Authenticating to the Container registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry).
 
 ```shell
 # The read:packages scope in the personal access token settings must be selected to log in.
@@ -31,7 +31,7 @@ $ echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
 
 ## Step 3. Start up the ScalarDB Analytics with PostgreSQL services
 
-The following command starts up PostgreSQL that serves ScalarDB Analytics with PostgreSQL along with the back-end servers of Cassandra, PostgreSQL, and DynamoDB local in the Docker containers. At the first time you run the command, the required Docker images will be downloaded from GitHub Container Registry.
+The following command starts up the PostgreSQL instance that serves ScalarDB Analytics with PostgreSQL along with the back-end servers of Cassandra, PostgreSQL, and DynamoDB local in the Docker containers. When you first run the command, the required Docker images will be downloaded from the GitHub Container Registry.
 
 ```shell
 $ docker-compose up
