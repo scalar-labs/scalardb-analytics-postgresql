@@ -1,6 +1,6 @@
 # How to install ScalarDB Analytics with PostgreSQL in your local environment with Docker
 
-This documents explains how to set up a local environment that runs ScalarDB Analytics with PostgreSQL using the multi-storage back-end of Cassandra, PostgreSQL, and DynamoDB local server using [Docker Compose](https://docs.docker.com/compose/).
+This document explains how to set up a local environment that runs ScalarDB Analytics with PostgreSQL using the multi-storage back-end of Cassandra, PostgreSQL, and DynamoDB local server using [Docker Compose](https://docs.docker.com/compose/).
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ Follow the instructions on the Docker website according to your platform.
 
 ## 1. Clone scalardb-analytics-postgresql-sample repository.
 
-[scalar-labs/scalardb-analytics-postgresql-sample](https://github.com/scalar-labs/scalardb-samples/scalardb-analytics-postgresql) repository is a project containing the sample configuration to set up ScalarDB Analytics with PostgreSQL.
+[scalar-labs/scalardb-analytics-postgresql-sample](https://github.com/scalar-labs/scalardb-samples/scalardb-analytics-postgresql) repository is a project containing a sample configuration to set up ScalarDB Analytics with PostgreSQL.
 
 Determine the location on your local machine where you want to run the scalardb-analytics-postgresql-sample app. Then open the terminal, cd to the directory, then run the following commands:
 
@@ -45,7 +45,7 @@ $ docker-compose up -d
 
 ### 4. Run your analytical queries
 
-You have all required services running now. Then, please follow the [Getting Started with ScalarDB Analytics with PostgreSQL](./getting-started.md) to run actual analytical queries.
+You have all the required services running now. Then, please follow the [Getting Started with ScalarDB Analytics with PostgreSQL](./getting-started.md) to run analytical queries.
 
 ### 5. Shut down ScalarDB Analytics with PostgreSQL services
 

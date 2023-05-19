@@ -1,6 +1,6 @@
 # Getting Started with ScalarDB Analytics with PostgreSQL
 
-This document explains how to get started with ScalarDB Analytics with PostgreSQL. Here, we assume that you have already installed ScalarDB Analytics with PostgreSQL, and all required services are running. If you don't have such an environment, please follow [the installation document](./installation.md). As ScalarDB Analytics with PostgreSQL executes queries via PostgreSQL, we also assumes you already have a `psql` or other PostgreSQL client to send queries to PostgreSQL.
+This document explains how to get started with ScalarDB Analytics with PostgreSQL. Here, we assume that you have already installed ScalarDB Analytics with PostgreSQL, and all required services are running. If you don't have such an environment, please follow [the installation document](./installation.md). As ScalarDB Analytics with PostgreSQL executes queries via PostgreSQL, we also assume you already have a `psql` or other PostgreSQL client to send queries to PostgreSQL.
 
 ## What is ScalarDB Analytics with PostgreSQL?
 
@@ -10,25 +10,25 @@ ScalarDB Analytics with PostgreSQL extends the functionality to process analytic
 
 ScalarDB Analytics with PostgreSQL mainly consists of two components, PostgreSQL and Schema Importer.
 
-PostgreSQL runs as a service, accepting queries from user to process. FDW extensions are used to read data from the back-end storages managed by ScalarDB. Schema Importer is a tool to imports the schema of the ScalarDB database into PostgreSQL so that users can see the identical tables in PostgreSQL side to the ScalarDB side.
+PostgreSQL runs as a service, accepting queries from users to process. FDW extensions are used to read data from the back-end storages managed by ScalarDB. Schema Importer is a tool to import the schema of the ScalarDB database into PostgreSQL so that users can see the identical tables in PostgreSQL side to the ScalarDB side.
 
 ## Clone the sample application
 
 ## Set up ScalarDB database
 
-First, you need ScalarDB database to run analytical queries with ScalarDB Analytics with PostgreSQL. If you have your own ScalarDB database, you can skip this section and use your database instead. Otherwise, you can setup a sample database by running the following command.
+First, you need one or more ScalarDB database to run analytical queries with ScalarDB Analytics with PostgreSQL. If you have your own ScalarDB database, you can skip this section and use your database instead. Otherwise, you can set up a sample database by running the following command.
 
 ```shell
 $ docker compose run --rm sql-cli --config /etc/scalardb.properties --file /etc/sample_data.sql
 ```
 
-This commands set up [multiple storage instances](https://scalardb.scalar-labs.com/docs/3.9/multi-storage-transactions/) that consists of DynamoDB, PostgreSQL, and Cassandra. Then, this creates namespaces of `dynamons`, `postgresns`, and `cassandrans` mapped to those storages, creates tables of `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` using [ScalarDB SQL](https://scalardb.scalar-labs.com/docs/3.9/scalardb-sql/getting-started-with-sql/), and load sample data into the tables.
+This command sets up [multiple storage instances](https://scalardb.scalar-labs.com/docs/3.9/multi-storage-transactions/) that consist of DynamoDB, PostgreSQL, and Cassandra. Then, this creates namespaces of `dynamons`, `postgresns`, and `cassandrans` mapped to those storages, creates tables of `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` using [ScalarDB SQL](https://scalardb.scalar-labs.com/docs/3.9/scalardb-sql/getting-started-with-sql/), and load sample data into the tables.
 
 ![Multi storage overview](./images/multi-storage-overview.png)
 
 ## Import Schema of ScalarDB into PostgreSQL
 
-Next, let's import the schema of the ScalarDB database into PostgreSQL that processes analytical queries. ScalarDB Analytics with PostgreSQL provides a tool, Schema Importer, for this purpose. It'll get everything in place to run analytical queries for you.
+Next, let's import the schemas of the ScalarDB databases into PostgreSQL that processes analytical queries. ScalarDB Analytics with PostgreSQL provides a tool, Schema Importer, for this purpose. It'll get everything in place to run analytical queries for you.
 
 ```shell
 $ docker compose run --rm schema-importer \
@@ -45,13 +45,13 @@ $ docker compose run --rm schema-importer \
   --config-on-postgres-host /etc/scalardb.properties
 ```
 
-This creates tables (in precise, views) with the same name with the tables in the ScalarDB database. In this example, the tables of`dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` are created. The column definitions are also identical to the ScalarDB database. These tables are [foreign tables](https://www.postgresql.org/docs/current/sql-createforeigntable.html) connected to the underlying storage of the ScalarDB database using FDW. Therefore, you can equate those tables in PostgreSQL with the tables in the ScalarDB database.
+This creates tables (in precise, views) with the same names as the tables in the ScalarDB databases. In this example, the tables of `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` are created. The column definitions are also identical to the ScalarDB databases. These tables are [foreign tables](https://www.postgresql.org/docs/current/sql-createforeigntable.html) connected to the underlying storage of the ScalarDB databases using FDW. Therefore, you can equate those tables in PostgreSQL with the tables in the ScalarDB databases.
 
 ![Imported schema](./images/imported-schema.png)
 
 ## Run analytical queries
 
-Now, you have all tables to read the same data in the ScalarDB database, and can run any arbitrary analytical queries supported by PostgreSQL. To run queries, please connect to PostgreSQL with `psql` or other client, and post any arbitrary queries you want.
+Now, you have all tables to read the same data in the ScalarDB databases and can run any arbitrary analytical queries supported by PostgreSQL. To run queries, please connect to PostgreSQL with `psql` or other client.
 
 ```shell
 $ psql -U postgres -h localhost test
