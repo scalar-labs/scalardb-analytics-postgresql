@@ -4,17 +4,17 @@ This document explains how to get started with ScalarDB Analytics with PostgreSQ
 
 ## What is ScalarDB Analytics with PostgreSQL?
 
-ScalarDB, as a universal transaction manager, targets mainly transactional workloads, so it supports limited subsets of the relational query.
+ScalarDB, as a universal transaction manager, targets mainly transactional workloads and therefore supports limited subsets of relational queries.
 
-ScalarDB Analytics with PostgreSQL extends the functionality to process analytical queries on ScalarDB-managed data by using PostgreSQL and its Foreign Data Wrapper (FDW) extension.
+ScalarDB Analytics with PostgreSQL extends the functionality of ScalarDB to process analytical queries on ScalarDB-managed data by using PostgreSQL and its foreign data wrapper (FDW) extension.
 
-ScalarDB Analytics with PostgreSQL mainly consists of two components, PostgreSQL and Schema Importer.
+ScalarDB Analytics with PostgreSQL mainly consists of two components: PostgreSQL and Schema Importer.
 
 PostgreSQL runs as a service, accepting queries from users to process. FDW extensions are used to read data from the back-end storages managed by ScalarDB. Schema Importer is a tool to import the schema of the ScalarDB database into PostgreSQL so that users can see the identical tables in PostgreSQL side to the ScalarDB side.
 
 ## Clone the sample application
 
-## Set up ScalarDB database
+## Set up a ScalarDB database
 
 First, you need one or more ScalarDB database to run analytical queries with ScalarDB Analytics with PostgreSQL. If you have your own ScalarDB database, you can skip this section and use your database instead. Otherwise, you can set up a sample database by running the following command.
 
@@ -24,9 +24,9 @@ $ docker compose run --rm sql-cli --config /etc/scalardb.properties --file /etc/
 
 This command sets up [multiple storage instances](https://scalardb.scalar-labs.com/docs/3.9/multi-storage-transactions/) that consist of DynamoDB, PostgreSQL, and Cassandra. Then, this creates namespaces of `dynamons`, `postgresns`, and `cassandrans` mapped to those storages, creates tables of `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` using [ScalarDB SQL](https://scalardb.scalar-labs.com/docs/3.9/scalardb-sql/getting-started-with-sql/), and load sample data into the tables.
 
-![Multi storage overview](./images/multi-storage-overview.png)
+![Multi-storage overview](./images/multi-storage-overview.png)
 
-## Import Schema of ScalarDB into PostgreSQL
+## Import the schemas from ScalarDB into PostgreSQL
 
 Next, let's import the schemas of the ScalarDB databases into PostgreSQL that processes analytical queries. ScalarDB Analytics with PostgreSQL provides a tool, Schema Importer, for this purpose. It'll get everything in place to run analytical queries for you.
 
@@ -68,18 +68,18 @@ Password for user postgres:
 (5 rows)
 ```
 
-The details of the sample data and more practical are shown in [the sample application page]().
+For details about the sample data and additional practical work, see [the sample application page]().
 
 ## Caveats
 
 ### Isolation level
 
-ScalarDB Analytics with PostgreSQL reads data with **Read Committed** isolation level. It ensures that the data you read has been committed in the past, but it is not guaranteed that you read consistent data at a particular point in time.
+ScalarDB Analytics with PostgreSQL reads data with the **Read Committed** isolation level set. This isolation level ensures that the data you read has been committed in the past but does not guarantee that you can read consistent data at a particular point in time.
 
 ### Write operations are not supported
 
-ScalarDB Analytics with PostgreSQL only support read-only queries. `INSERT`, `UPDATE` or other write operations are not supported.
+ScalarDB Analytics with PostgreSQL only supports read-only queries. `INSERT`, `UPDATE`, and other write operations are not supported.
 
 ### Conflicts among FDW extensions
 
-If you use multi-storage configuration, and use the JDBC with DynamoDB or CosmosDB together, you sometimes get an error due to the conflict between the underlying FDW extensions. We plan to fix this issue in the near future. Until then, you can avoid the error by reading data in DynamoDB or CosmosDB first, then JDBC.
+If you have a multi-storage configuration and use JDBC with DynamoDB or CosmosDB, you may encounter an error due to a conflict between the underlying FDW extensions. We plan to fix this issue in the near future. Until we fix this issue, you can avoid the error by reading data in DynamoDB or CosmosDB first, then reading data by using JDBC.
