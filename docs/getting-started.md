@@ -1,6 +1,6 @@
 # Getting Started with ScalarDB Analytics with PostgreSQL
 
-This document explains how to get started with ScalarDB Analytics with PostgreSQL. Here, we assume that you have already installed ScalarDB Analytics with PostgreSQL, and all required services are running. If you don't have such an environment, please follow [the installation document](./installation.md). As ScalarDB Analytics with PostgreSQL executes queries via PostgreSQL, we also assume you already have a `psql` or other PostgreSQL client to send queries to PostgreSQL.
+This document explains how to get started with ScalarDB Analytics with PostgreSQL. We assume that you have already installed ScalarDB Analytics with PostgreSQL and that all required services are running. If you don't have such an environment, please follow the instructions in [How to install ScalarDB Analytics with PostgreSQL in your local environment by using Docker](./installation.md). Because ScalarDB Analytics with PostgreSQL executes queries via PostgreSQL, we also assume that you already have a `psql` client or another PostgreSQL client to send queries to PostgreSQL.
 
 ## What is ScalarDB Analytics with PostgreSQL?
 
@@ -10,7 +10,7 @@ ScalarDB Analytics with PostgreSQL extends the functionality of ScalarDB to proc
 
 ScalarDB Analytics with PostgreSQL mainly consists of two components: PostgreSQL and Schema Importer.
 
-PostgreSQL runs as a service, accepting queries from users to process. FDW extensions are used to read data from the back-end storages managed by ScalarDB. Schema Importer is a tool to import the schema of the ScalarDB database into PostgreSQL so that users can see the identical tables in PostgreSQL side to the ScalarDB side.
+PostgreSQL runs as a service, accepting queries from users to process. FDW extensions are used to read data from the back-end storages that ScalarDB manages. Schema Importer is a tool to import the schema of the ScalarDB database into PostgreSQL so that users can see tables on the PostgreSQL side, which are identical to the tables on the ScalarDB side.
 
 ## Clone the sample application
 
@@ -22,7 +22,7 @@ First, you need one or more ScalarDB database to run analytical queries with Sca
 $ docker compose run --rm sql-cli --config /etc/scalardb.properties --file /etc/sample_data.sql
 ```
 
-This command sets up [multiple storage instances](https://scalardb.scalar-labs.com/docs/3.9/multi-storage-transactions/) that consist of DynamoDB, PostgreSQL, and Cassandra. Then, this creates namespaces of `dynamons`, `postgresns`, and `cassandrans` mapped to those storages, creates tables of `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` using [ScalarDB SQL](https://scalardb.scalar-labs.com/docs/3.9/scalardb-sql/getting-started-with-sql/), and load sample data into the tables.
+This command sets up [multiple storage instances](https://scalardb.scalar-labs.com/docs/3.9/multi-storage-transactions/) that consist of DynamoDB, PostgreSQL, and Cassandra. Then, the command creates namespaces for `dynamons`, `postgresns`, and `cassandrans` that are mapped to those storages, creates tables for `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` by using [ScalarDB SQL](https://scalardb.scalar-labs.com/docs/3.9/scalardb-sql/getting-started-with-sql/), and load sample data into the tables.
 
 ![Multi-storage overview](./images/multi-storage-overview.png)
 
@@ -68,7 +68,7 @@ Password for user postgres:
 (5 rows)
 ```
 
-For details about the sample data and additional practical work, see [the sample application page]().
+For details about the sample data and additional practical work, see the sample application page.
 
 ## Caveats
 
