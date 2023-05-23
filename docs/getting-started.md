@@ -12,10 +12,9 @@ ScalarDB Analytics with PostgreSQL mainly consists of two components: PostgreSQL
 
 PostgreSQL runs as a service, accepting queries from users to process. FDW extensions are used to read data from the back-end storages that ScalarDB manages. Schema Importer is a tool to import the schema of the ScalarDB database into PostgreSQL so that users can see tables on the PostgreSQL side, which are identical to the tables on the ScalarDB side.
 
-
 ## Set up a ScalarDB database
 
-First, you need one or more ScalarDB database to run analytical queries with ScalarDB Analytics with PostgreSQL. If you have your own ScalarDB database, you can skip this section and use your database instead. Otherwise, you can set up a sample database by running the following command.
+First, you need one or more ScalarDB databases to run analytical queries with ScalarDB Analytics with PostgreSQL. If you have your own ScalarDB database, you can skip this section and use your database instead. If you use the [scalardb-samples/scalardb-analytics-postgresql-sample](https://github.com/scalar-labs/scalardb-samples/scalardb-analytics-postgresql) project, you can set up a sample database by running the following command in the project directory.
 
 ```shell
 $ docker compose run --rm sql-cli --config /etc/scalardb.properties --file /etc/sample_data.sql
@@ -43,6 +42,8 @@ $ docker compose run --rm schema-importer \
   --namespace dynamons \
   --config-on-postgres-host /etc/scalardb.properties
 ```
+
+If you use your own ScalarDB database, you must replace the `--config` and `--config-on-postgres-host` options with your ScalarDB configuration file and the `--namespace` options with your ScalarDB namespaces to import.
 
 This creates tables (in precise, views) with the same names as the tables in the ScalarDB databases. In this example, the tables of `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` are created. The column definitions are also identical to the ScalarDB databases. These tables are [foreign tables](https://www.postgresql.org/docs/current/sql-createforeigntable.html) connected to the underlying storage of the ScalarDB databases using FDW. Therefore, you can equate those tables in PostgreSQL with the tables in the ScalarDB databases.
 

@@ -10,7 +10,7 @@ Follow the instructions on the Docker website according to your platform.
 
 ## Step 1. Clone the `scalardb-samples` repository
 
-[scalar-labs/scalardb-analytics-postgresql-sample](https://github.com/scalar-labs/scalardb-samples/scalardb-analytics-postgresql) repository is a project containing a sample configuration to set up ScalarDB Analytics with PostgreSQL.
+[scalardb-samples/scalardb-analytics-postgresql-sample](https://github.com/scalar-labs/scalardb-samples/scalardb-analytics-postgresql) repository is a project containing a sample configuration to set up ScalarDB Analytics with PostgreSQL.
 
 Determine the location on your local machine where you want to run the scalardb-analytics-postgresql-sample app. Then, open Terminal, go to the location by using the `cd` command, and run the following commands:
 
@@ -41,6 +41,12 @@ If you want to run the containers in the background, add the `-d` (--detach) opt
 
 ```shell
 $ docker-compose up -d
+```
+
+If you already have your own ScalarDB database and want to use it as a back-end service, you can launch only the PostgreSQL instance without starting additional back-end servers in the container.
+
+```shell
+$ docker-compose up analytics
 ```
 
 ### Step 4. Run your analytical queries
