@@ -12,7 +12,6 @@ ScalarDB Analytics with PostgreSQL mainly consists of two components: PostgreSQL
 
 PostgreSQL runs as a service, accepting queries from users to process. FDW extensions are used to read data from the back-end storages that ScalarDB manages. Schema Importer is a tool to import the schema of the ScalarDB database into PostgreSQL so that users can see tables on the PostgreSQL side, which are identical to the tables on the ScalarDB side.
 
-## Clone the sample application
 
 ## Set up a ScalarDB database
 
