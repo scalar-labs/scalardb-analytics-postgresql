@@ -543,6 +543,10 @@ static void add_classpath_to_system_class_loader(char *classpath)
 	(*env)->CallVoidMethod(env, system_class_loader, URLClassLoader_addURL,
 			       url);
 	catch_exception();
+
+	(*env)->DeleteGlobalRef(env, ClassLoader_class);
+	(*env)->DeleteGlobalRef(env, URLClassLoader_class);
+	(*env)->DeleteGlobalRef(env, URL_class);
 }
 
 static void clear_exception()
