@@ -534,21 +534,15 @@ static void add_classpath_to_system_class_loader(char *classpath)
 		env, ClassLoader_class, ClassLoader_getSystemClassLoader);
 	catch_exception();
 
-	ereport(DEBUG3, errmsg("foo"));
-
 	clear_exception();
 	url = (*env)->NewObject(env, URL_class, URL_constructor,
 				(*env)->NewStringUTF(env, url_classpath));
 	catch_exception();
 
-	ereport(DEBUG3, errmsg("bar"));
-
 	clear_exception();
 	(*env)->CallVoidMethod(env, system_class_loader, URLClassLoader_addURL,
 			       url);
 	catch_exception();
-
-	ereport(DEBUG3, errmsg("hoge"));
 }
 
 static void clear_exception()
