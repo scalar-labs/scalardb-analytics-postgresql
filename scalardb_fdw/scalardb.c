@@ -53,7 +53,8 @@ static jmethodID Closeable_close;
 static jclass ScalarDbUtils_class;
 static jmethodID ScalarDbUtils_initialize;
 static jmethodID ScalarDbUtils_closeStorage;
-static jmethodID ScalarDbUtils_scanAll;
+static jmethodID ScalarDbUtils_scan;
+static jmethodID ScalarDbUtils_buildableScanAll;
 static jmethodID ScalarDbUtils_getResultColumnsSize;
 
 static jclass Result_class;
@@ -68,6 +69,9 @@ static jmethodID Result_getBlobAsBytes;
 
 static jclass Scanner_class;
 static jmethodID Scanner_one;
+
+static jclass BuildableScanAll_class;
+static jmethodID BuildableScanAll_build;
 
 static void initialize_jvm(ScalarDbFdwOptions *opts);
 static void destroy_jvm(void);
@@ -149,16 +153,24 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name)
 {
 	jstring namespace_str;
 	jstring table_name_str;
+	jobject buildableScan;
+	jobject scan;
 	jobject scanner;
 
 	ereport(DEBUG5, errmsg("entering function %s", __func__));
 
 	namespace_str = (*env)->NewStringUTF(env, namespace);
 	table_name_str = (*env)->NewStringUTF(env, table_name);
+
+	buildableScan = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_buildableScanAll,
+		namespace_str, table_name_str);
+
+	scan = (*env)->CallObjectMethod(env, buildableScan,
+					BuildableScanAll_build);
 	clear_exception();
 	scanner = (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
-						 ScalarDbUtils_scanAll,
-						 namespace_str, table_name_str);
+						 ScalarDbUtils_scan, scan);
 	catch_exception();
 	return scanner;
 }
@@ -464,8 +476,12 @@ static void initialize_scalardb_references()
 	register_java_static_method(ScalarDbUtils_closeStorage,
 				    ScalarDbUtils_class, "closeStorage", "()V");
 	register_java_static_method(
-		ScalarDbUtils_scanAll, ScalarDbUtils_class, "scanAll",
-		"(Ljava/lang/String;Ljava/lang/String;)Lcom/scalar/db/api/Scanner;");
+		ScalarDbUtils_scan, ScalarDbUtils_class, "scan",
+		"(Lcom/scalar/db/api/Scan;)Lcom/scalar/db/api/Scanner;");
+	register_java_static_method(
+		ScalarDbUtils_buildableScanAll, ScalarDbUtils_class,
+		"buildableScanAll",
+		"(Ljava/lang/String;Ljava/lang/String;)Lcom/scalar/db/api/ScanBuilder$BuildableScanAll;");
 	register_java_static_method(ScalarDbUtils_getResultColumnsSize,
 				    ScalarDbUtils_class, "getResultColumnsSize",
 				    "(Lcom/scalar/db/api/Result;)I");
@@ -493,6 +509,13 @@ static void initialize_scalardb_references()
 	register_java_class(Scanner_class, "com/scalar/db/api/Scanner");
 	register_java_class_method(Scanner_one, Scanner_class, "one",
 				   "()Ljava/util/Optional;");
+
+	// com.scalar.db.api.ScanBuilder$BuildableScanAll
+	register_java_class(BuildableScanAll_class,
+			    "Lcom/scalar/db/api/ScanBuilder$BuildableScanAll;");
+	register_java_class_method(BuildableScanAll_build,
+				   BuildableScanAll_class, "build",
+				   "()Lcom/scalar/db/api/Scan;");
 }
 
 static void add_classpath_to_system_class_loader(char *classpath)
