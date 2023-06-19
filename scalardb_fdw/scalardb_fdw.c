@@ -1,4 +1,5 @@
 #include "c.h"
+#include "nodes/value.h"
 #include "option.h"
 #include "postgres.h"
 
@@ -52,6 +53,7 @@ typedef struct {
 
 	/* extracted fdw_private data */
 	List *attrs_to_retrieve; /* list of retrieved attribute numbers */
+	List *attnames; /* list of retrieved attribute names, which are coverted from attrs_to_retrieve */
 
 	Relation rel; /* relcache entry for the foreign table */
 	AttInMetadata *attinmeta; /* attribute datatype conversion metadata */
@@ -81,11 +83,14 @@ static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
 static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 			    Bitmapset *attrs_used, List **attrs_to_retrieve);
 
+static void get_attnames(TupleDesc tupdesc, List *attrs_to_retrieve,
+			 List **attnames);
+
 static Datum convert_result_column_to_datum(jobject result, char *attname,
 					    Oid atttypid);
 
-static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
-					Relation rel, List *attrs_to_retrieve);
+static HeapTuple make_tuple_from_result(jobject result, Relation rel,
+					List *attrs_to_retrieve);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_handler);
 
@@ -184,9 +189,7 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 				       NULL, /* no extra plan */
 				       NIL); /* no fdw_private */
 	add_path(baserel, (Path *)path);
-	/* TODO: support other type of Scan, including partitionKey() and
-     * indexKey()
-     */
+	/* TODO: support other type of Scan, including partitionKey() and indexKey() */
 	/* TODO: support ordering push down */
 }
 
@@ -326,6 +329,10 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 		ALLOCSET_DEFAULT_SIZES);
 
 	scalardb_initialize(&fdw_state->options);
+
+	fdw_state->attnames = NIL;
+	get_attnames(fdw_state->attinmeta->tupdesc,
+		     fdw_state->attrs_to_retrieve, &fdw_state->attnames);
 }
 
 static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
@@ -343,9 +350,9 @@ static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
 	slot = node->ss.ss_ScanTupleSlot;
 
 	if (!fdw_state->scanner) {
-		fdw_state->scanner =
-			scalardb_scan_all(fdw_state->options.namespace,
-					  fdw_state->options.table_name);
+		fdw_state->scanner = scalardb_scan_all(
+			fdw_state->options.namespace,
+			fdw_state->options.table_name, fdw_state->attnames);
 	}
 
 	result_optional = scalardb_scanner_one(fdw_state->scanner);
@@ -357,9 +364,7 @@ static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
 	old_context = MemoryContextSwitchTo(fdw_state->per_tuple_context);
 
 	result = scalardb_optional_get(result_optional);
-	tuple = make_tuple_from_result(result,
-				       scalardb_result_columns_size(result),
-				       fdw_state->rel,
+	tuple = make_tuple_from_result(result, fdw_state->rel,
 				       fdw_state->attrs_to_retrieve);
 
 	scalardb_scanner_release_result();
@@ -381,7 +386,8 @@ static void scalardbReScanForeignScan(ForeignScanState *node)
 		scalardb_scanner_close(fdw_state->scanner);
 
 	fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
-					       fdw_state->options.table_name);
+					       fdw_state->options.table_name,
+					       fdw_state->attnames);
 }
 
 static void scalardbEndForeignScan(ForeignScanState *node)
@@ -553,13 +559,34 @@ static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 	table_close(rel, NoLock);
 }
 
-static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
-					Relation rel, List *attrs_to_retrieve)
+static void get_attnames(TupleDesc tupdesc, List *attrs_to_retrieve,
+			 List **attnames)
+{
+	ListCell *lc;
+	FormData_pg_attribute *attr;
+	char *attname;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	foreach(lc, attrs_to_retrieve) {
+		int i = lfirst_int(lc);
+
+		if (i > 0) {
+			/* ordinary column */
+			Assert(i <= tupdesc->natts);
+			attr = TupleDescAttr(tupdesc, i - 1);
+			attname = NameStr(attr->attname);
+			*attnames = lappend(*attnames, pstrdup(attname));
+		}
+	}
+}
+
+static HeapTuple make_tuple_from_result(jobject result, Relation rel,
+					List *attrs_to_retrieve)
 {
 	TupleDesc tupdesc;
 	Datum *values;
 	bool *nulls;
-	int count;
 	ListCell *lc;
 	FormData_pg_attribute attr;
 	char *attname;
@@ -575,10 +602,6 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
 	/* Initialize to nulls for any columns not present in result */
 	memset(nulls, true, tupdesc->natts * sizeof(bool));
 
-	/*
-	 * i indexes columns in the relation, j indexes columns in the PGresult.
-	 */
-	count = 0;
 	foreach(lc, attrs_to_retrieve) {
 		int i = lfirst_int(lc);
 
@@ -591,17 +614,7 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
 			values[i - 1] = convert_result_column_to_datum(
 				result, attname, attr.atttypid);
 		}
-
-		count++;
 	}
-
-	/* TODO: retrieve only used columns */
-	/*
-	 * Check we got the expected number of columns.  Note: j == 0 and
-	 * PQnfields == 1 is expected, since deparse emits a NULL if no columns.
-	 */
-	// if (count > 0 && count != ncolumn)
-	//     elog(ERROR, "remote query result does not match the foreign table");
 
 	tuple = heap_form_tuple(tupdesc, values, nulls);
 

@@ -1,6 +1,8 @@
 #include "scalardb.h"
 
 #include "jni.h"
+#include "nodes/pg_list.h"
+#include "nodes/value.h"
 #include "storage/ipc.h"
 #include "utils/builtins.h"
 #include "utils/elog.h"
@@ -71,6 +73,7 @@ static jclass Scanner_class;
 static jmethodID Scanner_one;
 
 static jclass BuildableScanAll_class;
+static jmethodID BuildableScanAll_projections;
 static jmethodID BuildableScanAll_build;
 
 static void initialize_jvm(ScalarDbFdwOptions *opts);
@@ -87,6 +90,9 @@ static void catch_exception(void);
 static char *convert_string_to_cstring(jobject java_cstring);
 static text *convert_string_to_text(jobject java_cstring);
 static bytea *convert_jbyteArray_to_bytea(jbyteArray bytes);
+static jobjectArray convert_cstring_list_to_jarray_of_string(List *strings);
+
+static char *to_string(jobject obj);
 
 static void on_proc_exit_cb(int code, Datum arg);
 
@@ -149,11 +155,20 @@ void scalardb_initialize(ScalarDbFdwOptions *opts)
 	already_initialized = true;
 }
 
-extern jobject scalardb_scan_all(char *namespace, char *table_name)
+/*
+ * Retruns Scanner object started from Scan built with the specified parameters.
+ *
+ * If `attnames` is specified, only the columns in `attnames` will be returned.
+ * The type of `attnames` must be a List of a null-terminated char*.
+ * In that case, callers also must specify its length as `projections_len`. Otherwise,
+ * all columns will be returned.
+ */
+extern jobject scalardb_scan_all(char *namespace, char *table_name,
+				 List *attnames)
 {
 	jstring namespace_str;
 	jstring table_name_str;
-	jobject buildableScan;
+	jobject buildable_scan;
 	jobject scan;
 	jobject scanner;
 
@@ -162,12 +177,23 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name)
 	namespace_str = (*env)->NewStringUTF(env, namespace);
 	table_name_str = (*env)->NewStringUTF(env, table_name);
 
-	buildableScan = (*env)->CallStaticObjectMethod(
+	buildable_scan = (*env)->CallStaticObjectMethod(
 		env, ScalarDbUtils_class, ScalarDbUtils_buildableScanAll,
 		namespace_str, table_name_str);
 
-	scan = (*env)->CallObjectMethod(env, buildableScan,
+	if (attnames != NIL) {
+		jobjectArray attrnames_array =
+			convert_cstring_list_to_jarray_of_string(attnames);
+		buildable_scan = (*env)->CallObjectMethod(
+			env, buildable_scan, BuildableScanAll_projections,
+			attrnames_array);
+	}
+
+	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScanAll_build);
+
+	ereport(DEBUG3, errmsg("ScalarDB Scan: %s", to_string(scan)));
+
 	clear_exception();
 	scanner = (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
 						 ScalarDbUtils_scan, scan);
@@ -513,6 +539,10 @@ static void initialize_scalardb_references()
 	// com.scalar.db.api.ScanBuilder$BuildableScanAll
 	register_java_class(BuildableScanAll_class,
 			    "Lcom/scalar/db/api/ScanBuilder$BuildableScanAll;");
+	register_java_class_method(
+		BuildableScanAll_projections, BuildableScanAll_class,
+		"projections",
+		"([Ljava/lang/String;)Lcom/scalar/db/api/ScanBuilder$BuildableScanAll;");
 	register_java_class_method(BuildableScanAll_build,
 				   BuildableScanAll_class, "build",
 				   "()Lcom/scalar/db/api/Scan;");
@@ -581,11 +611,7 @@ static void catch_exception()
 {
 	if ((*env)->ExceptionCheck(env)) {
 		jthrowable exc = (*env)->ExceptionOccurred(env);
-
-		jstring exception_message = (jstring)(*env)->CallObjectMethod(
-			env, exc, Object_toString);
-		char *msg = convert_string_to_cstring(exception_message);
-
+		char *msg = to_string(exc);
 		ereport(ERROR, errcode(ERRCODE_FDW_ERROR),
 			errmsg("Exception occurred in JVM: %s", msg));
 	}
@@ -651,6 +677,31 @@ static bytea *convert_jbyteArray_to_bytea(jbyteArray bytes)
 		(*env)->ReleaseByteArrayElements(env, bytes, elems, JNI_ABORT);
 	}
 	return ret;
+}
+
+/*
+* Convert a list of strings to a Java String array.
+* The type of strs must be a List of a null-terminated char*;
+*/
+static jobjectArray convert_cstring_list_to_jarray_of_string(List *strs)
+{
+	jobjectArray ret = (*env)->NewObjectArray(env, list_length(strs),
+						  String_class, NULL);
+
+	for (int i = 0; i < list_length(strs); i++) {
+		jstring str = (*env)->NewStringUTF(env, list_nth(strs, i));
+		(*env)->SetObjectArrayElement(env, ret, i, str);
+		(*env)->DeleteLocalRef(env, str);
+	}
+	return ret;
+}
+
+static char *to_string(jobject obj)
+{
+	jstring str =
+		(jstring)(*env)->CallObjectMethod(env, obj, Object_toString);
+	char *cstr = convert_string_to_cstring(str);
+	return cstr;
 }
 
 static void on_proc_exit_cb(int code, Datum arg)
