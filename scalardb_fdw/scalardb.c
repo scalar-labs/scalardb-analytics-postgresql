@@ -158,10 +158,9 @@ void scalardb_initialize(ScalarDbFdwOptions *opts)
 /*
  * Retruns Scanner object started from Scan built with the specified parameters.
  *
- * If `attnames` is specified, only the columns in `attnames` will be returned.
+ * If `attnames` is specified, only the columns with the names in `attnames`
+ * will be returned. (i.e. calls projections())
  * The type of `attnames` must be a List of a null-terminated char*.
- * In that case, callers also must specify its length as `projections_len`. Otherwise,
- * all columns will be returned.
  */
 extern jobject scalardb_scan_all(char *namespace, char *table_name,
 				 List *attnames)
