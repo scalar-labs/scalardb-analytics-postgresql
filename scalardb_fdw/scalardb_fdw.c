@@ -1,4 +1,5 @@
 #include "c.h"
+#include "nodes/value.h"
 #include "option.h"
 #include "postgres.h"
 
@@ -33,10 +34,10 @@ typedef struct {
 	Bitmapset *attrs_used;
 
 	/*
-     * Restriction clauses, divided into safe and unsafe to pushdown subsets.
-     * All entries in these lists should have RestrictInfo wrappers; that
-     * improves efficiency of selectivity and cost estimation.
-     */
+	 * Restriction clauses, divided into safe and unsafe to pushdown subsets.
+	 * All entries in these lists should have RestrictInfo wrappers; that
+	 * improves efficiency of selectivity and cost estimation.
+	 */
 	List *remote_conds;
 	List *local_conds;
 
@@ -52,6 +53,7 @@ typedef struct {
 
 	/* extracted fdw_private data */
 	List *attrs_to_retrieve; /* list of retrieved attribute numbers */
+	List *attnames; /* list of retrieved attribute names, which are coverted from attrs_to_retrieve */
 
 	Relation rel; /* relcache entry for the foreign table */
 	AttInMetadata *attinmeta; /* attribute datatype conversion metadata */
@@ -81,11 +83,14 @@ static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
 static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 			    Bitmapset *attrs_used, List **attrs_to_retrieve);
 
+static void get_attnames(TupleDesc tupdesc, List *attrs_to_retrieve,
+			 List **attnames);
+
 static Datum convert_result_column_to_datum(jobject result, char *attname,
 					    Oid atttypid);
 
-static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
-					Relation rel, List *attrs_to_retrieve);
+static HeapTuple make_tuple_from_result(jobject result, Relation rel,
+					List *attrs_to_retrieve);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_handler);
 
@@ -130,14 +135,14 @@ static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
 			    &fdw_private->local_conds);
 
 	/*
-     * Identify which attributes will need to be retrieved from the remote
-     * server.  These include all attrs needed for joins or final output,
-     * plus all attrs used in the local_conds.  (Note: if we end up using a
-     * parameterized scan, it's possible that some of the join clauses will
-     * be sent to the remote and thus we wouldn't really need to retrieve
-     * the columns used in them.  Doesn't seem worth detecting that case
-     * though.)
-     */
+	 * Identify which attributes will need to be retrieved from the remote
+	 * server.  These include all attrs needed for joins or final output,
+	 * plus all attrs used in the local_conds.  (Note: if we end up using a
+	 * parameterized scan, it's possible that some of the join clauses will
+	 * be sent to the remote and thus we wouldn't really need to retrieve
+	 * the columns used in them.  Doesn't seem worth detecting that case
+	 * though.)
+	 */
 	fdw_private->attrs_used = NULL;
 	pull_varattnos((Node *)baserel->reltarget->exprs, baserel->relid,
 		       &fdw_private->attrs_used);
@@ -173,7 +178,7 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 	estimate_costs(root, baserel, &startup_cost, &total_cost);
 
 	/* Create a ForeignPath node corresponding to Scan.all()
-     * and add it as only possible path */
+	 * and add it as only possible path */
 	path = create_foreignscan_path(root, baserel,
 				       NULL, /* default pathtarget */
 				       baserel->rows, /* number of rows */
@@ -184,9 +189,7 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 				       NULL, /* no extra plan */
 				       NIL); /* no fdw_private */
 	add_path(baserel, (Path *)path);
-	/* TODO: support other type of Scan, including partitionKey() and
-     * indexKey()
-     */
+	/* TODO: support other type of Scan, including partitionKey() and indexKey() */
 	/* TODO: support ordering push down */
 }
 
@@ -212,33 +215,33 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	fdw_private = (ScalarDbFdwPlanState *)baserel->fdw_private;
 
 	/* So far, baserel is always base relations because
-     * GetForeignJoinPaths nor GetForeignUpperPaths are not defined.
-     */
+	 * GetForeignJoinPaths nor GetForeignUpperPaths are not defined.
+	 */
 
 	/*
-     * For base relations, set scan_relid as the relid of the relation.
-     */
+	 * For base relations, set scan_relid as the relid of the relation.
+	 */
 	scan_relid = baserel->relid;
 
 	/*
-     * In a base-relation scan, we must apply the given scan_clauses.
-     *
-     * Separate the scan_clauses into those that can be executed remotely
-     * and those that can't.  baserestrictinfo clauses that were
-     * previously determined to be safe or unsafe by classifyConditions
-     * are found in fpinfo->remote_conds and fpinfo->local_conds. Anything
-     * else in the scan_clauses list will be a join clause, which we have
-     * to check for remote-safety.
-     *
-     * Note: the join clauses we see here should be the exact same ones
-     * previously examined by postgresGetForeignPaths.  Possibly it'd be
-     * worth passing forward the classification work done then, rather
-     * than repeating it here.
-     *
-     * This code must match "extract_actual_clauses(scan_clauses, false)"
-     * except for the additional decision about remote versus local
-     * execution.
-     */
+	 * In a base-relation scan, we must apply the given scan_clauses.
+	 *
+	 * Separate the scan_clauses into those that can be executed remotely
+	 * and those that can't.  baserestrictinfo clauses that were
+	 * previously determined to be safe or unsafe by classifyConditions
+	 * are found in fpinfo->remote_conds and fpinfo->local_conds. Anything
+	 * else in the scan_clauses list will be a join clause, which we have
+	 * to check for remote-safety.
+	 *
+	 * Note: the join clauses we see here should be the exact same ones
+	 * previously examined by postgresGetForeignPaths.  Possibly it'd be
+	 * worth passing forward the classification work done then, rather
+	 * than repeating it here.
+	 *
+	 * This code must match "extract_actual_clauses(scan_clauses, false)"
+	 * except for the additional decision about remote versus local
+	 * execution.
+	 */
 	foreach(lc, scan_clauses) {
 		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
 
@@ -257,9 +260,9 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	}
 
 	/*
-     * For a base-relation scan, we have to support EPQ recheck, which
-     * should recheck all the remote quals.
-     */
+	 * For a base-relation scan, we have to support EPQ recheck, which
+	 * should recheck all the remote quals.
+	 */
 	fdw_recheck_quals = remote_exprs;
 
 	get_target_list(root, baserel, fdw_private->attrs_used,
@@ -268,13 +271,13 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	fdw_private_for_scan = list_make1(attrs_to_retrieve);
 
 	/*
-     * Create the ForeignScan node for the given relation.
-     *
-     * Note that the remote parameter expressions are stored in the
-     * fdw_exprs field of the finished plan node; we can't keep them in
-     * private state because then they wouldn't be subject to later planner
-     * processing.
-     */
+	 * Create the ForeignScan node for the given relation.
+	 *
+	 * Note that the remote parameter expressions are stored in the
+	 * fdw_exprs field of the finished plan node; we can't keep them in
+	 * private state because then they wouldn't be subject to later planner
+	 * processing.
+	 */
 	return make_foreignscan(tlist, local_exprs, scan_relid,
 				NIL, /* no expressions to evaluate */
 				fdw_private_for_scan, /* private state */
@@ -297,8 +300,8 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	fsplan = (ForeignScan *)node->ss.ps.plan;
 
 	/*
-     * Do nothing in EXPLAIN (no ANALYZE) case.  node->fdw_state stays NULL.
-     */
+	 * Do nothing in EXPLAIN (no ANALYZE) case.  node->fdw_state stays NULL.
+	 */
 	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
 		return;
 
@@ -326,6 +329,10 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 		ALLOCSET_DEFAULT_SIZES);
 
 	scalardb_initialize(&fdw_state->options);
+
+	fdw_state->attnames = NIL;
+	get_attnames(fdw_state->attinmeta->tupdesc,
+		     fdw_state->attrs_to_retrieve, &fdw_state->attnames);
 }
 
 static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
@@ -343,9 +350,9 @@ static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
 	slot = node->ss.ss_ScanTupleSlot;
 
 	if (!fdw_state->scanner) {
-		fdw_state->scanner =
-			scalardb_scan_all(fdw_state->options.namespace,
-					  fdw_state->options.table_name);
+		fdw_state->scanner = scalardb_scan_all(
+			fdw_state->options.namespace,
+			fdw_state->options.table_name, fdw_state->attnames);
 	}
 
 	result_optional = scalardb_scanner_one(fdw_state->scanner);
@@ -357,9 +364,7 @@ static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
 	old_context = MemoryContextSwitchTo(fdw_state->per_tuple_context);
 
 	result = scalardb_optional_get(result_optional);
-	tuple = make_tuple_from_result(result,
-				       scalardb_result_columns_size(result),
-				       fdw_state->rel,
+	tuple = make_tuple_from_result(result, fdw_state->rel,
 				       fdw_state->attrs_to_retrieve);
 
 	scalardb_scanner_release_result();
@@ -381,7 +386,8 @@ static void scalardbReScanForeignScan(ForeignScanState *node)
 		scalardb_scanner_close(fdw_state->scanner);
 
 	fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
-					       fdw_state->options.table_name);
+					       fdw_state->options.table_name,
+					       fdw_state->attnames);
 }
 
 static void scalardbEndForeignScan(ForeignScanState *node)
@@ -463,12 +469,12 @@ static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
 {
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 	/*
-     * If the foreign table has never been ANALYZEd, it will have
-     * reltuples < 0, meaning "unknown". In this case we can use a hack
-     * similar to plancat.c's treatment of empty relations: use a minimum
-     * size estimate of 10 pages, and divide by the column-datatype-based
-     * width estimate to get the corresponding number of tuples.
-     */
+	 * If the foreign table has never been ANALYZEd, it will have
+	 * reltuples < 0, meaning "unknown". In this case we can use a hack
+	 * similar to plancat.c's treatment of empty relations: use a minimum
+	 * size estimate of 10 pages, and divide by the column-datatype-based
+	 * width estimate to get the corresponding number of tuples.
+	 */
 #if PG_VERSION_NUM >= 140000
 	if (baserel->tuples < 0) {
 #else
@@ -500,8 +506,7 @@ static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-	/* TODO: consider whether more precise estimation of cost is worth doing
-     */
+	/* TODO: consider whether more precise estimation of cost is worth doing */
 	cost_per_tuple = 1;
 	*startup_cost = 100; /* temporary default value */
 	*total_cost = *startup_cost + cost_per_tuple * baserel->tuples;
@@ -526,9 +531,9 @@ static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 	rte = planner_rt_fetch(baserel->relid, root);
 
 	/*
-     * Core code already has some lock on each rel being planned, so we can
-     * use NoLock here.
-     */
+	 * Core code already has some lock on each rel being planned, so we can
+	 * use NoLock here.
+	 */
 	rel = table_open(rte->relid, NoLock);
 	tupdesc = RelationGetDescr(rel);
 
@@ -554,13 +559,34 @@ static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 	table_close(rel, NoLock);
 }
 
-static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
-					Relation rel, List *attrs_to_retrieve)
+static void get_attnames(TupleDesc tupdesc, List *attrs_to_retrieve,
+			 List **attnames)
+{
+	ListCell *lc;
+	FormData_pg_attribute *attr;
+	char *attname;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	foreach(lc, attrs_to_retrieve) {
+		int i = lfirst_int(lc);
+
+		if (i > 0) {
+			/* ordinary column */
+			Assert(i <= tupdesc->natts);
+			attr = TupleDescAttr(tupdesc, i - 1);
+			attname = NameStr(attr->attname);
+			*attnames = lappend(*attnames, pstrdup(attname));
+		}
+	}
+}
+
+static HeapTuple make_tuple_from_result(jobject result, Relation rel,
+					List *attrs_to_retrieve)
 {
 	TupleDesc tupdesc;
 	Datum *values;
 	bool *nulls;
-	int count;
 	ListCell *lc;
 	FormData_pg_attribute attr;
 	char *attname;
@@ -576,10 +602,6 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
 	/* Initialize to nulls for any columns not present in result */
 	memset(nulls, true, tupdesc->natts * sizeof(bool));
 
-	/*
-     * i indexes columns in the relation, j indexes columns in the PGresult.
-     */
-	count = 0;
 	foreach(lc, attrs_to_retrieve) {
 		int i = lfirst_int(lc);
 
@@ -592,17 +614,7 @@ static HeapTuple make_tuple_from_result(jobject result, int ncolumn,
 			values[i - 1] = convert_result_column_to_datum(
 				result, attname, attr.atttypid);
 		}
-
-		count++;
 	}
-
-	/* TODO: retrieve only used columns */
-	/*
-     * Check we got the expected number of columns.  Note: j == 0 and
-     * PQnfields == 1 is expected, since deparse emits a NULL if no columns.
-     */
-	// if (count > 0 && count != ncolumn)
-	//     elog(ERROR, "remote query result does not match the foreign table");
 
 	tuple = heap_form_tuple(tupdesc, values, nulls);
 

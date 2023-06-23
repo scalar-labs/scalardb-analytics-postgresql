@@ -74,9 +74,9 @@ Datum scalardb_fdw_validator(PG_FUNCTION_ARGS)
 			StringInfoData buf;
 
 			/*
-             * Unknown option specified, complain about it. Provide a hint
-             * with list of valid options for the object.
-             */
+			 * Unknown option specified, complain about it. Provide a hint
+			 * with list of valid options for the object.
+			 */
 			initStringInfo(&buf);
 			for (opt = valid_options; opt->optname; opt++) {
 				if (catalog == opt->optcontext)

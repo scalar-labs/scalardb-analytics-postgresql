@@ -13,7 +13,7 @@
 
 extern void scalardb_initialize(ScalarDbFdwOptions *opts);
 
-extern jobject scalardb_scan_all(char *namespace, char *table_name);
+extern jobject scalardb_scan_all(char *namespace, char *table_name, List *attnames);
 
 extern jobject scalardb_scanner_one(jobject scanner);
 extern void scalardb_scanner_release_result(void);

@@ -21,7 +21,7 @@ CREATE FOREIGN TABLE cassandrans_test (
 select * from cassandrans_test;
  c_pk | c_ck1 | c_ck2 | c_boolean_col | c_int_col | c_bigint_col | c_float_col | c_double_col | c_text_col | c_blob_col 
 ------+-------+-------+---------------+-----------+--------------+-------------+--------------+------------+------------
-    1 |     1 |     1 | t             |         0 |            1 |           0 |            1 | test       | \x010203
+    1 |     1 |     1 | t             |         1 |            1 |           0 |            1 | test       | \x010203
 (1 row)
 
 CREATE FOREIGN TABLE postgresns_test (
@@ -42,7 +42,7 @@ CREATE FOREIGN TABLE postgresns_test (
 select * from postgresns_test;
  p_pk | p_ck1 | p_ck2 | p_boolean_col | p_int_col | p_bigint_col | p_float_col | p_double_col | p_text_col | p_blob_col 
 ------+-------+-------+---------------+-----------+--------------+-------------+--------------+------------+------------
-    1 |     1 |     1 | t             |         0 |            1 |           0 |            1 | test       | \x010203
+    1 |     1 |     1 | t             |         1 |            1 |           0 |            1 | test       | \x010203
 (1 row)
 
 CREATE FOREIGN TABLE postgresns_null_test (
@@ -63,7 +63,7 @@ CREATE FOREIGN TABLE postgresns_null_test (
 select * from postgresns_null_test;
  p_pk | p_ck1 | p_ck2 | p_boolean_col | p_int_col | p_bigint_col | p_float_col | p_double_col | p_text_col | p_blob_col 
 ------+-------+-------+---------------+-----------+--------------+-------------+--------------+------------+------------
-    1 |     1 |     1 |               |         0 |              |             |              |            | 
+    1 |     1 |     1 |               |           |              |             |              |            | 
 (1 row)
 
 select p_pk from postgresns_test;

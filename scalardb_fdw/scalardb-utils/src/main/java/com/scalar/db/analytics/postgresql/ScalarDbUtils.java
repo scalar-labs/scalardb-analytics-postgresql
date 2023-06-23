@@ -3,6 +3,7 @@ package com.scalar.db.analytics.postgresql;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
@@ -20,9 +21,12 @@ public class ScalarDbUtils {
     }
   }
 
-  static Scanner scanAll(String namespace, String tableName) throws ExecutionException {
-    Scan scan = Scan.newBuilder().namespace(namespace).table(tableName).all().build();
+  static Scanner scan(Scan scan) throws ExecutionException {
     return storage.scan(scan);
+  }
+
+  static ScanBuilder.BuildableScanAll buildableScanAll(String namespace, String tableName) {
+    return Scan.newBuilder().namespace(namespace).table(tableName).all();
   }
 
   static int getResultColumnsSize(Result result) {
