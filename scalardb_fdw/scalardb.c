@@ -188,9 +188,9 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 			attrnames_array);
 	}
 
-	jobject _scan = (*env)->CallObjectMethod(env, buildable_scan,
-						 BuildableScanAll_build);
-	scan = (*env)->NewGlobalRef(env, _scan);
+	scan = (*env)->CallObjectMethod(env, buildable_scan,
+					BuildableScanAll_build);
+	scan = (*env)->NewGlobalRef(env, scan);
 	return scan;
 }
 

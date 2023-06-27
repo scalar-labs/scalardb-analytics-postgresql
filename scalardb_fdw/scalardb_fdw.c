@@ -406,10 +406,11 @@ static void scalardbEndForeignScan(ForeignScanState *node)
 
 static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
+	ScalarDbFdwScanState *fdw_state;
+
 	ereport(DEBUG4, errmsg("entering function %s", __func__));
 
-	ScalarDbFdwScanState *fdw_state =
-		(ScalarDbFdwScanState *)node->fdw_state;
+	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
 	ExplainPropertyText("ScalarDB Namespace", fdw_state->options.namespace,
 			    es);
 	ExplainPropertyText("ScalarDB Table", fdw_state->options.table_name,
