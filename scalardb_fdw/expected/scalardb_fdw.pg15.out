@@ -80,3 +80,21 @@ select proname, prosrc, probin from pg_proc where proname = 'scalardb_fdw_get_ja
  scalardb_fdw_get_jar_file_path | scalardb_fdw_get_jar_file_path | $libdir/scalardb_fdw
 (1 row)
 
+explain select p_pk from postgresns_test;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Foreign Scan on postgresns_test  (cost=100.00..3026.00 rows=2926 width=4)
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+(3 rows)
+
+explain verbose select p_pk from postgresns_test;
+                                                                                                                                                            QUERY PLAN                                                                                                                                                             
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=100.00..3026.00 rows=2926 width=4)
+   Output: p_pk
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan: ScanAll{namespace=Optional[postgresns], table=Optional[test], partitionKey=Key{}, clusteringKey=Optional.empty, projections=[p_pk], consistency=SEQUENTIAL}ScanAll{startClusteringKey=Optional.empty, startInclusive=false, endClusteringKey=Optional.empty, endInclusive=false, orderings=[], limit=0}ScanAll{}
+(5 rows)
+
