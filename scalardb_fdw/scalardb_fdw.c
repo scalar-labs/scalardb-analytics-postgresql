@@ -49,8 +49,8 @@ typedef struct {
 	ScalarDbFdwOptions options;
 
 	/* extracted fdw_private data */
-	List *attrs_to_retrieve; /* list of retrieved attribute numbers */
-	List *attnames; /* list of retrieved attribute names, which are coverted from attrs_to_retrieve */
+	List *attrs_to_retrieve; /* List of retrieved attribute numbers */
+	List *attnames; /* List of retrieved attribute names, which are coverted from attrs_to_retrieve */
 
 	Relation rel; /* relcache entry for the foreign table */
 	AttInMetadata *attinmeta; /* attribute datatype conversion metadata */
@@ -558,6 +558,9 @@ static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 	table_close(rel, NoLock);
 }
 
+/* 
+ * Get a List of attribute name Strings from the given List of attribute numbers.
+ */
 static void get_attnames(TupleDesc tupdesc, List *attrs_to_retrieve,
 			 List **attnames)
 {
@@ -575,7 +578,8 @@ static void get_attnames(TupleDesc tupdesc, List *attrs_to_retrieve,
 			Assert(i <= tupdesc->natts);
 			attr = TupleDescAttr(tupdesc, i - 1);
 			attname = NameStr(attr->attname);
-			*attnames = lappend(*attnames, pstrdup(attname));
+			*attnames = lappend(*attnames,
+					    makeString(pstrdup(attname)));
 		}
 	}
 }

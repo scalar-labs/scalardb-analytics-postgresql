@@ -93,7 +93,7 @@ static void catch_exception(void);
 static char *convert_string_to_cstring(jobject java_cstring);
 static text *convert_string_to_text(jobject java_cstring);
 static bytea *convert_jbyteArray_to_bytea(jbyteArray bytes);
-static jobjectArray convert_cstring_list_to_jarray_of_string(List *strings);
+static jobjectArray convert_string_list_to_jarray_of_string(List *strings);
 
 static void on_proc_exit_cb(int code, Datum arg);
 
@@ -164,7 +164,7 @@ void scalardb_initialize(ScalarDbFdwOptions *opts)
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
- * The type of `attnames` must be a List of a null-terminated char*.
+ * The type of `attnames` must be a List of String.
  */
 extern jobject scalardb_scan_all(char *namespace, char *table_name,
 				 List *attnames)
@@ -185,7 +185,7 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 
 	if (attnames != NIL) {
 		jobjectArray attrnames_array =
-			convert_cstring_list_to_jarray_of_string(attnames);
+			convert_string_list_to_jarray_of_string(attnames);
 		buildable_scan = (*env)->CallObjectMethod(
 			env, buildable_scan, BuildableScanAll_projections,
 			attrnames_array);
@@ -792,15 +792,16 @@ static bytea *convert_jbyteArray_to_bytea(jbyteArray bytes)
 
 /*
 * Convert a list of strings to a Java String array.
-* The type of strs must be a List of a null-terminated char*;
+* The type of strs must be a List of String;
 */
-static jobjectArray convert_cstring_list_to_jarray_of_string(List *strs)
+static jobjectArray convert_string_list_to_jarray_of_string(List *strs)
 {
 	jobjectArray ret = (*env)->NewObjectArray(env, list_length(strs),
 						  String_class, NULL);
 
 	for (int i = 0; i < list_length(strs); i++) {
-		jstring str = (*env)->NewStringUTF(env, list_nth(strs, i));
+		jstring str =
+			(*env)->NewStringUTF(env, strVal(list_nth(strs, i)));
 		(*env)->SetObjectArrayElement(env, ret, i, str);
 		(*env)->DeleteLocalRef(env, str);
 	}
