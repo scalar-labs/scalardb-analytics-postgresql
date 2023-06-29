@@ -58,6 +58,9 @@ static jmethodID ScalarDbUtils_closeStorage;
 static jmethodID ScalarDbUtils_scan;
 static jmethodID ScalarDbUtils_buildableScanAll;
 static jmethodID ScalarDbUtils_getResultColumnsSize;
+static jmethodID ScalarDbUtils_getPartitionKeyNames;
+static jmethodID ScalarDbUtils_getClusteringKeyNames;
+static jmethodID ScalarDbUtils_getSecondaryIndexNames;
 
 static jclass Result_class;
 static jmethodID Result_isNull;
@@ -397,6 +400,77 @@ extern char *scalardb_to_string(jobject obj)
 	return cstr;
 }
 
+/*
+ * Set the column metadata for the given table.
+ */
+extern void scalardb_get_column_metadata(char *namespace, char *table_name,
+					 ScalarDbFdwColumnMetadata *metadata)
+{
+	jstring namespace_str;
+	jstring table_name_str;
+
+	jsize len;
+	jstring elem;
+
+	jobjectArray partition_key_names;
+	jobjectArray clustering_key_names;
+	jobjectArray secondary_index_names;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	Assert(metadata->partition_key_names == NIL);
+	Assert(metadata->clustering_key_names == NIL);
+	Assert(metadata->secondary_index_names == NIL);
+
+	namespace_str = (*env)->NewStringUTF(env, namespace);
+	table_name_str = (*env)->NewStringUTF(env, table_name);
+
+	clear_exception();
+	partition_key_names = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_getPartitionKeyNames,
+		namespace_str, table_name_str);
+	catch_exception();
+
+	len = (*env)->GetArrayLength(env, partition_key_names);
+	for (jsize i = 0; i < len; i++) {
+		elem = (jstring)(*env)->GetObjectArrayElement(
+			env, partition_key_names, i);
+		metadata->partition_key_names =
+			lappend(metadata->partition_key_names,
+				makeString(convert_string_to_cstring(elem)));
+	}
+
+	clear_exception();
+	clustering_key_names = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_getClusteringKeyNames,
+		namespace_str, table_name_str);
+	catch_exception();
+
+	len = (*env)->GetArrayLength(env, clustering_key_names);
+	for (jsize i = 0; i < len; i++) {
+		elem = (jstring)(*env)->GetObjectArrayElement(
+			env, clustering_key_names, i);
+		metadata->clustering_key_names =
+			lappend(metadata->clustering_key_names,
+				makeString(convert_string_to_cstring(elem)));
+	}
+
+	clear_exception();
+	secondary_index_names = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_getSecondaryIndexNames,
+		namespace_str, table_name_str);
+	catch_exception();
+
+	len = (*env)->GetArrayLength(env, secondary_index_names);
+	for (jsize i = 0; i < len; i++) {
+		elem = (jstring)(*env)->GetObjectArrayElement(
+			env, secondary_index_names, i);
+		metadata->secondary_index_names =
+			lappend(metadata->secondary_index_names,
+				makeString(convert_string_to_cstring(elem)));
+	}
+}
+
 static void initialize_jvm(ScalarDbFdwOptions *opts)
 {
 	char *max_heap_size;
@@ -536,6 +610,18 @@ static void initialize_scalardb_references()
 	register_java_static_method(ScalarDbUtils_getResultColumnsSize,
 				    ScalarDbUtils_class, "getResultColumnsSize",
 				    "(Lcom/scalar/db/api/Result;)I");
+	register_java_static_method(
+		ScalarDbUtils_getPartitionKeyNames, ScalarDbUtils_class,
+		"getPartitionKeyNames",
+		"(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+	register_java_static_method(
+		ScalarDbUtils_getClusteringKeyNames, ScalarDbUtils_class,
+		"getClusteringKeyNames",
+		"(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+	register_java_static_method(
+		ScalarDbUtils_getSecondaryIndexNames, ScalarDbUtils_class,
+		"getSecondaryIndexNames",
+		"(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
 
 	// com.scalar.db.api.Result
 	register_java_class(Result_class, "com/scalar/db/api/Result");

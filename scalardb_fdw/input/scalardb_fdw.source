@@ -8,9 +8,9 @@ CREATE SERVER scalardb FOREIGN DATA WRAPPER scalardb_fdw OPTIONS (
 CREATE USER MAPPING FOR PUBLIC SERVER scalardb;
 
 CREATE FOREIGN TABLE cassandrans_test (
-    c_pk int OPTIONS (scalardb_partition_key 'true'),
-    c_ck1 int OPTIONS (scalardb_clustering_key 'true'),
-    c_ck2 int OPTIONS (scalardb_clustering_key 'true'),
+    c_pk int,
+    c_ck1 int,
+    c_ck2 int,
     c_boolean_col boolean,
     c_int_col int,
     c_bigint_col bigint,
@@ -26,9 +26,9 @@ CREATE FOREIGN TABLE cassandrans_test (
 select * from cassandrans_test;
 
 CREATE FOREIGN TABLE postgresns_test (
-    p_pk int OPTIONS(scalardb_partition_key 'true'),
-    p_ck1 int OPTIONS(scalardb_clustering_key 'true'),
-    p_ck2 int OPTIONS(scalardb_clustering_key 'true'),
+    p_pk int,
+    p_ck1 int,
+    p_ck2 int,
     p_boolean_col boolean,
     p_int_col int,
     p_bigint_col bigint,
@@ -44,9 +44,9 @@ CREATE FOREIGN TABLE postgresns_test (
 select * from postgresns_test;
 
 CREATE FOREIGN TABLE postgresns_null_test (
-    p_pk int OPTIONS(scalardb_partition_key 'true'),
-    p_ck1 int OPTIONS(scalardb_clustering_key 'true'),
-    p_ck2 int OPTIONS(scalardb_clustering_key 'true'),
+    p_pk int,
+    p_ck1 int,
+    p_ck2 int,
     p_boolean_col boolean,
     p_int_col int,
     p_bigint_col bigint,

@@ -1,5 +1,6 @@
 #include "c.h"
 #include "nodes/nodes.h"
+#include "nodes/pg_list.h"
 #include "nodes/value.h"
 #include "option.h"
 #include "postgres.h"
@@ -34,11 +35,6 @@ typedef struct {
 	/* Bitmap of attr numbers we need to fetch from the remote server. */
 	Bitmapset *attrs_used;
 
-	/*
-	 * Restriction clauses, divided into safe and unsafe to pushdown subsets.
-	 * All entries in these lists should have RestrictInfo wrappers; that
-	 * improves efficiency of selectivity and cost estimation.
-	 */
 	List *remote_conds;
 	List *local_conds;
 
@@ -61,6 +57,9 @@ typedef struct {
 
 	jobject scan; /* Java instance of com.scalar.db.api.Scan.*/
 	jobject scanner; /* Java instance of com.scalar.db.api.Scanner */
+
+	ScalarDbFdwColumnMetadata
+		column_metadata; /* set of the column metadata of the table*/
 
 	MemoryContext
 		per_tuple_context; /* memory context for per-tuple temporary data*/
@@ -318,15 +317,14 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	fdw_state->attinmeta =
 		TupleDescGetAttInMetadata(RelationGetDescr(fdw_state->rel));
 
-	fdw_state->per_tuple_context = AllocSetContextCreate(
-		estate->es_query_cxt, "scalardb_fdw per_tuple_context",
-		ALLOCSET_DEFAULT_SIZES);
-
-	fdw_state->attnames = NIL;
 	get_attnames(fdw_state->attinmeta->tupdesc,
 		     fdw_state->attrs_to_retrieve, &fdw_state->attnames);
 
 	scalardb_initialize(&fdw_state->options);
+
+	scalardb_get_column_metadata(fdw_state->options.namespace,
+				     fdw_state->options.table_name,
+				     &fdw_state->column_metadata);
 
 	fdw_state->scan = scalardb_scan_all(fdw_state->options.namespace,
 					    fdw_state->options.table_name,
@@ -407,7 +405,6 @@ static void scalardbEndForeignScan(ForeignScanState *node)
 static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
 	ScalarDbFdwScanState *fdw_state;
-
 	ereport(DEBUG4, errmsg("entering function %s", __func__));
 
 	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
@@ -416,8 +413,10 @@ static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 	ExplainPropertyText("ScalarDB Table", fdw_state->options.table_name,
 			    es);
 	if (es->verbose) {
-		ExplainPropertyText("ScalarDB Scan",
-				    scalardb_to_string(fdw_state->scan), es);
+		if (list_length(fdw_state->attnames) > 0)
+			ExplainPropertyText("ScalarDB Scan Attribute",
+					    nodeToString(fdw_state->attnames),
+					    es);
 	}
 }
 

@@ -11,6 +11,12 @@
 
 #include "option.h"
 
+typedef struct {
+	List *partition_key_names;
+	List *clustering_key_names;
+	List *secondary_index_names;
+} ScalarDbFdwColumnMetadata;
+
 extern void scalardb_initialize(ScalarDbFdwOptions *opts);
 
 extern jobject scalardb_scan_all(char *namespace, char *table_name,
@@ -41,6 +47,9 @@ extern double scalardb_result_get_double(jobject result, char *attname);
 extern text *scalardb_result_get_text(jobject result, char *attname);
 extern bytea *scalardb_result_get_blob(jobject result, char *attname);
 extern int scalardb_result_columns_size(jobject result);
+
+extern void scalardb_get_column_metadata(char *namespace, char *table_name,
+					 ScalarDbFdwColumnMetadata *metadata);
 
 extern char *scalardb_to_string(jobject scan);
 

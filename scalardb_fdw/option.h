@@ -11,10 +11,6 @@ typedef struct {
 
 	char *namespace;
 	char *table_name;
-
-	char *partition_key_column;
-	List *clustering_key_columns;
-	List *index_key_columns;
 } ScalarDbFdwOptions;
 
 void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions *opts);
