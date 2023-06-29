@@ -60,9 +60,6 @@ typedef struct {
 
 	ScalarDbFdwColumnMetadata
 		column_metadata; /* set of the column metadata of the table*/
-
-	MemoryContext
-		per_tuple_context; /* memory context for per-tuple temporary data*/
 } ScalarDbFdwScanState;
 
 enum ScanFdwPrivateIndex {
@@ -338,7 +335,6 @@ static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
 	TupleTableSlot *slot;
 	jobject result_optional;
 	jobject result;
-	MemoryContext old_context;
 	HeapTuple tuple;
 
 	ereport(DEBUG4, errmsg("entering function %s", __func__));
@@ -356,14 +352,11 @@ static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
 		return ExecClearTuple(slot);
 	}
 
-	old_context = MemoryContextSwitchTo(fdw_state->per_tuple_context);
-
 	result = scalardb_optional_get(result_optional);
 	tuple = make_tuple_from_result(result, fdw_state->rel,
 				       fdw_state->attrs_to_retrieve);
 
 	scalardb_scanner_release_result();
-	MemoryContextSwitchTo(old_context);
 
 	ExecStoreHeapTuple(tuple, slot, false);
 
