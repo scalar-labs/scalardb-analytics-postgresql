@@ -15,7 +15,7 @@ Follow the instructions on the Docker website according to your platform.
 Determine the location on your local machine where you want to run the scalardb-analytics-postgresql-sample app. Then, open Terminal, go to the location by using the `cd` command, and run the following commands:
 
 ```shell
-$ git clone git clone https://github.com/scalar-labs/scalardb-samples.git
+$ git clone https://github.com/scalar-labs/scalardb-samples.git
 $ cd scalardb-samples/scalardb-analytics-postgresql-sample
 ```
 
