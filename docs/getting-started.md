@@ -1,6 +1,6 @@
 # Getting Started with ScalarDB Analytics with PostgreSQL
 
-This document explains how to get started with ScalarDB Analytics with PostgreSQL. We assume that you have already installed ScalarDB Analytics with PostgreSQL and that all required services are running. If you don't have such an environment, please follow the instructions in [How to install ScalarDB Analytics with PostgreSQL in your local environment by using Docker](./installation.md). Because ScalarDB Analytics with PostgreSQL executes queries via PostgreSQL, we also assume that you already have a `psql` client or another PostgreSQL client to send queries to PostgreSQL.
+This document explains how to get started with ScalarDB Analytics with PostgreSQL. We assume that you have already installed ScalarDB Analytics with PostgreSQL and that all required services are running. If you don't have such an environment, please follow the instructions in [How to Install ScalarDB Analytics with PostgreSQL in Your Local Environment by Using Docker](./installation.md). Because ScalarDB Analytics with PostgreSQL executes queries via PostgreSQL, we also assume that you already have a `psql` client or another PostgreSQL client to send queries to PostgreSQL.
 
 ## What is ScalarDB Analytics with PostgreSQL?
 
@@ -14,13 +14,13 @@ PostgreSQL runs as a service, accepting queries from users to process. FDW exten
 
 ## Set up a ScalarDB database
 
-First, you need one or more ScalarDB databases to run analytical queries with ScalarDB Analytics with PostgreSQL. If you have your own ScalarDB database, you can skip this section and use your database instead. If you use the [scalardb-samples/scalardb-analytics-postgresql-sample](https://github.com/scalar-labs/scalardb-samples/scalardb-analytics-postgresql) project, you can set up a sample database by running the following command in the project directory.
+First, you need one or more ScalarDB databases to run analytical queries with ScalarDB Analytics with PostgreSQL. If you have your own ScalarDB database, you can skip this section and use your database instead. If you use the [scalardb-samples/scalardb-analytics-postgresql-sample](https://github.com/scalar-labs/scalardb-samples/tree/main/scalardb-analytics-postgresql-sample) project, you can set up a sample database by running the following command in the project directory.
 
 ```shell
 $ docker compose run --rm sql-cli --config /etc/scalardb.properties --file /etc/sample_data.sql
 ```
 
-This command sets up [multiple storage instances](https://scalardb.scalar-labs.com/docs/3.9/multi-storage-transactions/) that consist of DynamoDB, PostgreSQL, and Cassandra. Then, the command creates namespaces for `dynamons`, `postgresns`, and `cassandrans` that are mapped to those storages, creates tables for `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` by using [ScalarDB SQL](https://scalardb.scalar-labs.com/docs/3.9/scalardb-sql/getting-started-with-sql/), and load sample data into the tables.
+This command sets up [multiple storage instances](https://scalardb.scalar-labs.com/docs/latest/multi-storage-transactions/) that consist of DynamoDB, PostgreSQL, and Cassandra. Then, the command creates namespaces for `dynamons`, `postgresns`, and `cassandrans` that are mapped to those storages, creates tables for `dynamons.customer`, `postgresns.orders`, and `cassandrans.lineitem` by using [ScalarDB SQL](https://scalardb.scalar-labs.com/docs/latest/scalardb-sql/getting-started-with-sql/), and loads sample data into the tables.
 
 ![Multi-storage overview](./images/multi-storage-overview.png)
 
