@@ -1,4 +1,5 @@
 #include "c.h"
+#include "nodes/nodes.h"
 #include "nodes/value.h"
 #include "option.h"
 #include "postgres.h"
@@ -58,6 +59,7 @@ typedef struct {
 	Relation rel; /* relcache entry for the foreign table */
 	AttInMetadata *attinmeta; /* attribute datatype conversion metadata */
 
+	jobject scan; /* Java instance of com.scalar.db.api.Scan.*/
 	jobject scanner; /* Java instance of com.scalar.db.api.Scanner */
 
 	MemoryContext
@@ -299,12 +301,6 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 
 	fsplan = (ForeignScan *)node->ss.ps.plan;
 
-	/*
-	 * Do nothing in EXPLAIN (no ANALYZE) case.  node->fdw_state stays NULL.
-	 */
-	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
-		return;
-
 	rte = rt_fetch(fsplan->scan.scanrelid, estate->es_range_table);
 
 	fdw_state =
@@ -322,17 +318,20 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	fdw_state->attinmeta =
 		TupleDescGetAttInMetadata(RelationGetDescr(fdw_state->rel));
 
-	fdw_state->scanner = NULL;
-
 	fdw_state->per_tuple_context = AllocSetContextCreate(
 		estate->es_query_cxt, "scalardb_fdw per_tuple_context",
 		ALLOCSET_DEFAULT_SIZES);
 
-	scalardb_initialize(&fdw_state->options);
-
 	fdw_state->attnames = NIL;
 	get_attnames(fdw_state->attinmeta->tupdesc,
 		     fdw_state->attrs_to_retrieve, &fdw_state->attnames);
+
+	scalardb_initialize(&fdw_state->options);
+
+	fdw_state->scan = scalardb_scan_all(fdw_state->options.namespace,
+					    fdw_state->options.table_name,
+					    fdw_state->attnames);
+	fdw_state->scanner = NULL;
 }
 
 static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
@@ -350,9 +349,7 @@ static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node)
 	slot = node->ss.ss_ScanTupleSlot;
 
 	if (!fdw_state->scanner) {
-		fdw_state->scanner = scalardb_scan_all(
-			fdw_state->options.namespace,
-			fdw_state->options.table_name, fdw_state->attnames);
+		fdw_state->scanner = scalardb_start_scan(fdw_state->scan);
 	}
 
 	result_optional = scalardb_scanner_one(fdw_state->scanner);
@@ -385,9 +382,7 @@ static void scalardbReScanForeignScan(ForeignScanState *node)
 	if (fdw_state->scanner)
 		scalardb_scanner_close(fdw_state->scanner);
 
-	fdw_state->scanner = scalardb_scan_all(fdw_state->options.namespace,
-					       fdw_state->options.table_name,
-					       fdw_state->attnames);
+	fdw_state->scanner = scalardb_start_scan(fdw_state->scan);
 }
 
 static void scalardbEndForeignScan(ForeignScanState *node)
@@ -398,9 +393,8 @@ static void scalardbEndForeignScan(ForeignScanState *node)
 
 	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
 
-	/* if fdw_state is NULL, we are in EXPLAIN; nothing to do */
-	if (fdw_state == NULL)
-		return;
+	if (fdw_state->scan)
+		scalardb_release_scan(fdw_state->scan);
 
 	/* Close the scanner if open, to prevent accumulation of scanner */
 	if (fdw_state->scanner)
@@ -412,6 +406,19 @@ static void scalardbEndForeignScan(ForeignScanState *node)
 
 static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
+	ScalarDbFdwScanState *fdw_state;
+
+	ereport(DEBUG4, errmsg("entering function %s", __func__));
+
+	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
+	ExplainPropertyText("ScalarDB Namespace", fdw_state->options.namespace,
+			    es);
+	ExplainPropertyText("ScalarDB Table", fdw_state->options.table_name,
+			    es);
+	if (es->verbose) {
+		ExplainPropertyText("ScalarDB Scan",
+				    scalardb_to_string(fdw_state->scan), es);
+	}
 }
 
 static bool scalardbAnalyzeForeignTable(Relation relation,

@@ -92,8 +92,6 @@ static text *convert_string_to_text(jobject java_cstring);
 static bytea *convert_jbyteArray_to_bytea(jbyteArray bytes);
 static jobjectArray convert_cstring_list_to_jarray_of_string(List *strings);
 
-static char *to_string(jobject obj);
-
 static void on_proc_exit_cb(int code, Datum arg);
 
 static char *get_class_name(jclass class);
@@ -156,7 +154,10 @@ void scalardb_initialize(ScalarDbFdwOptions *opts)
 }
 
 /*
- * Retruns Scanner object started from Scan built with the specified parameters.
+ * Retruns Scan object built with the specified parameters.
+ *
+ * The returned object is a global reference. It is caller's responsibility to
+ * release the object 
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
@@ -169,7 +170,6 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 	jstring table_name_str;
 	jobject buildable_scan;
 	jobject scan;
-	jobject scanner;
 
 	ereport(DEBUG5, errmsg("entering function %s", __func__));
 
@@ -190,9 +190,24 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScanAll_build);
+	scan = (*env)->NewGlobalRef(env, scan);
+	return scan;
+}
 
-	ereport(DEBUG3, errmsg("ScalarDB Scan: %s", to_string(scan)));
+/*
+ * Release the specified Scan object.
+ */
+extern void scalardb_release_scan(jobject scan)
+{
+	(*env)->DeleteGlobalRef(env, scan);
+}
 
+/*
+ * Returns Scanner object started from the specified Scan object.
+ */
+extern jobject scalardb_start_scan(jobject scan)
+{
+	jobject scanner;
 	clear_exception();
 	scanner = (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
 						 ScalarDbUtils_scan, scan);
@@ -369,6 +384,17 @@ extern int scalardb_result_columns_size(jobject result)
 	return (int)(*env)->CallStaticIntMethod(
 		env, ScalarDbUtils_class, ScalarDbUtils_getResultColumnsSize,
 		result);
+}
+
+/*
+ * Returns a string representation of the given object by calling its toString()
+ */
+extern char *scalardb_to_string(jobject obj)
+{
+	jstring str =
+		(jstring)(*env)->CallObjectMethod(env, obj, Object_toString);
+	char *cstr = convert_string_to_cstring(str);
+	return cstr;
 }
 
 static void initialize_jvm(ScalarDbFdwOptions *opts)
@@ -610,7 +636,7 @@ static void catch_exception()
 {
 	if ((*env)->ExceptionCheck(env)) {
 		jthrowable exc = (*env)->ExceptionOccurred(env);
-		char *msg = to_string(exc);
+		char *msg = scalardb_to_string(exc);
 		ereport(ERROR, errcode(ERRCODE_FDW_ERROR),
 			errmsg("Exception occurred in JVM: %s", msg));
 	}
@@ -693,14 +719,6 @@ static jobjectArray convert_cstring_list_to_jarray_of_string(List *strs)
 		(*env)->DeleteLocalRef(env, str);
 	}
 	return ret;
-}
-
-static char *to_string(jobject obj)
-{
-	jstring str =
-		(jstring)(*env)->CallObjectMethod(env, obj, Object_toString);
-	char *cstr = convert_string_to_cstring(str);
-	return cstr;
 }
 
 static void on_proc_exit_cb(int code, Datum arg)

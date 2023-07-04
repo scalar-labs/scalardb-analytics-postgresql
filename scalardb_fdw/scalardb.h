@@ -13,7 +13,11 @@
 
 extern void scalardb_initialize(ScalarDbFdwOptions *opts);
 
-extern jobject scalardb_scan_all(char *namespace, char *table_name, List *attnames);
+extern jobject scalardb_scan_all(char *namespace, char *table_name,
+				 List *attnames);
+extern void scalardb_release_scan(jobject scan);
+
+extern jobject scalardb_start_scan(jobject scan);
 
 extern jobject scalardb_scanner_one(jobject scanner);
 extern void scalardb_scanner_release_result(void);
@@ -37,5 +41,7 @@ extern double scalardb_result_get_double(jobject result, char *attname);
 extern text *scalardb_result_get_text(jobject result, char *attname);
 extern bytea *scalardb_result_get_blob(jobject result, char *attname);
 extern int scalardb_result_columns_size(jobject result);
+
+extern char *scalardb_to_string(jobject scan);
 
 #endif
