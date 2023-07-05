@@ -145,9 +145,7 @@ CREATE FOREIGN TABLE blob_test (
     table_name 'blob_test'
 );
 
---
 -- Test filtering push-down on partition keys, clustering keys and indexed columns
---
 explain verbose select * from boolean_test where pk = true;
 explain verbose select * from int_test where pk = 1;
 explain verbose select * from bigint_test where pk = 1;
@@ -163,3 +161,7 @@ explain verbose select * from float_test where index = 1.0;
 explain verbose select * from double_test where index = 1.0;
 explain verbose select * from text_test where index = '1';
 explain verbose select * from blob_test where index = E'\\xDEADBEEF';
+
+-- Test filtering push-down for boolean conditions
+explain verbose select * from boolean_test where pk;
+explain verbose select * from boolean_test where not pk;

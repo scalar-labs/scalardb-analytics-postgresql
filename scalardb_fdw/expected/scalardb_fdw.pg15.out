@@ -165,9 +165,7 @@ CREATE FOREIGN TABLE blob_test (
     namespace 'postgresns',
     table_name 'blob_test'
 );
---
 -- Test filtering push-down on partition keys, clustering keys and indexed columns
---
 explain verbose select * from boolean_test where pk = true;
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
@@ -334,5 +332,30 @@ explain verbose select * from blob_test where index = E'\\xDEADBEEF';
    ScalarDB Scan Type: secondary index
    ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
    ScalarDB Scan Conditions: index = \xdeadbeef
+(7 rows)
+
+-- Test filtering push-down with boolean operator
+explain verbose select * from boolean_test where pk;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=1463 width=4)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: boolean_test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: pk = true
+(7 rows)
+
+explain verbose select * from boolean_test where not pk;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=1463 width=4)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: boolean_test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: pk = false
 (7 rows)
 
