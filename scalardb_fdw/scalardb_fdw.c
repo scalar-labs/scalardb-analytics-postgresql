@@ -1,8 +1,4 @@
 #include "c.h"
-#include "nodes/nodes.h"
-#include "nodes/pg_list.h"
-#include "nodes/value.h"
-#include "option.h"
 #include "postgres.h"
 
 #include "access/reloptions.h"
@@ -13,15 +9,27 @@
 #include "foreign/fdwapi.h"
 #include "funcapi.h"
 #include "nodes/pathnodes.h"
+#include "nodes/nodes.h"
+#include "nodes/pg_list.h"
+#include "nodes/primnodes.h"
+#include "nodes/value.h"
+#include "nodes/execnodes.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/cost.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
 #include "parser/parsetree.h"
+#include "parser/parse_node.h"
+#include "utils/palloc.h"
 #include "utils/rel.h"
+#include "utils/lsyscache.h"
 
 #include "scalardb.h"
 #include "scalardb_fdw.h"
+#include "scalardb_fdw_util.h"
+#include "condition.h"
+#include "option.h"
 
 PG_MODULE_MAGIC;
 
@@ -38,9 +46,23 @@ typedef struct {
 	List *remote_conds;
 	List *local_conds;
 
-	BlockNumber pages; /* estimate of physical size */
-	double tuples; /* estimate of number of data rows */
+	/* estimate of physical size */
+	BlockNumber pages;
+	/* estimate of number of data rows */
+	double tuples;
+
+	/* set of the column metadata of the table*/
+	ScalarDbFdwColumnMetadata column_metadata;
 } ScalarDbFdwPlanState;
+
+/* 
+ * Scan Operation Type
+ */
+typedef enum {
+	SCALARDB_FDW_SCAN_ALL,
+	SCALARDB_FDW_SCAN_PARTITION_KEY,
+	SCALARDB_FDW_SCAN_SECONDARY_INDEX,
+} ScalarDbFdwScanType;
 
 /*
  * FDW-specific information for ForeignScanState.fdw_state.
@@ -48,35 +70,45 @@ typedef struct {
 typedef struct {
 	ScalarDbFdwOptions options;
 
-	/* extracted fdw_private data */
-	List *attrs_to_retrieve; /* List of retrieved attribute numbers */
-	List *attnames; /* List of retrieved attribute names, which are coverted from attrs_to_retrieve */
+	/* extracted fdw_private data. See the following enum for the content*/
+	List *attrs_to_retrieve;
+	List *condition_column_names;
+	List *condition_types;
 
-	Relation rel; /* relcache entry for the foreign table */
-	AttInMetadata *attinmeta; /* attribute datatype conversion metadata */
+	/* List of retrieved attribute names, coverted from attrs_to_retrieve */
+	List *attnames;
+	/* relcache entry for the foreign table */
+	Relation rel;
+	/* attribute datatype conversion metadata */
+	AttInMetadata *attinmeta;
 
-	jobject scan; /* Java instance of com.scalar.db.api.Scan.*/
-	jobject scanner; /* Java instance of com.scalar.db.api.Scanner */
+	/* Array of Conditions for ScalarDB Scan */
+	ScalarDbFdwScanCondition *scan_conds;
+	/* number of conditions in scan_conds */
+	size_t scan_conds_len;
+	/* Scan operation type */
+	ScalarDbFdwScanType scan_type;
 
-	ScalarDbFdwColumnMetadata
-		column_metadata; /* set of the column metadata of the table*/
+	/* Java instance of com.scalar.db.api.Scan.*/
+	jobject scan;
+	/* Java instance of com.scalar.db.api.Scanner */
+	jobject scanner;
 } ScalarDbFdwScanState;
 
 enum ScanFdwPrivateIndex {
 	/* Integer list of attribute numbers retrieved by the SELECT */
-	ScanFdwPrivateAttrsToRetrieve
+	ScanFdwPrivateAttrsToRetrieve,
+	/* List of String that contains column names of the lhs of the pushed-down condition*/
+	ScanFdwPrivateConditionColumnNames,
+	/* List of String, which contains types of the pushed-down condition*/
+	ScanFdwPrivateConditionTypes,
 };
-
-static void classify_conditions(PlannerInfo *root, RelOptInfo *baserel,
-				List *input_conds, List **remote_conds,
-				List **local_conds);
-
-static bool is_foreign_expr(PlannerInfo *root, RelOptInfo *baserel, Expr *expr);
 
 static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
 			  ScalarDbFdwPlanState *fdw_private);
 static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
-			   Cost *startup_cost, Cost *total_cost);
+			   List *remote_conds, Cost *startup_cost,
+			   Cost *total_cost);
 
 static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 			    Bitmapset *attrs_used, List **attrs_to_retrieve);
@@ -89,6 +121,16 @@ static Datum convert_result_column_to_datum(jobject result, char *attname,
 
 static HeapTuple make_tuple_from_result(jobject result, Relation rel,
 					List *attrs_to_retrieve);
+
+static ScalarDbFdwScanCondition *prepare_scan_conds(ForeignScanState *node,
+						    List *fdw_expr,
+						    List *left_names,
+						    List *condition_types);
+
+static List *exprs_to_strings(ScalarDbFdwScanCondition *scan_conds,
+			      size_t num_conds);
+
+static ScalarDbFdwScanType determine_scan_type(List *condition_types);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_handler);
 
@@ -128,18 +170,15 @@ static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
 
 	get_scalardb_fdw_options(foreigntableid, &fdw_private->options);
 
-	classify_conditions(root, baserel, baserel->baserestrictinfo,
-			    &fdw_private->remote_conds,
-			    &fdw_private->local_conds);
+	scalardb_initialize(&fdw_private->options);
+
+	get_column_metadata(root, baserel, fdw_private->options.namespace,
+			    fdw_private->options.table_name,
+			    &fdw_private->column_metadata);
 
 	/*
 	 * Identify which attributes will need to be retrieved from the remote
-	 * server.  These include all attrs needed for joins or final output,
-	 * plus all attrs used in the local_conds.  (Note: if we end up using a
-	 * parameterized scan, it's possible that some of the join clauses will
-	 * be sent to the remote and thus we wouldn't really need to retrieve
-	 * the columns used in them.  Doesn't seem worth detecting that case
-	 * though.)
+	 * server. These include all attrs needed for attrs used in the local_conds.
 	 */
 	fdw_private->attrs_used = NULL;
 	pull_varattnos((Node *)baserel->reltarget->exprs, baserel->relid,
@@ -167,15 +206,26 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 	Cost startup_cost;
 	Cost total_cost;
 
+	ScalarDbFdwPlanState *fdw_private =
+		(ScalarDbFdwPlanState *)baserel->fdw_private;
+
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-	// ScalarDbFdwPlanState* fdw_private =
-	//     (ScalarDbFdwPlanState*)baserel->fdw_private;
+	/* 
+	 * Separate baserestrictinfo into two groups:
+	 * 1. remote_conds: conditions that will be pushed down to ScalarDB
+	 * 2. local_conds: conditions that will be evaluated locally
+	 */
+	determine_remote_conds(baserel, baserel->baserestrictinfo,
+			       &fdw_private->column_metadata,
+			       &fdw_private->remote_conds,
+			       &fdw_private->local_conds);
 
 	/* Estimate costs */
-	estimate_costs(root, baserel, &startup_cost, &total_cost);
+	estimate_costs(root, baserel, fdw_private->remote_conds, &startup_cost,
+		       &total_cost);
 
-	/* Create a ForeignPath node corresponding to Scan.all()
+	/* Create a ForeignPath node corresponding to Scan
 	 * and add it as only possible path */
 	path = create_foreignscan_path(root, baserel,
 				       NULL, /* default pathtarget */
@@ -187,8 +237,6 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 				       NULL, /* no extra plan */
 				       NIL); /* no fdw_private */
 	add_path(baserel, (Path *)path);
-	/* TODO: support other type of Scan, including partitionKey() and indexKey() */
-	/* TODO: support ordering push down */
 }
 
 static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
@@ -208,6 +256,12 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 
 	List *fdw_private_for_scan = NIL;
 
+	List *fdw_exprs = NIL;
+	bool shippable;
+	ScalarDbFdwShippableCondition shippable_cond;
+	List *condition_column_names = NIL;
+	List *condition_types = NIL;
+
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
 	fdw_private = (ScalarDbFdwPlanState *)baserel->fdw_private;
@@ -216,9 +270,7 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	 * GetForeignJoinPaths nor GetForeignUpperPaths are not defined.
 	 */
 
-	/*
-	 * For base relations, set scan_relid as the relid of the relation.
-	 */
+	/* For base relations, set scan_relid as the relid of the relation. */
 	scan_relid = baserel->relid;
 
 	/*
@@ -247,13 +299,28 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 		if (rinfo->pseudoconstant)
 			continue;
 
-		if (list_member_ptr(fdw_private->remote_conds, rinfo))
+		if (list_member_ptr(fdw_private->remote_conds, rinfo)) {
 			remote_exprs = lappend(remote_exprs, rinfo->clause);
-		else if (list_member_ptr(fdw_private->local_conds, rinfo))
+
+			shippable = is_shippable_condition(
+				baserel, &fdw_private->column_metadata,
+				rinfo->clause, &shippable_cond);
+
+			/* This must be true since remote_conds contains only shippable conditions*/
+			if (shippable) {
+				fdw_exprs =
+					lappend(fdw_exprs, shippable_cond.expr);
+				condition_column_names =
+					lappend(condition_column_names,
+						shippable_cond.name);
+				condition_types = lappend_int(
+					condition_types,
+					shippable_cond.condtition_type);
+			}
+		} else if (list_member_ptr(fdw_private->local_conds, rinfo))
 			local_exprs = lappend(local_exprs, rinfo->clause);
-		else if (is_foreign_expr(root, baserel, rinfo->clause))
-			remote_exprs = lappend(remote_exprs, rinfo->clause);
 		else
+			/* join clauses */
 			local_exprs = lappend(local_exprs, rinfo->clause);
 	}
 
@@ -266,18 +333,10 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	get_target_list(root, baserel, fdw_private->attrs_used,
 			&attrs_to_retrieve);
 
-	fdw_private_for_scan = list_make1(attrs_to_retrieve);
+	fdw_private_for_scan = list_make3(
+		attrs_to_retrieve, condition_column_names, condition_types);
 
-	/*
-	 * Create the ForeignScan node for the given relation.
-	 *
-	 * Note that the remote parameter expressions are stored in the
-	 * fdw_exprs field of the finished plan node; we can't keep them in
-	 * private state because then they wouldn't be subject to later planner
-	 * processing.
-	 */
-	return make_foreignscan(tlist, local_exprs, scan_relid,
-				NIL, /* no expressions to evaluate */
+	return make_foreignscan(tlist, local_exprs, scan_relid, fdw_exprs,
 				fdw_private_for_scan, /* private state */
 				NIL, /* no custom tlist */
 				fdw_recheck_quals, /* remote quals */
@@ -309,6 +368,12 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	fdw_state->attrs_to_retrieve = (List *)list_nth(
 		fsplan->fdw_private, ScanFdwPrivateAttrsToRetrieve);
 
+	fdw_state->condition_column_names = (List *)list_nth(
+		fsplan->fdw_private, ScanFdwPrivateConditionColumnNames);
+
+	fdw_state->condition_types = (List *)list_nth(
+		fsplan->fdw_private, ScanFdwPrivateConditionTypes);
+
 	/* Get info we'll need for input data conversion. */
 	fdw_state->rel = node->ss.ss_currentRelation;
 	fdw_state->attinmeta =
@@ -317,15 +382,32 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	get_attnames(fdw_state->attinmeta->tupdesc,
 		     fdw_state->attrs_to_retrieve, &fdw_state->attnames);
 
-	scalardb_initialize(&fdw_state->options);
+	/* Prepare conditions for Scan */
+	fdw_state->scan_conds = prepare_scan_conds(
+		node, fsplan->fdw_exprs, fdw_state->condition_column_names,
+		fdw_state->condition_types);
+	fdw_state->scan_conds_len = list_length(fsplan->fdw_exprs);
 
-	scalardb_get_column_metadata(fdw_state->options.namespace,
-				     fdw_state->options.table_name,
-				     &fdw_state->column_metadata);
+	fdw_state->scan_type = determine_scan_type(fdw_state->condition_types);
 
-	fdw_state->scan = scalardb_scan_all(fdw_state->options.namespace,
-					    fdw_state->options.table_name,
-					    fdw_state->attnames);
+	/* Instanciate Scan object of ScalarDb*/
+	switch (fdw_state->scan_type) {
+	case SCALARDB_FDW_SCAN_ALL:
+		fdw_state->scan = scalardb_scan_all(
+			fdw_state->options.namespace,
+			fdw_state->options.table_name, fdw_state->attnames);
+		break;
+	case SCALARDB_FDW_SCAN_PARTITION_KEY:
+		fdw_state->scan = scalardb_scan(fdw_state->options.namespace,
+						fdw_state->options.table_name,
+						fdw_state->attnames,
+						fdw_state->scan_conds,
+						fdw_state->scan_conds_len);
+		break;
+	case SCALARDB_FDW_SCAN_SECONDARY_INDEX:
+		break;
+	}
+
 	fdw_state->scanner = NULL;
 }
 
@@ -398,6 +480,8 @@ static void scalardbEndForeignScan(ForeignScanState *node)
 static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
 	ScalarDbFdwScanState *fdw_state;
+	ListCell *lc;
+
 	ereport(DEBUG4, errmsg("entering function %s", __func__));
 
 	fdw_state = (ScalarDbFdwScanState *)node->fdw_state;
@@ -406,10 +490,37 @@ static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 	ExplainPropertyText("ScalarDB Table", fdw_state->options.table_name,
 			    es);
 	if (es->verbose) {
+		char *scan_type_str;
+		switch (fdw_state->scan_type) {
+		case SCALARDB_FDW_SCAN_ALL:
+			scan_type_str = "all";
+			break;
+		case SCALARDB_FDW_SCAN_PARTITION_KEY:
+			scan_type_str = "partition key";
+			break;
+		case SCALARDB_FDW_SCAN_SECONDARY_INDEX:
+			scan_type_str = "secondary index";
+			break;
+		}
+
+		ExplainPropertyText("ScalarDB Scan Type", scan_type_str, es);
+
 		if (list_length(fdw_state->attnames) > 0)
 			ExplainPropertyText("ScalarDB Scan Attribute",
 					    nodeToString(fdw_state->attnames),
 					    es);
+
+		if (fdw_state->scan_conds_len > 0) {
+			List *expr_strings =
+				exprs_to_strings(fdw_state->scan_conds,
+						 fdw_state->scan_conds_len);
+
+			foreach(lc, expr_strings) {
+				char *expr_str = strVal(lfirst(lc));
+				ExplainPropertyText("ScalarDB Scan Conditions",
+						    expr_str, es);
+			}
+		}
 	}
 }
 
@@ -417,42 +528,6 @@ static bool scalardbAnalyzeForeignTable(Relation relation,
 					AcquireSampleRowsFunc *func,
 					BlockNumber *totalpages)
 {
-	return false;
-}
-
-/*
- * Examine each qual clause in input_conds, and classify them into two
- * groups, which are returned as two lists:
- *	- remote_conds contains expressions that can be evaluated remotely
- *	- local_conds contains expressions that can't be evaluated remotely
- */
-static void classify_conditions(PlannerInfo *root, RelOptInfo *baserel,
-				List *input_conds, List **remote_conds,
-				List **local_conds)
-{
-	ListCell *lc;
-
-	ereport(DEBUG3, errmsg("entering function %s", __func__));
-
-	*remote_conds = NIL;
-	*local_conds = NIL;
-
-	foreach(lc, input_conds) {
-		RestrictInfo *ri = lfirst_node(RestrictInfo, lc);
-
-		if (is_foreign_expr(root, baserel, ri->clause))
-			*remote_conds = lappend(*remote_conds, ri);
-		else
-			*local_conds = lappend(*local_conds, ri);
-	}
-}
-
-/*
- * Returns true if given expr is safe to evaluate on the foreign server.
- */
-static bool is_foreign_expr(PlannerInfo *root, RelOptInfo *baserel, Expr *expr)
-{
-	/* TODO: implement this */
 	return false;
 }
 
@@ -484,7 +559,6 @@ static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
 			(10.0 * BLCKSZ) / (baserel->reltarget->width +
 					   sizeof(HeapTupleHeaderData));
 	} else {
-		/* TODO: support ANALYZEd table */
 		ereport(ERROR,
 			errmsg("foreign table of scalardb_fdw should not be ANALYZEd"));
 	}
@@ -493,22 +567,39 @@ static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
 	set_baserel_size_estimates(root, baserel);
 }
 
+#define DEFAULT_ROWS_FOR_PARTITION_KEY_SCAN 10
+
 /*
  * Estimate costs of scanning a foreign table.
  *
  * Results are returned in *startup_cost and *total_cost.
  */
 static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
-			   Cost *startup_cost, Cost *total_cost)
+			   List *remote_conds, Cost *startup_cost,
+			   Cost *total_cost)
 {
-	int cost_per_tuple;
+	Cost run_cost = 0;
+	Cost cpu_per_tuple;
+	double rows;
+	ScalarDbFdwPlanState *fdw_private =
+		(ScalarDbFdwPlanState *)baserel->fdw_private;
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-	/* TODO: consider whether more precise estimation of cost is worth doing */
-	cost_per_tuple = 1;
-	*startup_cost = 100; /* temporary default value */
-	*total_cost = *startup_cost + cost_per_tuple * baserel->tuples;
+	rows = list_length(fdw_private->remote_conds) > 0 ?
+		       DEFAULT_ROWS_FOR_PARTITION_KEY_SCAN :
+		       baserel->rows;
+
+	*startup_cost = 0;
+	*startup_cost += baserel->baserestrictcost.startup;
+	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
+	run_cost += cpu_per_tuple * baserel->tuples;
+
+	/* Add in tlist eval cost for each output row */
+	*startup_cost += baserel->reltarget->cost.startup;
+	run_cost += baserel->reltarget->cost.per_tuple * rows;
+
+	*total_cost = *startup_cost + run_cost;
 }
 
 /*
@@ -660,4 +751,116 @@ static Datum convert_result_column_to_datum(jobject result, char *attname,
 	default:
 		ereport(ERROR, errmsg("Unsupported data type: %d", atttypid));
 	}
+}
+
+/* 
+ * Prepare the scan conditions for the ScalarDB Scan by evaluating the fdw_expr.
+ */
+static ScalarDbFdwScanCondition *prepare_scan_conds(ForeignScanState *node,
+						    List *fdw_expr,
+						    List *left_names,
+						    List *condition_types)
+{
+	size_t len;
+	ScalarDbFdwScanCondition *scan_conds;
+
+	List *fdw_expr_states = NIL;
+	ExprContext *econtext = node->ss.ps.ps_ExprContext;
+	int i;
+	ListCell *lc;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	len = list_length(fdw_expr);
+	scan_conds = palloc0(sizeof(ScalarDbFdwScanCondition) * len);
+
+	fdw_expr_states = ExecInitExprList(fdw_expr, (PlanState *)node);
+
+	i = 0;
+	foreach(lc, fdw_expr) {
+		Expr *expr = (Expr *)lfirst(lc);
+		ExprState *expr_state =
+			(ExprState *)list_nth(fdw_expr_states, i);
+		char *name = strVal(list_nth(left_names, i));
+		ScalarDbFdwConditionType condition_type =
+			list_nth_int(condition_types, i);
+
+		Datum expr_value;
+		bool isNull;
+
+		expr_value = ExecEvalExpr(expr_state, econtext, &isNull);
+
+		scan_conds[i].condition_type = condition_type;
+		scan_conds[i].name = name;
+		scan_conds[i].value = isNull ? (Datum)NULL : expr_value;
+		scan_conds[i].value_type = exprType((Node *)expr);
+	}
+	return scan_conds;
+}
+
+static List *exprs_to_strings(ScalarDbFdwScanCondition *scan_conds,
+			      size_t scan_conds_len)
+{
+	List *strs = NIL;
+
+	ereport(DEBUG4, errmsg("entering function %s", __func__));
+
+	for (int i = 0; i < scan_conds_len; i++) {
+		ScalarDbFdwScanCondition *scan_cond = &scan_conds[i];
+
+		char *op_str;
+		char *value_str;
+
+		Oid typefnoid;
+		bool isvarlena;
+		FmgrInfo flinfo;
+
+		Assert(value != NULL);
+
+		switch (scan_cond->condition_type) {
+		case SCALARDB_PARTITION_KEY_EQ:
+		case SCALARDB_SECONDARY_INDEX_EQ:
+			op_str = "=";
+			break;
+		case SCALARDB_CLUSTERING_KEY_LE:
+			op_str = "<=";
+			break;
+		case SCALARDB_CLUSTERING_KEY_GT:
+			op_str = ">";
+			break;
+		}
+
+		if (scan_cond->value_type == BOOLOID) {
+			value_str = DatumGetBool(scan_cond->value) ? "true" :
+								     "false";
+		} else {
+			getTypeOutputInfo(scan_cond->value_type, &typefnoid,
+					  &isvarlena);
+			fmgr_info(typefnoid, &flinfo);
+			value_str =
+				OutputFunctionCall(&flinfo, scan_cond->value);
+		}
+
+		strs = lappend(strs,
+			       makeString(psprintf("%s %s %s", scan_cond->name,
+						   op_str, value_str)));
+	}
+	return strs;
+}
+
+static ScalarDbFdwScanType determine_scan_type(List *condition_types)
+{
+	ListCell *lc;
+	foreach(lc, condition_types) {
+		switch ((ScalarDbFdwConditionType)lfirst_int(lc)) {
+		case SCALARDB_PARTITION_KEY_EQ:
+			return SCALARDB_FDW_SCAN_PARTITION_KEY;
+		case SCALARDB_SECONDARY_INDEX_EQ:
+			return SCALARDB_FDW_SCAN_SECONDARY_INDEX;
+		case SCALARDB_CLUSTERING_KEY_LE:
+		case SCALARDB_CLUSTERING_KEY_GT:
+			continue;
+		}
+	}
+	return SCALARDB_FDW_SCAN_ALL;
 }

@@ -71,3 +71,87 @@ select proname, prosrc, probin from pg_proc where proname = 'scalardb_fdw_get_ja
 explain select p_pk from postgresns_test;
 
 explain verbose select p_pk from postgresns_test;
+
+--
+-- Prepare tables for testing data types
+--
+CREATE FOREIGN TABLE boolean_test (
+    pk bool,
+    ck bool,
+    index bool,
+    col bool
+) SERVER scalardb OPTIONS (
+    namespace 'postgresns',
+    table_name 'boolean_test'
+);
+
+CREATE FOREIGN TABLE int_test (
+    pk int,
+    ck int,
+    index int,
+    col int
+) SERVER scalardb OPTIONS (
+    namespace 'postgresns',
+    table_name 'int_test'
+);
+
+CREATE FOREIGN TABLE bigint_test (
+    pk bigint,
+    ck bigint,
+    index bigint,
+    col bigint
+) SERVER scalardb OPTIONS (
+    namespace 'postgresns',
+    table_name 'bigint_test'
+);
+
+CREATE FOREIGN TABLE float_test (
+    pk float,
+    ck float,
+    index float,
+    col float
+) SERVER scalardb OPTIONS (
+    namespace 'postgresns',
+    table_name 'float_test'
+);
+
+CREATE FOREIGN TABLE double_test (
+    pk double precision,
+    ck double precision,
+    index double precision,
+    col double precision
+) SERVER scalardb OPTIONS (
+    namespace 'postgresns',
+    table_name 'double_test'
+);
+
+CREATE FOREIGN TABLE text_test (
+    pk text,
+    ck text,
+    index text,
+    col text
+) SERVER scalardb OPTIONS (
+    namespace 'postgresns',
+    table_name 'text_test'
+);
+
+CREATE FOREIGN TABLE blob_test (
+    pk bytea,
+    ck bytea,
+    index bytea,
+    col bytea
+) SERVER scalardb OPTIONS (
+    namespace 'postgresns',
+    table_name 'blob_test'
+);
+
+--
+-- Test filtering push-down on partition keys, clustering keys and indexed columns
+--
+explain verbose select * from boolean_test where pk = true;
+explain verbose select * from int_test where pk = 1;
+explain verbose select * from bigint_test where pk = 1;
+explain verbose select * from float_test where pk = 1.0;
+explain verbose select * from double_test where pk = 1.0;
+explain verbose select * from text_test where pk = '1';
+explain verbose select * from blob_test where pk = E'\\xDEADBEEF';

@@ -39,7 +39,6 @@ static struct OptionEntry valid_options[] = {
 };
 
 static bool is_valid_option(const char *option, Oid context);
-static void get_attribute_options(Oid foreigntableid, ScalarDbFdwOptions *opts);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_validator);
 

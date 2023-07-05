@@ -22,6 +22,13 @@ public class TestDataLoader {
   private static final String POSTGRES_NAMESPACE = "postgresns";
   private static final String POSTGRES_TABLE_TEST = "test";
   private static final String POSTGRES_TABLE_NULL_TEST = "null_test";
+  private static final String BOOLEAN_TEST_TABLE = "boolean_test";
+  private static final String INT_TEST_TABLE = "int_test";
+  private static final String BIGINT_TEST_TABLE = "bigint_test";
+  private static final String FLOAT_TEST_TABLE = "float_test";
+  private static final String DOUBLE_TEST_TABLE = "double_test";
+  private static final String TEXT_TEST_TABLE = "text_test";
+  private static final String BLOB_TEST_TABLE = "blob_test";
 
   public static void main(String... args) {
     if (args.length != 1) {
@@ -53,6 +60,13 @@ public class TestDataLoader {
       createCassandraTestTable(admin);
       createPostgresTestTable(admin);
       createPostgresNullTestTable(admin);
+      createBooleanTestTable(admin);
+      createIntTestTable(admin);
+      createBigIntTestTable(admin);
+      createFloatTestTable(admin);
+      createDoubleTestTable(admin);
+      createTextTestTable(admin);
+      createBlobTestTable(admin);
     } finally {
       admin.close();
     }
@@ -141,6 +155,174 @@ public class TestDataLoader {
             .addClusteringKey("p_ck2")
             .build();
     admin.createTable(POSTGRES_NAMESPACE, POSTGRES_TABLE_NULL_TEST, tableMetadata, true);
+  }
+
+  private static void createBooleanTestTable(DistributedTransactionAdmin admin)
+      throws ExecutionException {
+    if (admin.tableExists(POSTGRES_NAMESPACE, BOOLEAN_TEST_TABLE)) {
+      logger.info("postgresns.boolean_test already exists. Truncating it");
+      admin.truncateTable(POSTGRES_NAMESPACE, BOOLEAN_TEST_TABLE);
+      return;
+    }
+
+    DataType type = DataType.BOOLEAN;
+
+    logger.info("Creating postgresns.boolean_test table");
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", type)
+            .addColumn("ck", type)
+            .addColumn("index", type)
+            .addColumn("col", type)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("index")
+            .build();
+    admin.createTable(POSTGRES_NAMESPACE, BOOLEAN_TEST_TABLE, tableMetadata, true);
+  }
+
+  private static void createIntTestTable(DistributedTransactionAdmin admin)
+      throws ExecutionException {
+    if (admin.tableExists(POSTGRES_NAMESPACE, INT_TEST_TABLE)) {
+      logger.info("postgresns.int_test already exists. Truncating it");
+      admin.truncateTable(POSTGRES_NAMESPACE, INT_TEST_TABLE);
+      return;
+    }
+
+    DataType type = DataType.INT;
+
+    logger.info("Creating postgresns.int_test table");
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", type)
+            .addColumn("ck", type)
+            .addColumn("index", type)
+            .addColumn("col", type)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("index")
+            .build();
+    admin.createTable(POSTGRES_NAMESPACE, INT_TEST_TABLE, tableMetadata, true);
+  }
+
+  private static void createBigIntTestTable(DistributedTransactionAdmin admin)
+      throws ExecutionException {
+    if (admin.tableExists(POSTGRES_NAMESPACE, BIGINT_TEST_TABLE)) {
+      logger.info("postgresns.bigint_test already exists. Truncating it");
+      admin.truncateTable(POSTGRES_NAMESPACE, BIGINT_TEST_TABLE);
+      return;
+    }
+
+    DataType type = DataType.BIGINT;
+
+    logger.info("Creating postgresns.bigint_test table");
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", type)
+            .addColumn("ck", type)
+            .addColumn("index", type)
+            .addColumn("col", type)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("index")
+            .build();
+    admin.createTable(POSTGRES_NAMESPACE, BIGINT_TEST_TABLE, tableMetadata, true);
+  }
+
+  private static void createFloatTestTable(DistributedTransactionAdmin admin)
+      throws ExecutionException {
+    if (admin.tableExists(POSTGRES_NAMESPACE, FLOAT_TEST_TABLE)) {
+      logger.info("postgresns.float_tst already exists. Truncating it");
+      admin.truncateTable(POSTGRES_NAMESPACE, FLOAT_TEST_TABLE);
+      return;
+    }
+
+    DataType type = DataType.FLOAT;
+
+    logger.info("Creating postgresns.float_test table");
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", type)
+            .addColumn("ck", type)
+            .addColumn("index", type)
+            .addColumn("col", type)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("index")
+            .build();
+    admin.createTable(POSTGRES_NAMESPACE, FLOAT_TEST_TABLE, tableMetadata, true);
+  }
+
+  private static void createDoubleTestTable(DistributedTransactionAdmin admin)
+      throws ExecutionException {
+    if (admin.tableExists(POSTGRES_NAMESPACE, DOUBLE_TEST_TABLE)) {
+      logger.info("postgresns.double_test already exists. Truncating it");
+      admin.truncateTable(POSTGRES_NAMESPACE, DOUBLE_TEST_TABLE);
+      return;
+    }
+
+    DataType type = DataType.DOUBLE;
+
+    logger.info("Creating postgresns.double_test table");
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", type)
+            .addColumn("ck", type)
+            .addColumn("index", type)
+            .addColumn("col", type)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("index")
+            .build();
+    admin.createTable(POSTGRES_NAMESPACE, DOUBLE_TEST_TABLE, tableMetadata, true);
+  }
+
+  private static void createTextTestTable(DistributedTransactionAdmin admin)
+      throws ExecutionException {
+    if (admin.tableExists(POSTGRES_NAMESPACE, TEXT_TEST_TABLE)) {
+      logger.info("postgresns.text_test already exists. Truncating it");
+      admin.truncateTable(POSTGRES_NAMESPACE, TEXT_TEST_TABLE);
+      return;
+    }
+
+    DataType type = DataType.TEXT;
+
+    logger.info("Creating postgresns.text_test table");
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", type)
+            .addColumn("ck", type)
+            .addColumn("index", type)
+            .addColumn("col", type)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("index")
+            .build();
+    admin.createTable(POSTGRES_NAMESPACE, TEXT_TEST_TABLE, tableMetadata, true);
+  }
+
+  private static void createBlobTestTable(DistributedTransactionAdmin admin)
+      throws ExecutionException {
+    if (admin.tableExists(POSTGRES_NAMESPACE, BLOB_TEST_TABLE)) {
+      logger.info("postgresns.blob_test already exists. Truncating it");
+      admin.truncateTable(POSTGRES_NAMESPACE, BLOB_TEST_TABLE);
+      return;
+    }
+
+    DataType type = DataType.BLOB;
+
+    logger.info("Creating postgresns.blob_test table");
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", type)
+            .addColumn("ck", type)
+            .addColumn("index", type)
+            .addColumn("col", type)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("index")
+            .build();
+    admin.createTable(POSTGRES_NAMESPACE, BLOB_TEST_TABLE, tableMetadata, true);
   }
 
   private static void loadTestData(TransactionFactory factory) throws TransactionException {

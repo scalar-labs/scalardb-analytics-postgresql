@@ -8,8 +8,8 @@ import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
-
 import java.io.IOException;
 
 public class ScalarDbUtils {
@@ -30,32 +30,48 @@ public class ScalarDbUtils {
     return storage.scan(scan);
   }
 
+  static ScanBuilder.BuildableScan buildableScan(String namespace, String tableName, Key key) {
+    return Scan.newBuilder().namespace(namespace).table(tableName).partitionKey(key);
+  }
+
+  static ScanBuilder.BuildableScanWithIndex buildableScanWithIndex(
+      String namespace, String tableName, Key key) {
+    return Scan.newBuilder().namespace(namespace).table(tableName).indexKey(key);
+  }
+
   static ScanBuilder.BuildableScanAll buildableScanAll(String namespace, String tableName) {
     return Scan.newBuilder().namespace(namespace).table(tableName).all();
+  }
+
+  static Key.Builder keyBuilder() {
+    return Key.newBuilder();
   }
 
   static int getResultColumnsSize(Result result) {
     return result.getColumns().size();
   }
 
-  static String[] getPartitionKeyNames(String namespace, String tableName) throws ExecutionException{
-    TableMetadata metadata =  storageAdmin.getTableMetadata(namespace, tableName);
+  static String[] getPartitionKeyNames(String namespace, String tableName)
+      throws ExecutionException {
+    TableMetadata metadata = storageAdmin.getTableMetadata(namespace, tableName);
     if (metadata == null) {
       return null;
     }
     return metadata.getPartitionKeyNames().toArray(new String[0]);
   }
 
-  static String[] getClusteringKeyNames(String namespace, String tableName) throws ExecutionException{
-    TableMetadata metadata =  storageAdmin.getTableMetadata(namespace, tableName);
+  static String[] getClusteringKeyNames(String namespace, String tableName)
+      throws ExecutionException {
+    TableMetadata metadata = storageAdmin.getTableMetadata(namespace, tableName);
     if (metadata == null) {
       return null;
     }
     return metadata.getClusteringKeyNames().toArray(new String[0]);
   }
 
-  static String[] getSecondaryIndexNames(String namespace, String tableName) throws ExecutionException{
-    TableMetadata metadata =  storageAdmin.getTableMetadata(namespace, tableName);
+  static String[] getSecondaryIndexNames(String namespace, String tableName)
+      throws ExecutionException {
+    TableMetadata metadata = storageAdmin.getTableMetadata(namespace, tableName);
     if (metadata == null) {
       return null;
     }
