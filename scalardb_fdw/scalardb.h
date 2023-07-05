@@ -19,6 +19,10 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 			     ScalarDbFdwScanCondition *scan_conds,
 			     size_t scan_conds_len);
+extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
+					List *attnames,
+					ScalarDbFdwScanCondition *scan_conds,
+					size_t scan_conds_len);
 
 extern void scalardb_release_scan(jobject scan);
 

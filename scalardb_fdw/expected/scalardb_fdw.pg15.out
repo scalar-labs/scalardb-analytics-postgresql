@@ -252,3 +252,87 @@ explain verbose select * from blob_test where pk = E'\\xDEADBEEF';
    ScalarDB Scan Conditions: pk = \xdeadbeef
 (7 rows)
 
+explain verbose select * from boolean_test where index = true;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=1463 width=4)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: boolean_test
+   ScalarDB Scan Type: secondary index
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: index = true
+(7 rows)
+
+explain verbose select * from int_test where index = 1;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Foreign Scan on public.int_test  (cost=0.00..25.60 rows=10 width=16)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: int_test
+   ScalarDB Scan Type: secondary index
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: index = 1
+(7 rows)
+
+explain verbose select * from bigint_test where index = 1;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Foreign Scan on public.bigint_test  (cost=0.00..18.29 rows=7 width=32)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: bigint_test
+   ScalarDB Scan Type: secondary index
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: index = 1
+(7 rows)
+
+explain verbose select * from float_test where index = 1.0;
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Foreign Scan on public.float_test  (cost=0.00..18.29 rows=7 width=32)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: float_test
+   ScalarDB Scan Type: secondary index
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: index = 1
+(7 rows)
+
+explain verbose select * from double_test where index = 1.0;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Foreign Scan on public.double_test  (cost=0.00..18.29 rows=7 width=32)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: double_test
+   ScalarDB Scan Type: secondary index
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: index = 1
+(7 rows)
+
+explain verbose select * from text_test where index = '1';
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Foreign Scan on public.text_test  (cost=0.00..6.74 rows=3 width=128)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: text_test
+   ScalarDB Scan Type: secondary index
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: index = 1
+(7 rows)
+
+explain verbose select * from blob_test where index = E'\\xDEADBEEF';
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Foreign Scan on public.blob_test  (cost=0.00..6.74 rows=3 width=128)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: blob_test
+   ScalarDB Scan Type: secondary index
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: index = \xdeadbeef
+(7 rows)
+

@@ -405,6 +405,10 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 						fdw_state->scan_conds_len);
 		break;
 	case SCALARDB_FDW_SCAN_SECONDARY_INDEX:
+		fdw_state->scan = scalardb_scan_with_index(
+			fdw_state->options.namespace,
+			fdw_state->options.table_name, fdw_state->attnames,
+			fdw_state->scan_conds, fdw_state->scan_conds_len);
 		break;
 	}
 

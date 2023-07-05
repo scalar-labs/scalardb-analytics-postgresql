@@ -155,3 +155,11 @@ explain verbose select * from float_test where pk = 1.0;
 explain verbose select * from double_test where pk = 1.0;
 explain verbose select * from text_test where pk = '1';
 explain verbose select * from blob_test where pk = E'\\xDEADBEEF';
+
+explain verbose select * from boolean_test where index = true;
+explain verbose select * from int_test where index = 1;
+explain verbose select * from bigint_test where index = 1;
+explain verbose select * from float_test where index = 1.0;
+explain verbose select * from double_test where index = 1.0;
+explain verbose select * from text_test where index = '1';
+explain verbose select * from blob_test where index = E'\\xDEADBEEF';

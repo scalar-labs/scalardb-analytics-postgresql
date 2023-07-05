@@ -110,10 +110,13 @@ static void initialize_standard_references(void);
 static void initialize_scalardb_references(void);
 static void add_classpath_to_system_class_loader(char *classpath);
 
-static jobject get_key_of_partition_key(ScalarDbFdwScanCondition *scan_conds,
-					size_t scan_conds_len);
+static jobject
+get_key_from_conds(ScalarDbFdwScanCondition *scan_conds, size_t scan_conds_len,
+		   ScalarDbFdwConditionType target_condition_type);
 static void add_datum_value_to_key(jobject key_builder, jstring name,
 				   Datum value, Oid value_type);
+static void apply_column_pruning(jobject buildable_scan, List *attnames,
+				 jmethodID projections_method);
 
 static void clear_exception(void);
 static void catch_exception(void);
@@ -211,13 +214,8 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 		env, ScalarDbUtils_class, ScalarDbUtils_buildableScanAll,
 		namespace_str, table_name_str);
 
-	if (attnames != NIL) {
-		jobjectArray attrnames_array =
-			convert_string_list_to_jarray_of_string(attnames);
-		buildable_scan = (*env)->CallObjectMethod(
-			env, buildable_scan, BuildableScanAll_projections,
-			attrnames_array);
-	}
+	apply_column_pruning(buildable_scan, attnames,
+			     BuildableScanAll_projections);
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScanAll_build);
@@ -250,19 +248,15 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 	namespace_str = (*env)->NewStringUTF(env, namespace);
 	table_name_str = (*env)->NewStringUTF(env, table_name);
 
-	key = get_key_of_partition_key(scan_conds, scan_conds_len);
+	key = get_key_from_conds(scan_conds, scan_conds_len,
+				 SCALARDB_PARTITION_KEY_EQ);
 
 	buildable_scan = (*env)->CallStaticObjectMethod(
 		env, ScalarDbUtils_class, ScalarDbUtils_buildableScan,
 		namespace_str, table_name_str, key);
 
-	if (attnames != NIL) {
-		jobjectArray attrnames_array =
-			convert_string_list_to_jarray_of_string(attnames);
-		buildable_scan = (*env)->CallObjectMethod(
-			env, buildable_scan, BuildableScan_projections,
-			attrnames_array);
-	}
+	apply_column_pruning(buildable_scan, attnames,
+			     BuildableScan_projections);
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScan_build);
@@ -273,8 +267,54 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 	return scan;
 }
 
-static jobject get_key_of_partition_key(ScalarDbFdwScanCondition *scan_conds,
+/*
+ * Retruns Scan (indexKey) object built with the specified parameters.
+ *
+ * The returned object is a global reference. It is caller's responsibility to
+ * release the object 
+ *
+ * If `attnames` is specified, only the columns with the names in `attnames`
+ * will be returned. (i.e. calls projections())
+ * The type of `attnames` must be a List of String.
+ */
+extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
+					List *attnames,
+					ScalarDbFdwScanCondition *scan_conds,
 					size_t scan_conds_len)
+{
+	jstring namespace_str;
+	jstring table_name_str;
+	jobject buildable_scan;
+	jobject scan;
+	jobject key;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	namespace_str = (*env)->NewStringUTF(env, namespace);
+	table_name_str = (*env)->NewStringUTF(env, table_name);
+
+	key = get_key_from_conds(scan_conds, scan_conds_len,
+				 SCALARDB_SECONDARY_INDEX_EQ);
+
+	buildable_scan = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_buildableScanWithIndex,
+		namespace_str, table_name_str, key);
+
+	apply_column_pruning(buildable_scan, attnames,
+			     BuildableScanWithIndex_projections);
+
+	scan = (*env)->CallObjectMethod(env, buildable_scan,
+					BuildableScanWithIndex_build);
+	scan = (*env)->NewGlobalRef(env, scan);
+
+	ereport(DEBUG5, errmsg("scan %s", scalardb_to_string(scan)));
+
+	return scan;
+}
+
+static jobject
+get_key_from_conds(ScalarDbFdwScanCondition *scan_conds, size_t scan_conds_len,
+		   ScalarDbFdwConditionType target_condition_type)
 {
 	jobject key_builder;
 
@@ -285,7 +325,7 @@ static jobject get_key_of_partition_key(ScalarDbFdwScanCondition *scan_conds,
 		ScalarDbFdwScanCondition *cond = &scan_conds[i];
 		jstring key_name_str;
 
-		if (cond->condition_type != SCALARDB_PARTITION_KEY_EQ)
+		if (cond->condition_type != target_condition_type)
 			continue;
 
 		key_name_str = (*env)->NewStringUTF(env, cond->name);
@@ -296,6 +336,7 @@ static jobject get_key_of_partition_key(ScalarDbFdwScanCondition *scan_conds,
 
 	return (*env)->CallObjectMethod(env, key_builder, KeyBuilder_build);
 }
+
 static void add_datum_value_to_key(jobject key_builder, jstring name,
 				   Datum value, Oid value_type)
 {
@@ -361,6 +402,17 @@ static void add_datum_value_to_key(jobject key_builder, jstring name,
 	}
 	default:
 		ereport(ERROR, errmsg("Unsupported data type: %d", value_type));
+	}
+}
+static void apply_column_pruning(jobject buildable_scan, List *attnames,
+				 jmethodID projections_method)
+{
+	if (attnames != NIL) {
+		jobjectArray attrnames_array =
+			convert_string_list_to_jarray_of_string(attnames);
+		buildable_scan = (*env)->CallObjectMethod(env, buildable_scan,
+							  projections_method,
+							  attrnames_array);
 	}
 }
 
