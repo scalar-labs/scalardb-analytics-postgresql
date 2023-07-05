@@ -165,3 +165,7 @@ explain verbose select * from blob_test where index = E'\\xDEADBEEF';
 -- Test filtering push-down for boolean conditions
 explain verbose select * from boolean_test where pk;
 explain verbose select * from boolean_test where not pk;
+
+-- Test priorities of filtering push-down
+-- Conditions of partition keys have higher priorities than indexed columns
+explain verbose select * from boolean_test where pk and index;

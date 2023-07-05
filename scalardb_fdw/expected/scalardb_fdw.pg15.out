@@ -334,7 +334,7 @@ explain verbose select * from blob_test where index = E'\\xDEADBEEF';
    ScalarDB Scan Conditions: index = \xdeadbeef
 (7 rows)
 
--- Test filtering push-down with boolean operator
+-- Test filtering push-down for boolean conditions
 explain verbose select * from boolean_test where pk;
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
@@ -358,4 +358,19 @@ explain verbose select * from boolean_test where not pk;
    ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
    ScalarDB Scan Conditions: pk = false
 (7 rows)
+
+-- Test priorities of filtering push-down
+-- Conditions of partition keys have higher priorities than indexed columns
+explain verbose select * from boolean_test where pk and index;
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=731 width=4)
+   Output: pk, ck, index, col
+   Filter: boolean_test.index
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: boolean_test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+   ScalarDB Scan Conditions: pk = true
+(8 rows)
 
