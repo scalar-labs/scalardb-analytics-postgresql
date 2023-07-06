@@ -72,7 +72,7 @@ typedef struct {
 
 	/* extracted fdw_private data. See the following enum for the content*/
 	List *attrs_to_retrieve;
-	List *condition_column_names;
+	List *condition_key_names;
 	List *condition_key_types;
 
 	/* List of retrieved attribute names, coverted from attrs_to_retrieve */
@@ -124,8 +124,8 @@ static HeapTuple make_tuple_from_result(jobject result, Relation rel,
 
 static ScalarDbFdwScanCondition *prepare_scan_conds(ForeignScanState *node,
 						    List *fdw_expr,
-						    List *left_names,
-						    List *condition_types);
+						    List *key_names,
+						    List *key_types);
 
 static List *exprs_to_strings(ScalarDbFdwScanCondition *scan_conds,
 			      size_t num_conds);
@@ -259,7 +259,7 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	List *fdw_exprs = NIL;
 	bool shippable;
 	ScalarDbFdwShippableCondition shippable_cond;
-	List *condition_column_names = NIL;
+	List *condition_key_names = NIL;
 	List *condition_key_types = NIL;
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
@@ -310,8 +310,8 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 			if (shippable) {
 				fdw_exprs =
 					lappend(fdw_exprs, shippable_cond.expr);
-				condition_column_names =
-					lappend(condition_column_names,
+				condition_key_names =
+					lappend(condition_key_names,
 						shippable_cond.name);
 				condition_key_types =
 					lappend_int(condition_key_types,
@@ -334,7 +334,7 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 			&attrs_to_retrieve);
 
 	fdw_private_for_scan = list_make3(
-		attrs_to_retrieve, condition_column_names, condition_key_types);
+		attrs_to_retrieve, condition_key_names, condition_key_types);
 
 	return make_foreignscan(tlist, local_exprs, scan_relid, fdw_exprs,
 				fdw_private_for_scan, /* private state */
@@ -368,7 +368,7 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	fdw_state->attrs_to_retrieve = (List *)list_nth(
 		fsplan->fdw_private, ScanFdwPrivateAttrsToRetrieve);
 
-	fdw_state->condition_column_names = (List *)list_nth(
+	fdw_state->condition_key_names = (List *)list_nth(
 		fsplan->fdw_private, ScanFdwPrivateConditionColumnNames);
 
 	fdw_state->condition_key_types = (List *)list_nth(
@@ -384,7 +384,7 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 
 	/* Prepare conditions for Scan */
 	fdw_state->scan_conds = prepare_scan_conds(
-		node, fsplan->fdw_exprs, fdw_state->condition_column_names,
+		node, fsplan->fdw_exprs, fdw_state->condition_key_names,
 		fdw_state->condition_key_types);
 	fdw_state->scan_conds_len = list_length(fsplan->fdw_exprs);
 
@@ -763,8 +763,8 @@ static Datum convert_result_column_to_datum(jobject result, char *attname,
  */
 static ScalarDbFdwScanCondition *prepare_scan_conds(ForeignScanState *node,
 						    List *fdw_expr,
-						    List *left_names,
-						    List *condition_types)
+						    List *key_names,
+						    List *key_types)
 {
 	size_t len;
 	ScalarDbFdwScanCondition *scan_conds;
@@ -786,9 +786,9 @@ static ScalarDbFdwScanCondition *prepare_scan_conds(ForeignScanState *node,
 		Expr *expr = (Expr *)lfirst(lc);
 		ExprState *expr_state =
 			(ExprState *)list_nth(fdw_expr_states, i);
-		char *name = strVal(list_nth(left_names, i));
+		char *name = strVal(list_nth(key_names, i));
 		ScalarDbFdwConditionKeyType condition_key_type =
-			list_nth_int(condition_types, i);
+			list_nth_int(key_types, i);
 
 		Datum expr_value;
 		bool isNull;
