@@ -16,16 +16,11 @@
 
 #include "condition.h"
 
-typedef enum {
-	SCALARDB_OP_EQ, /* = */
-	SCALARDB_OP_LE, /* <= */
-	SCALARDB_OP_GT, /* > */
-	SCALARDB_OP_OTHER, /* operators cannot be shipped */
-} ScalarDbFdwOperator;
+#define UnsupportedConitionType -1
 
 static bool is_foreign_table_var(Var *var, RelOptInfo *baserel);
 
-static ScalarDbFdwOperator get_operator_type(OpExpr *op);
+static ScalarDbFdwConditionOperator get_operator_type(OpExpr *op);
 
 static Const *make_boolean_const(bool val);
 
@@ -56,19 +51,18 @@ extern void determine_remote_conds(RelOptInfo *baserel, List *input_conds,
 		RestrictInfo *ri = lfirst_node(RestrictInfo, lc);
 		if (is_shippable_condition(baserel, column_metadata, ri->clause,
 					   &shippable_condition)) {
-			switch (shippable_condition.condtition_type) {
-			case SCALARDB_PARTITION_KEY_EQ: {
+			switch (shippable_condition.key) {
+			case SCALARDB_PARTITION_KEY: {
 				partition_key_conds =
 					lappend(partition_key_conds, ri);
 				break;
 			}
-			case SCALARDB_CLUSTERING_KEY_LE:
-			case SCALARDB_CLUSTERING_KEY_GT: {
+			case SCALARDB_CLUSTERING_KEY: {
 				clustering_key_conds =
 					lappend(clustering_key_conds, ri);
 				break;
 			}
-			case SCALARDB_SECONDARY_INDEX_EQ: {
+			case SCALARDB_SECONDARY_INDEX: {
 				if (secondary_index_cond == NULL) {
 					secondary_index_cond = ri;
 				}
@@ -113,8 +107,9 @@ is_shippable_condition(RelOptInfo *baserel,
 		foreach(lc, column_metadata->partition_key_attnums) {
 			int attnum = lfirst_int(lc);
 			if (attnum == var->varattno) {
-				shippable_condition->condtition_type =
-					SCALARDB_PARTITION_KEY_EQ;
+				shippable_condition->key =
+					SCALARDB_PARTITION_KEY;
+				shippable_condition->op = SCALARDB_OP_EQ;
 				shippable_condition->column = var;
 				shippable_condition->name = list_nth(
 					column_metadata->partition_key_names,
@@ -130,8 +125,9 @@ is_shippable_condition(RelOptInfo *baserel,
 		foreach(lc, column_metadata->secondary_index_attnums) {
 			int attnum = lfirst_int(lc);
 			if (attnum == var->varattno) {
-				shippable_condition->condtition_type =
-					SCALARDB_SECONDARY_INDEX_EQ;
+				shippable_condition->key =
+					SCALARDB_SECONDARY_INDEX;
+				shippable_condition->op = SCALARDB_OP_EQ;
 				shippable_condition->column = var;
 				shippable_condition->name = list_nth(
 					column_metadata->secondary_index_names,
@@ -166,8 +162,9 @@ is_shippable_condition(RelOptInfo *baserel,
 		foreach(lc, column_metadata->partition_key_attnums) {
 			int attnum = lfirst_int(lc);
 			if (attnum == var->varattno) {
-				shippable_condition->condtition_type =
-					SCALARDB_PARTITION_KEY_EQ;
+				shippable_condition->key =
+					SCALARDB_PARTITION_KEY;
+				shippable_condition->op = SCALARDB_OP_EQ;
 				shippable_condition->column = var;
 				shippable_condition->name = list_nth(
 					column_metadata->partition_key_names,
@@ -183,8 +180,9 @@ is_shippable_condition(RelOptInfo *baserel,
 		foreach(lc, column_metadata->secondary_index_attnums) {
 			int attnum = lfirst_int(lc);
 			if (attnum == var->varattno) {
-				shippable_condition->condtition_type =
-					SCALARDB_SECONDARY_INDEX_EQ;
+				shippable_condition->key =
+					SCALARDB_SECONDARY_INDEX;
+				shippable_condition->op = SCALARDB_OP_EQ;
 				shippable_condition->column = var;
 				shippable_condition->name = list_nth(
 					column_metadata->secondary_index_names,
@@ -203,9 +201,8 @@ is_shippable_condition(RelOptInfo *baserel,
 		Var *left;
 		Node *right;
 		OpExpr *op = (OpExpr *)expr;
-		ScalarDbFdwOperator op_type = get_operator_type(op);
-
-		if (op_type == SCALARDB_OP_OTHER)
+		ScalarDbFdwConditionOperator op_type = get_operator_type(op);
+		if (op_type == UnsupportedConitionType)
 			return false;
 
 		if (list_length(op->args) != 2)
@@ -228,8 +225,9 @@ is_shippable_condition(RelOptInfo *baserel,
 			foreach(lc, column_metadata->partition_key_attnums) {
 				int attnum = lfirst_int(lc);
 				if (attnum == left->varattno) {
-					shippable_condition->condtition_type =
-						SCALARDB_PARTITION_KEY_EQ;
+					shippable_condition->key =
+						SCALARDB_PARTITION_KEY;
+					shippable_condition->op = op_type;
 					shippable_condition->column = left;
 					shippable_condition->name = list_nth(
 						column_metadata
@@ -242,15 +240,16 @@ is_shippable_condition(RelOptInfo *baserel,
 				i++;
 			}
 		}
-		if (op_type == SCALARDB_OP_LE || op_type == SCALARDB_OP_GT) {
+		if (op_type == SCALARDB_OP_EQ || op_type == SCALARDB_OP_LE ||
+		    op_type == SCALARDB_OP_LT || op_type == SCALARDB_OP_GE ||
+		    op_type == SCALARDB_OP_GT) {
 			i = 0;
 			foreach(lc, column_metadata->clustering_key_attnums) {
 				int attnum = lfirst_int(lc);
 				if (attnum == left->varattno) {
-					shippable_condition->condtition_type =
-						op_type == SCALARDB_OP_LE ?
-							SCALARDB_CLUSTERING_KEY_LE :
-							SCALARDB_CLUSTERING_KEY_GT;
+					shippable_condition->key =
+						SCALARDB_CLUSTERING_KEY;
+					shippable_condition->op = op_type;
 					shippable_condition->column = left;
 					shippable_condition->name = list_nth(
 						column_metadata
@@ -268,8 +267,9 @@ is_shippable_condition(RelOptInfo *baserel,
 			foreach(lc, column_metadata->secondary_index_attnums) {
 				int attnum = lfirst_int(lc);
 				if (attnum == left->varattno) {
-					shippable_condition->condtition_type =
-						SCALARDB_SECONDARY_INDEX_EQ;
+					shippable_condition->key =
+						SCALARDB_SECONDARY_INDEX;
+					shippable_condition->op = op_type;
 					shippable_condition->column = left;
 					shippable_condition->name = list_nth(
 						column_metadata
@@ -295,14 +295,14 @@ static bool is_foreign_table_var(Var *var, RelOptInfo *baserel)
 	       var->varlevelsup == 0;
 }
 
-static ScalarDbFdwOperator get_operator_type(OpExpr *op)
+static ScalarDbFdwConditionOperator get_operator_type(OpExpr *op)
 {
 	HeapTuple tuple;
 	Form_pg_operator form;
-	ScalarDbFdwOperator ret = SCALARDB_OP_OTHER;
+	ScalarDbFdwConditionOperator ret = UnsupportedConitionType;
 
 	if (list_length(op->args) != 2)
-		return false;
+		return ret;
 
 	/* Retrieve information about the operator from system catalog. */
 	tuple = SearchSysCache1(OPEROID, ObjectIdGetDatum(op->opno));
@@ -314,6 +314,10 @@ static ScalarDbFdwOperator get_operator_type(OpExpr *op)
 		ret = SCALARDB_OP_EQ;
 	else if (strcmp(NameStr(form->oprname), "<=") == 0)
 		ret = SCALARDB_OP_LE;
+	else if (strcmp(NameStr(form->oprname), "<") == 0)
+		ret = SCALARDB_OP_LT;
+	else if (strcmp(NameStr(form->oprname), ">=") == 0)
+		ret = SCALARDB_OP_GE;
 	else if (strcmp(NameStr(form->oprname), ">") == 0)
 		ret = SCALARDB_OP_GT;
 

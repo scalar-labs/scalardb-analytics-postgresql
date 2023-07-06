@@ -111,8 +111,9 @@ static void initialize_scalardb_references(void);
 static void add_classpath_to_system_class_loader(char *classpath);
 
 static jobject
-get_key_from_conds(ScalarDbFdwScanCondition *scan_conds, size_t scan_conds_len,
-		   ScalarDbFdwConditionType target_condition_type);
+get_key_for_key_type(ScalarDbFdwScanCondition *scan_conds,
+		     size_t scan_conds_len,
+		     ScalarDbFdwConditionKeyType target_condition_key_type);
 static void add_datum_value_to_key(jobject key_builder, jstring name,
 				   Datum value, Oid value_type);
 static void apply_column_pruning(jobject buildable_scan, List *attnames,
@@ -248,8 +249,8 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 	namespace_str = (*env)->NewStringUTF(env, namespace);
 	table_name_str = (*env)->NewStringUTF(env, table_name);
 
-	key = get_key_from_conds(scan_conds, scan_conds_len,
-				 SCALARDB_PARTITION_KEY_EQ);
+	key = get_key_for_key_type(scan_conds, scan_conds_len,
+				   SCALARDB_PARTITION_KEY);
 
 	buildable_scan = (*env)->CallStaticObjectMethod(
 		env, ScalarDbUtils_class, ScalarDbUtils_buildableScan,
@@ -293,8 +294,8 @@ extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
 	namespace_str = (*env)->NewStringUTF(env, namespace);
 	table_name_str = (*env)->NewStringUTF(env, table_name);
 
-	key = get_key_from_conds(scan_conds, scan_conds_len,
-				 SCALARDB_SECONDARY_INDEX_EQ);
+	key = get_key_for_key_type(scan_conds, scan_conds_len,
+				   SCALARDB_SECONDARY_INDEX);
 
 	buildable_scan = (*env)->CallStaticObjectMethod(
 		env, ScalarDbUtils_class, ScalarDbUtils_buildableScanWithIndex,
@@ -313,8 +314,9 @@ extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
 }
 
 static jobject
-get_key_from_conds(ScalarDbFdwScanCondition *scan_conds, size_t scan_conds_len,
-		   ScalarDbFdwConditionType target_condition_type)
+get_key_for_key_type(ScalarDbFdwScanCondition *scan_conds,
+		     size_t scan_conds_len,
+		     ScalarDbFdwConditionKeyType target_condition_key_type)
 {
 	jobject key_builder;
 
@@ -325,13 +327,12 @@ get_key_from_conds(ScalarDbFdwScanCondition *scan_conds, size_t scan_conds_len,
 		ScalarDbFdwScanCondition *cond = &scan_conds[i];
 		jstring key_name_str;
 
-		if (cond->condition_type != target_condition_type)
+		if (cond->key != target_condition_key_type)
 			continue;
 
 		key_name_str = (*env)->NewStringUTF(env, cond->name);
 		add_datum_value_to_key(key_builder, key_name_str, cond->value,
 				       cond->value_type);
-		i++;
 	}
 
 	return (*env)->CallObjectMethod(env, key_builder, KeyBuilder_build);

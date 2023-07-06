@@ -73,7 +73,7 @@ typedef struct {
 	/* extracted fdw_private data. See the following enum for the content*/
 	List *attrs_to_retrieve;
 	List *condition_column_names;
-	List *condition_types;
+	List *condition_key_types;
 
 	/* List of retrieved attribute names, coverted from attrs_to_retrieve */
 	List *attnames;
@@ -100,8 +100,8 @@ enum ScanFdwPrivateIndex {
 	ScanFdwPrivateAttrsToRetrieve,
 	/* List of String that contains column names of the lhs of the pushed-down condition*/
 	ScanFdwPrivateConditionColumnNames,
-	/* List of String, which contains types of the pushed-down condition*/
-	ScanFdwPrivateConditionTypes,
+	/* List of ScalarDbFdwConditionKeyType, which contains types of the keys of the pushed-down condition*/
+	ScanFdwPrivateConditionKeyTypes,
 };
 
 static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
@@ -260,7 +260,7 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	bool shippable;
 	ScalarDbFdwShippableCondition shippable_cond;
 	List *condition_column_names = NIL;
-	List *condition_types = NIL;
+	List *condition_key_types = NIL;
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
@@ -313,9 +313,9 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 				condition_column_names =
 					lappend(condition_column_names,
 						shippable_cond.name);
-				condition_types = lappend_int(
-					condition_types,
-					shippable_cond.condtition_type);
+				condition_key_types =
+					lappend_int(condition_key_types,
+						    shippable_cond.key);
 			}
 		} else if (list_member_ptr(fdw_private->local_conds, rinfo))
 			local_exprs = lappend(local_exprs, rinfo->clause);
@@ -334,7 +334,7 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 			&attrs_to_retrieve);
 
 	fdw_private_for_scan = list_make3(
-		attrs_to_retrieve, condition_column_names, condition_types);
+		attrs_to_retrieve, condition_column_names, condition_key_types);
 
 	return make_foreignscan(tlist, local_exprs, scan_relid, fdw_exprs,
 				fdw_private_for_scan, /* private state */
@@ -371,8 +371,8 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	fdw_state->condition_column_names = (List *)list_nth(
 		fsplan->fdw_private, ScanFdwPrivateConditionColumnNames);
 
-	fdw_state->condition_types = (List *)list_nth(
-		fsplan->fdw_private, ScanFdwPrivateConditionTypes);
+	fdw_state->condition_key_types = (List *)list_nth(
+		fsplan->fdw_private, ScanFdwPrivateConditionKeyTypes);
 
 	/* Get info we'll need for input data conversion. */
 	fdw_state->rel = node->ss.ss_currentRelation;
@@ -385,10 +385,11 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	/* Prepare conditions for Scan */
 	fdw_state->scan_conds = prepare_scan_conds(
 		node, fsplan->fdw_exprs, fdw_state->condition_column_names,
-		fdw_state->condition_types);
+		fdw_state->condition_key_types);
 	fdw_state->scan_conds_len = list_length(fsplan->fdw_exprs);
 
-	fdw_state->scan_type = determine_scan_type(fdw_state->condition_types);
+	fdw_state->scan_type =
+		determine_scan_type(fdw_state->condition_key_types);
 
 	/* Instanciate Scan object of ScalarDb*/
 	switch (fdw_state->scan_type) {
@@ -786,7 +787,7 @@ static ScalarDbFdwScanCondition *prepare_scan_conds(ForeignScanState *node,
 		ExprState *expr_state =
 			(ExprState *)list_nth(fdw_expr_states, i);
 		char *name = strVal(list_nth(left_names, i));
-		ScalarDbFdwConditionType condition_type =
+		ScalarDbFdwConditionKeyType condition_key_type =
 			list_nth_int(condition_types, i);
 
 		Datum expr_value;
@@ -794,7 +795,7 @@ static ScalarDbFdwScanCondition *prepare_scan_conds(ForeignScanState *node,
 
 		expr_value = ExecEvalExpr(expr_state, econtext, &isNull);
 
-		scan_conds[i].condition_type = condition_type;
+		scan_conds[i].key = condition_key_type;
 		scan_conds[i].name = name;
 		scan_conds[i].value = isNull ? (Datum)NULL : expr_value;
 		scan_conds[i].value_type = exprType((Node *)expr);
@@ -821,15 +822,20 @@ static List *exprs_to_strings(ScalarDbFdwScanCondition *scan_conds,
 
 		Assert(value != NULL);
 
-		switch (scan_cond->condition_type) {
-		case SCALARDB_PARTITION_KEY_EQ:
-		case SCALARDB_SECONDARY_INDEX_EQ:
+		switch (scan_cond->op) {
+		case SCALARDB_OP_EQ:
 			op_str = "=";
 			break;
-		case SCALARDB_CLUSTERING_KEY_LE:
+		case SCALARDB_OP_LE:
 			op_str = "<=";
 			break;
-		case SCALARDB_CLUSTERING_KEY_GT:
+		case SCALARDB_OP_LT:
+			op_str = "<";
+			break;
+		case SCALARDB_OP_GE:
+			op_str = ">=";
+			break;
+		case SCALARDB_OP_GT:
 			op_str = ">";
 			break;
 		}
@@ -856,13 +862,12 @@ static ScalarDbFdwScanType determine_scan_type(List *condition_types)
 {
 	ListCell *lc;
 	foreach(lc, condition_types) {
-		switch ((ScalarDbFdwConditionType)lfirst_int(lc)) {
-		case SCALARDB_PARTITION_KEY_EQ:
+		switch ((ScalarDbFdwConditionKeyType)lfirst_int(lc)) {
+		case SCALARDB_PARTITION_KEY:
 			return SCALARDB_FDW_SCAN_PARTITION_KEY;
-		case SCALARDB_SECONDARY_INDEX_EQ:
+		case SCALARDB_SECONDARY_INDEX:
 			return SCALARDB_FDW_SCAN_SECONDARY_INDEX;
-		case SCALARDB_CLUSTERING_KEY_LE:
-		case SCALARDB_CLUSTERING_KEY_GT:
+		case SCALARDB_CLUSTERING_KEY:
 			continue;
 		}
 	}

@@ -16,25 +16,30 @@
 #include "scalardb_fdw_util.h"
 
 /*
- * Type of shippable condition
+ * Type of the condition target column
  */
 typedef enum {
-	/* - partition key = pseudo constant */
-	SCALARDB_PARTITION_KEY_EQ,
-	/* - clustering key <= pseudo constant */
-	SCALARDB_CLUSTERING_KEY_LE,
-	/* - clustering key > pseudo constant */
-	SCALARDB_CLUSTERING_KEY_GT,
-	/* - secondary index = pseudo constant */
-	SCALARDB_SECONDARY_INDEX_EQ
-} ScalarDbFdwConditionType;
+	SCALARDB_PARTITION_KEY,
+	SCALARDB_CLUSTERING_KEY,
+	SCALARDB_SECONDARY_INDEX,
+} ScalarDbFdwConditionKeyType;
+
+typedef enum {
+	SCALARDB_OP_EQ,
+	SCALARDB_OP_LE,
+	SCALARDB_OP_LT,
+	SCALARDB_OP_GE,
+	SCALARDB_OP_GT,
+} ScalarDbFdwConditionOperator;
 
 /*
  * Represents a shippable condition in the planner phase.
  */
 typedef struct {
 	/*  type of condition. See the above definition. */
-	ScalarDbFdwConditionType condtition_type;
+	ScalarDbFdwConditionKeyType key;
+	/*  type of operator. */
+	ScalarDbFdwConditionOperator op;
 	/* Target column of the condition */
 	Var *column;
 	/* Name  of column*/
@@ -54,7 +59,9 @@ typedef struct {
  */
 typedef struct {
 	/*  type of condition. See the above definition. */
-	ScalarDbFdwConditionType condition_type;
+	ScalarDbFdwConditionKeyType key;
+	/*  type of operator. */
+	ScalarDbFdwConditionOperator op;
 	/* column name */
 	char *name;
 	/* condition value*/
