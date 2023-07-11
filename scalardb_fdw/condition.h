@@ -14,6 +14,7 @@
 #include "utils/syscache.h"
 
 #include "scalardb_fdw_util.h"
+#include "pgport.h"
 
 /*
  * Type of Scan of ScalarDB

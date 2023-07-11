@@ -1,5 +1,5 @@
 MODULE_big = scalardb_fdw
-OBJS = scalardb_fdw.o option.o scalardb.o condition.o scalardb_fdw_util.o
+OBJS = scalardb_fdw.o option.o scalardb.o condition.o scalardb_fdw_util.o pgport.o
 
 EXTENSION = scalardb_fdw
 DATA = scalardb_fdw--1.0.sql
