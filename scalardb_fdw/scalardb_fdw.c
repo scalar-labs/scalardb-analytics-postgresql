@@ -552,7 +552,7 @@ static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 	ExplainPropertyText("ScalarDB Table", fdw_state->options.table_name,
 			    es);
 	if (es->verbose) {
-		char *scan_type_str;
+		char *scan_type_str = NULL;
 		switch (fdw_state->scan_type) {
 		case SCALARDB_SCAN_ALL:
 			scan_type_str = "all";
