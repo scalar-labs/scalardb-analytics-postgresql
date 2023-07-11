@@ -82,9 +82,12 @@ static jmethodID Scanner_one;
 
 static jclass BuildableScan_class;
 static jmethodID BuildableScan_projections;
+static jmethodID BuildableScan_start;
+static jmethodID BuildableScan_end;
 static jmethodID BuildableScan_build;
 
 static jclass BuildableScanWithIndex_class;
+static jmethodID BuildableScanWithIndex_projections;
 static jmethodID BuildableScanWithIndex_projections;
 static jmethodID BuildableScanWithIndex_build;
 
@@ -110,14 +113,16 @@ static void initialize_standard_references(void);
 static void initialize_scalardb_references(void);
 static void add_classpath_to_system_class_loader(char *classpath);
 
-static jobject
-get_key_for_key_type(ScalarDbFdwScanCondition *scan_conds,
-		     size_t scan_conds_len,
-		     ScalarDbFdwConditionKeyType target_condition_key_type);
+static jobject get_key_from_conds(ScalarDbFdwScanCondition *scan_conds,
+				  size_t num_scan_conds);
+static jobject get_key_for_boundary(List *names, Datum *values,
+				    List *value_types, size_t num_values);
 static void add_datum_value_to_key(jobject key_builder, jstring name,
 				   Datum value, Oid value_type);
 static void apply_column_pruning(jobject buildable_scan, List *attnames,
 				 jmethodID projections_method);
+static void apply_clustering_key_boundary(jobject buildable_scan,
+					  ScalarDbFdwScanBoundary *boundary);
 
 static void clear_exception(void);
 static void catch_exception(void);
@@ -236,7 +241,8 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
  */
 extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 			     ScalarDbFdwScanCondition *scan_conds,
-			     size_t scan_conds_len)
+			     size_t num_scan_conds,
+			     ScalarDbFdwScanBoundary *boundary)
 {
 	jstring namespace_str;
 	jstring table_name_str;
@@ -249,8 +255,7 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 	namespace_str = (*env)->NewStringUTF(env, namespace);
 	table_name_str = (*env)->NewStringUTF(env, table_name);
 
-	key = get_key_for_key_type(scan_conds, scan_conds_len,
-				   SCALARDB_PARTITION_KEY);
+	key = get_key_from_conds(scan_conds, num_scan_conds);
 
 	buildable_scan = (*env)->CallStaticObjectMethod(
 		env, ScalarDbUtils_class, ScalarDbUtils_buildableScan,
@@ -258,6 +263,8 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 
 	apply_column_pruning(buildable_scan, attnames,
 			     BuildableScan_projections);
+
+	apply_clustering_key_boundary(buildable_scan, boundary);
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScan_build);
@@ -281,7 +288,7 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
 					List *attnames,
 					ScalarDbFdwScanCondition *scan_conds,
-					size_t scan_conds_len)
+					size_t num_scan_conds)
 {
 	jstring namespace_str;
 	jstring table_name_str;
@@ -294,8 +301,7 @@ extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
 	namespace_str = (*env)->NewStringUTF(env, namespace);
 	table_name_str = (*env)->NewStringUTF(env, table_name);
 
-	key = get_key_for_key_type(scan_conds, scan_conds_len,
-				   SCALARDB_SECONDARY_INDEX);
+	key = get_key_from_conds(scan_conds, num_scan_conds);
 
 	buildable_scan = (*env)->CallStaticObjectMethod(
 		env, ScalarDbUtils_class, ScalarDbUtils_buildableScanWithIndex,
@@ -313,28 +319,41 @@ extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
 	return scan;
 }
 
-static jobject
-get_key_for_key_type(ScalarDbFdwScanCondition *scan_conds,
-		     size_t scan_conds_len,
-		     ScalarDbFdwConditionKeyType target_condition_key_type)
+static jobject get_key_from_conds(ScalarDbFdwScanCondition *scan_conds,
+				  size_t num_scan_conds)
 {
 	jobject key_builder;
 
 	key_builder = (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
 						     ScalarDbUtils_keyBuilder);
 
-	for (int i = 0; i < scan_conds_len; i++) {
+	for (int i = 0; i < num_scan_conds; i++) {
 		ScalarDbFdwScanCondition *cond = &scan_conds[i];
 		jstring key_name_str;
-
-		if (cond->key != target_condition_key_type)
-			continue;
 
 		key_name_str = (*env)->NewStringUTF(env, cond->name);
 		add_datum_value_to_key(key_builder, key_name_str, cond->value,
 				       cond->value_type);
 	}
 
+	return (*env)->CallObjectMethod(env, key_builder, KeyBuilder_build);
+}
+
+static jobject get_key_for_boundary(List *names, Datum *values,
+				    List *value_types, size_t num_values)
+{
+	jobject key_builder;
+
+	key_builder = (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
+						     ScalarDbUtils_keyBuilder);
+	for (size_t i = 0; i < num_values; i++) {
+		jstring name_str =
+			(*env)->NewStringUTF(env, strVal(list_nth(names, i)));
+		Datum value = values[i];
+		Oid type = list_nth_oid(value_types, i);
+
+		add_datum_value_to_key(key_builder, name_str, value, type);
+	}
 	return (*env)->CallObjectMethod(env, key_builder, KeyBuilder_build);
 }
 
@@ -414,6 +433,32 @@ static void apply_column_pruning(jobject buildable_scan, List *attnames,
 		buildable_scan = (*env)->CallObjectMethod(env, buildable_scan,
 							  projections_method,
 							  attrnames_array);
+	}
+}
+
+static void apply_clustering_key_boundary(jobject buildable_scan,
+					  ScalarDbFdwScanBoundary *boundary)
+{
+	if (boundary->num_start_values > 0) {
+		jobject key = get_key_for_boundary(boundary->names,
+						   boundary->start_values,
+						   boundary->start_value_types,
+						   boundary->num_start_values);
+		buildable_scan = (*env)->CallObjectMethod(
+			env, buildable_scan, BuildableScan_start, key,
+			boundary->start_inclusive);
+	}
+
+	if (boundary->num_end_values > 0) {
+		jobject key = get_key_for_boundary(boundary->names,
+						   boundary->end_values,
+						   boundary->end_value_types,
+						   boundary->num_end_values);
+		ereport(DEBUG5, errmsg("key %s", scalardb_to_string(key)));
+		ereport(DEBUG5, errmsg("key %s", scalardb_to_string(key)));
+		buildable_scan = (*env)->CallObjectMethod(
+			env, buildable_scan, BuildableScan_end, key,
+			boundary->end_inclusive);
 	}
 }
 
@@ -925,6 +970,12 @@ static void initialize_scalardb_references()
 	register_java_class_method(
 		BuildableScan_projections, BuildableScan_class, "projections",
 		"([Ljava/lang/String;)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_class_method(
+		BuildableScan_start, BuildableScan_class, "start",
+		"(Lcom/scalar/db/io/Key;Z)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_class_method(
+		BuildableScan_end, BuildableScan_class, "end",
+		"(Lcom/scalar/db/io/Key;Z)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
 	register_java_class_method(BuildableScan_build, BuildableScan_class,
 				   "build", "()Lcom/scalar/db/api/Scan;");
 

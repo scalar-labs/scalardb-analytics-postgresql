@@ -145,7 +145,7 @@ CREATE FOREIGN TABLE blob_test (
     table_name 'blob_test'
 );
 
--- Test filtering push-down on partition keys, clustering keys and indexed columns
+-- Test filtering push-down on partition keys
 explain verbose select * from boolean_test where pk = true;
 explain verbose select * from int_test where pk = 1;
 explain verbose select * from bigint_test where pk = 1;
@@ -154,6 +154,16 @@ explain verbose select * from double_test where pk = 1.0;
 explain verbose select * from text_test where pk = '1';
 explain verbose select * from blob_test where pk = E'\\xDEADBEEF';
 
+-- Test filtering push-down on clustering keys
+explain verbose select * from boolean_test where pk = true AND ck = true;
+explain verbose select * from int_test where pk = 1 AND ck = 1;
+explain verbose select * from bigint_test where pk = 1 AND ck = 1;
+explain verbose select * from float_test where pk = 1.0 AND ck = 1.0;
+explain verbose select * from double_test where pk = 1.0 AND ck = 1.0;
+explain verbose select * from text_test where pk = '1' AND ck = '1';
+explain verbose select * from blob_test where pk = E'\\xDEADBEEF' AND ck = E'\\xDEADBEEF';
+
+-- Test filtering push-down on secondary indexes 
 explain verbose select * from boolean_test where index = true;
 explain verbose select * from int_test where index = 1;
 explain verbose select * from bigint_test where index = 1;
@@ -169,3 +179,29 @@ explain verbose select * from boolean_test where not pk;
 -- Test priorities of filtering push-down
 -- Conditions of partition keys have higher priorities than indexed columns
 explain verbose select * from boolean_test where pk and index;
+
+-- Test clustering key push-down inclusiveness
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 < 1 ;
+select * from postgresns_test where p_pk = 1 AND p_ck1 < 1;
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 <= 1 ;
+select * from postgresns_test where p_pk = 1 AND p_ck1 <= 1;
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 1 ;
+select * from postgresns_test where p_pk = 1 AND p_ck1 > 1;
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 >= 1 ;
+select * from postgresns_test where p_pk = 1 AND p_ck1 >= 1;
+
+-- 
+-- Test multi-column clustering key push-down
+--
+-- Should be pushed down if all clustering keys are specified
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 = 1;
+select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 = 1;
+-- Should NOT be pushed down if not partition key scan
+explain verbose select * from postgresns_test where p_ck1 = 1 AND p_ck2 = 1;
+select * from postgresns_test where p_ck1 = 1 AND p_ck2 = 1;
+-- Should be pushed down if first part of clustering keys are specified
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1;
+select * from postgresns_test where p_pk = 1 AND p_ck1 = 1;
+-- Should NOT be pushed down if first part of clustering keys are not specified
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck2 = 1;
+select * from postgresns_test where p_pk = 1 AND p_ck2 = 1;
