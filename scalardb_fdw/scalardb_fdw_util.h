@@ -11,10 +11,14 @@
  * Column metadata of ScalarDB table.
  */
 typedef struct {
+	/* column names each key type
+	 * The types are List of String */
 	List *partition_key_names;
 	List *clustering_key_names;
 	List *secondary_index_names;
 
+	/* attnum in Form_pg_attribute for each key type
+	 * The types are T_IntList*/
 	List *partition_key_attnums;
 	List *clustering_key_attnums;
 	List *secondary_index_attnums;
