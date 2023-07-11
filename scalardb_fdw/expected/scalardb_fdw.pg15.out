@@ -484,7 +484,7 @@ explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 < 1 ;
    ScalarDB Table: test
    ScalarDB Scan Type: partition key
    ScalarDB Scan Condition: p_pk = 1
-   ScalarDB Scan Start: p_ck1 < 1
+   ScalarDB Scan End: p_ck1 < 1
    ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
 (8 rows)
 
@@ -502,7 +502,7 @@ explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 <= 1 ;
    ScalarDB Table: test
    ScalarDB Scan Type: partition key
    ScalarDB Scan Condition: p_pk = 1
-   ScalarDB Scan Start: p_ck1 <= 1
+   ScalarDB Scan End: p_ck1 <= 1
    ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
 (8 rows)
 
@@ -521,7 +521,7 @@ explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 1 ;
    ScalarDB Table: test
    ScalarDB Scan Type: partition key
    ScalarDB Scan Condition: p_pk = 1
-   ScalarDB Scan End: p_ck1 > 1
+   ScalarDB Scan Start: p_ck1 > 1
    ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
 (8 rows)
 
@@ -539,7 +539,7 @@ explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 >= 1 ;
    ScalarDB Table: test
    ScalarDB Scan Type: partition key
    ScalarDB Scan Condition: p_pk = 1
-   ScalarDB Scan End: p_ck1 >= 1
+   ScalarDB Scan Start: p_ck1 >= 1
    ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
 (8 rows)
 

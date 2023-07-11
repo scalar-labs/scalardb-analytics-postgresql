@@ -993,9 +993,9 @@ static char *scan_start_boundary_to_string(ScalarDbFdwScanBoundary *boundary)
 		if (boolVal(list_nth(boundary->is_equals, i))) {
 			appendStringInfoString(&str, " = ");
 		} else if (boundary->start_inclusive) {
-			appendStringInfoString(&str, " <= ");
+			appendStringInfoString(&str, " >= ");
 		} else {
-			appendStringInfoString(&str, " < ");
+			appendStringInfoString(&str, " > ");
 		}
 
 		if (value_type == BOOLOID) {
@@ -1045,9 +1045,9 @@ static char *scan_end_boundary_to_string(ScalarDbFdwScanBoundary *boundary)
 		if (boolVal(list_nth(boundary->is_equals, i))) {
 			appendStringInfoString(&str, " = ");
 		} else if (boundary->end_inclusive) {
-			appendStringInfoString(&str, " >= ");
+			appendStringInfoString(&str, " <= ");
 		} else {
-			appendStringInfoString(&str, " > ");
+			appendStringInfoString(&str, " < ");
 		}
 
 		if (value_type == BOOLOID) {

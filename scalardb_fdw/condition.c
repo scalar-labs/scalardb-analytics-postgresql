@@ -237,35 +237,6 @@ static void determine_clustering_key_boundary(
 					goto NEXT_CLUSTERING_KEY;
 				case SCALARDB_OP_LE:
 				case SCALARDB_OP_LT:
-					/* Skip if start boundary is already set*/
-					if (start_boundary_is_set)
-						continue;
-
-					boundary->start_exprs =
-						lappend(boundary->start_exprs,
-							cond->expr);
-					boundary->start_inclusive =
-						cond->op == SCALARDB_OP_LE;
-					boundary->conds =
-						lappend(boundary->conds, ri);
-
-					if (end_boundary_is_set) {
-						/* Stop the boundary check because
-						 * both start and end for the current clustering key is set */
-						goto FINISH;
-					} else {
-						boundary->names =
-							lappend(boundary->names,
-								cond->name);
-						boundary->is_equals = lappend(
-							boundary->is_equals,
-							makeBoolean(false));
-						start_boundary_is_set = true;
-						/* Try to find end boundary condition */
-						continue;
-					}
-				case SCALARDB_OP_GE:
-				case SCALARDB_OP_GT:
 					/* Skip if end boundary is already set*/
 					if (end_boundary_is_set)
 						continue;
@@ -274,7 +245,7 @@ static void determine_clustering_key_boundary(
 						lappend(boundary->end_exprs,
 							cond->expr);
 					boundary->end_inclusive =
-						cond->op == SCALARDB_OP_GE;
+						cond->op == SCALARDB_OP_LE;
 					boundary->conds =
 						lappend(boundary->conds, ri);
 
@@ -291,6 +262,35 @@ static void determine_clustering_key_boundary(
 							makeBoolean(false));
 						end_boundary_is_set = true;
 						/* Try to find start boundary condition */
+						continue;
+					}
+				case SCALARDB_OP_GE:
+				case SCALARDB_OP_GT:
+					/* Skip if start boundary is already set*/
+					if (start_boundary_is_set)
+						continue;
+
+					boundary->start_exprs =
+						lappend(boundary->start_exprs,
+							cond->expr);
+					boundary->start_inclusive =
+						cond->op == SCALARDB_OP_GE;
+					boundary->conds =
+						lappend(boundary->conds, ri);
+
+					if (end_boundary_is_set) {
+						/* Stop the boundary check because
+						 * both start and end for the current clustering key is set */
+						goto FINISH;
+					} else {
+						boundary->names =
+							lappend(boundary->names,
+								cond->name);
+						boundary->is_equals = lappend(
+							boundary->is_equals,
+							makeBoolean(false));
+						start_boundary_is_set = true;
+						/* Try to find end boundary condition */
 						continue;
 					}
 				}
