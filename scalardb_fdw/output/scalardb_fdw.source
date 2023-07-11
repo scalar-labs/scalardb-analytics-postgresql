@@ -631,3 +631,94 @@ select * from postgresns_test where p_pk = 1 AND p_ck2 = 1;
     1 |     1 |     1 | t             |         1 |            1 |           0 |            1 | test       | \x010203
 (1 row)
 
+-- 
+-- Test multi-column clustering key push-down with range conditions
+--
+-- If the range condition exists, only that condition and the condtions before it are pushed down.
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 0 AND p_ck2 > 0;
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..11.11 rows=1 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   Filter: (postgresns_test.p_ck2 > 0)
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Start: p_ck1 > 0
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(9 rows)
+
+select * from postgresns_test where p_pk = 1 AND p_ck1 > 0 AND p_ck2 > 0;
+ p_pk | p_ck1 | p_ck2 | p_boolean_col | p_int_col | p_bigint_col | p_float_col | p_double_col | p_text_col | p_blob_col 
+------+-------+-------+---------------+-----------+--------------+-------------+--------------+------------+------------
+    1 |     1 |     1 | t             |         1 |            1 |           0 |            1 | test       | \x010203
+(1 row)
+
+-- If the last part of clustering key condtion is range condition AND:
+-- - that condition is the first clustering key condition, the condition is pushed down 
+--   regardless of it is one-sided or not.
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 0;
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=1 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Start: p_ck1 > 0
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(8 rows)
+
+select * from postgresns_test where p_pk = 1 AND p_ck1 > 0;
+ p_pk | p_ck1 | p_ck2 | p_boolean_col | p_int_col | p_bigint_col | p_float_col | p_double_col | p_text_col | p_blob_col 
+------+-------+-------+---------------+-----------+--------------+-------------+--------------+------------+------------
+    1 |     1 |     1 | t             |         1 |            1 |           0 |            1 | test       | \x010203
+(1 row)
+
+-- - if the last part of clustering key condition is one-sided (one of start or end),
+--   only the rest part of the condition (i.e. equal conditions) are pushed down.
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0;
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..11.11 rows=1 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   Filter: (postgresns_test.p_ck2 > 0)
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Start: p_ck1 = 1
+   ScalarDB Scan End: p_ck1 = 1
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(10 rows)
+
+select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0;
+ p_pk | p_ck1 | p_ck2 | p_boolean_col | p_int_col | p_bigint_col | p_float_col | p_double_col | p_text_col | p_blob_col 
+------+-------+-------+---------------+-----------+--------------+-------------+--------------+------------+------------
+    1 |     1 |     1 | t             |         1 |            1 |           0 |            1 | test       | \x010203
+(1 row)
+
+-- - if the last part of clustering key condition is both-sided (both start and end),
+--   the whole condition is pushed down.
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0 AND p_ck2 <= 1;
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..12.70 rows=1 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Start: p_ck1 = 1 AND p_ck2 > 0
+   ScalarDB Scan End: p_ck1 = 1 AND p_ck2 <= 1
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(9 rows)
+
+select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0 AND p_ck2 <= 1;
+ p_pk | p_ck1 | p_ck2 | p_boolean_col | p_int_col | p_bigint_col | p_float_col | p_double_col | p_text_col | p_blob_col 
+------+-------+-------+---------------+-----------+--------------+-------------+--------------+------------+------------
+    1 |     1 |     1 | t             |         1 |            1 |           0 |            1 | test       | \x010203
+(1 row)
+

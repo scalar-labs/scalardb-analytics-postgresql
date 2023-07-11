@@ -296,6 +296,37 @@ static void determine_clustering_key_boundary(
 				}
 			}
 		}
+		/* In the case that one of the start or end boudary is detected for the key;
+		 * - if it is the first key in the list, use it as an one-side boundary
+		 * - if the list already has other keys, use only them
+		 *   (i.e., use only conditions of EQ operator) */
+		if (start_boundary_is_set && !end_boundary_is_set) {
+			if (list_length(boundary->start_exprs) > 1) {
+				boundary->names =
+					list_delete_last(boundary->names);
+				boundary->is_equals =
+					list_delete_last(boundary->is_equals);
+				boundary->conds =
+					list_delete_last(boundary->conds);
+				boundary->start_exprs =
+					list_delete_last(boundary->start_exprs);
+				boundary->start_inclusive = true;
+			}
+		}
+		if (end_boundary_is_set && !start_boundary_is_set) {
+			if (list_length(boundary->end_exprs) > 1) {
+				boundary->names =
+					list_delete_last(boundary->names);
+				boundary->is_equals =
+					list_delete_last(boundary->is_equals);
+				boundary->conds =
+					list_delete_last(boundary->conds);
+				boundary->end_exprs =
+					list_delete_last(boundary->end_exprs);
+				boundary->end_inclusive = true;
+			}
+		}
+
 		/* Stop the boundary check if no condition is found for the current clustering key */
 		goto FINISH;
 NEXT_CLUSTERING_KEY:

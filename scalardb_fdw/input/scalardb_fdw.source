@@ -202,3 +202,24 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 = 1;
 -- Should NOT be pushed down if first part of clustering keys are not specified
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck2 = 1;
 select * from postgresns_test where p_pk = 1 AND p_ck2 = 1;
+
+-- 
+-- Test multi-column clustering key push-down with range conditions
+--
+-- If the range condition exists, only that condition and the condtions before it are pushed down.
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 0 AND p_ck2 > 0;
+select * from postgresns_test where p_pk = 1 AND p_ck1 > 0 AND p_ck2 > 0;
+-- If the last part of clustering key condtion is range condition AND:
+-- - that condition is the first clustering key condition, the condition is pushed down 
+--   regardless of it is one-sided or not.
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 0;
+select * from postgresns_test where p_pk = 1 AND p_ck1 > 0;
+-- - if the last part of clustering key condition is one-sided (one of start or end),
+--   only the rest part of the condition (i.e. equal conditions) are pushed down.
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0;
+select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0;
+
+-- - if the last part of clustering key condition is both-sided (both start and end),
+--   the whole condition is pushed down.
+explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0 AND p_ck2 <= 1;
+select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0 AND p_ck2 <= 1;
