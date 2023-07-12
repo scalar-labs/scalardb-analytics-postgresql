@@ -471,6 +471,9 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 		break;
 	}
 
+	ereport(DEBUG5, errmsg("ScalarDB Scan %s",
+			       scalardb_to_string(fdw_state->scan)));
+
 	fdw_state->scanner = NULL;
 }
 

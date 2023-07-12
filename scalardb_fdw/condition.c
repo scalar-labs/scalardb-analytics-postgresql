@@ -407,7 +407,7 @@ is_shippable_condition(RelOptInfo *baserel,
 		Var *var;
 		bool found;
 
-		/* Consier only NOT operator */
+		/* Consider only NOT operator */
 		if (bool_expr->boolop != NOT_EXPR)
 			return false;
 

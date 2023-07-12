@@ -88,7 +88,6 @@ static jmethodID BuildableScan_build;
 
 static jclass BuildableScanWithIndex_class;
 static jmethodID BuildableScanWithIndex_projections;
-static jmethodID BuildableScanWithIndex_projections;
 static jmethodID BuildableScanWithIndex_build;
 
 static jclass BuildableScanAll_class;
@@ -225,8 +224,7 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScanAll_build);
-	scan = (*env)->NewGlobalRef(env, scan);
-	return scan;
+	return (*env)->NewGlobalRef(env, scan);
 }
 
 /*
@@ -268,11 +266,7 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScan_build);
-	scan = (*env)->NewGlobalRef(env, scan);
-
-	ereport(DEBUG5, errmsg("scan %s", scalardb_to_string(scan)));
-
-	return scan;
+	return (*env)->NewGlobalRef(env, scan);
 }
 
 /*
@@ -312,11 +306,7 @@ extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScanWithIndex_build);
-	scan = (*env)->NewGlobalRef(env, scan);
-
-	ereport(DEBUG5, errmsg("scan %s", scalardb_to_string(scan)));
-
-	return scan;
+	return (*env)->NewGlobalRef(env, scan);
 }
 
 static jobject get_key_from_conds(ScalarDbFdwScanCondition *scan_conds,
@@ -424,6 +414,7 @@ static void add_datum_value_to_key(jobject key_builder, jstring name,
 		ereport(ERROR, errmsg("Unsupported data type: %d", value_type));
 	}
 }
+
 static void apply_column_pruning(jobject buildable_scan, List *attnames,
 				 jmethodID projections_method)
 {
@@ -454,8 +445,6 @@ static void apply_clustering_key_boundary(jobject buildable_scan,
 						   boundary->end_values,
 						   boundary->end_value_types,
 						   boundary->num_end_values);
-		ereport(DEBUG5, errmsg("key %s", scalardb_to_string(key)));
-		ereport(DEBUG5, errmsg("key %s", scalardb_to_string(key)));
 		buildable_scan = (*env)->CallObjectMethod(
 			env, buildable_scan, BuildableScan_end, key,
 			boundary->end_inclusive);
