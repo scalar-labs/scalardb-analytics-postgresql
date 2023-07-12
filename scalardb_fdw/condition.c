@@ -64,10 +64,9 @@ static void determine_clustering_key_boundary(
 	List *clustering_key_conds, List *clustering_key_shippable_conds,
 	int num_clustering_keys, ScalarDbFdwClusteringKeyBoundary *boundary);
 
-static bool
+static ScalarDbFdwShippableCondition *
 is_shippable_condition(RelOptInfo *baserel,
-		       ScalarDbFdwColumnMetadata *column_metadata, Expr *expr,
-		       ScalarDbFdwShippableCondition *shippable_condition);
+		       ScalarDbFdwColumnMetadata *column_metadata, Expr *expr);
 
 static bool is_foreign_table_var(Var *var, RelOptInfo *baserel);
 
@@ -95,8 +94,7 @@ extern void determine_remote_conds(RelOptInfo *baserel, List *input_conds,
 				   ScalarDbFdwScanType *scan_type)
 {
 	ListCell *lc;
-	ScalarDbFdwShippableCondition shippable_condition;
-	ScalarDbFdwShippableCondition *cond;
+	ScalarDbFdwShippableCondition *shippable_condition;
 	List *partition_key_conds = NIL;
 	List *clustering_key_conds = NIL;
 	List *clustering_key_shippable_conds = NIL;
@@ -106,12 +104,14 @@ extern void determine_remote_conds(RelOptInfo *baserel, List *input_conds,
 
 	foreach(lc, input_conds) {
 		RestrictInfo *ri = lfirst_node(RestrictInfo, lc);
-		if (is_shippable_condition(baserel, column_metadata, ri->clause,
-					   &shippable_condition)) {
-			switch (shippable_condition.key) {
+		shippable_condition = is_shippable_condition(
+			baserel, column_metadata, ri->clause);
+		if (shippable_condition != NULL) {
+			switch (shippable_condition->key) {
 			case SCALARDB_PARTITION_KEY: {
 				partition_key_conds =
 					lappend(partition_key_conds, ri);
+				pfree(shippable_condition);
 				break;
 			}
 			case SCALARDB_CLUSTERING_KEY: {
@@ -120,12 +120,9 @@ extern void determine_remote_conds(RelOptInfo *baserel, List *input_conds,
 				/* Not that the type of the element is ScalarDbFdwShippableCondition here.
 				 * This type is not a serilizable Node of List, but it would not be problematic
 				 * because this is used only with in this function */
-				cond = palloc0(
-					sizeof(ScalarDbFdwShippableCondition));
-				memcpy(cond, &shippable_condition,
-				       sizeof(ScalarDbFdwShippableCondition));
-				clustering_key_shippable_conds = lappend(
-					clustering_key_shippable_conds, cond);
+				clustering_key_shippable_conds =
+					lappend(clustering_key_shippable_conds,
+						shippable_condition);
 				break;
 			}
 			case SCALARDB_SECONDARY_INDEX: {
@@ -133,6 +130,7 @@ extern void determine_remote_conds(RelOptInfo *baserel, List *input_conds,
 				if (secondary_index_cond == NULL) {
 					secondary_index_cond = ri;
 				}
+				pfree(shippable_condition);
 				break;
 			}
 			}
@@ -177,18 +175,16 @@ extern void split_condition_expr(RelOptInfo *baserel,
 				 Expr *expr, Var **left, String **left_name,
 				 Expr **right)
 {
-	bool shippable;
-	ScalarDbFdwShippableCondition cond;
+	ScalarDbFdwShippableCondition *cond;
 
-	shippable =
-		is_shippable_condition(baserel, column_metadata, expr, &cond);
+	cond = is_shippable_condition(baserel, column_metadata, expr);
 
-	if (!shippable)
+	if (cond == NULL)
 		ereport(ERROR, errmsg("condition is not shippable"));
 
-	*left = cond.column;
-	*left_name = cond.name;
-	*right = cond.expr;
+	*left = cond->column;
+	*left_name = cond->name;
+	*right = cond->expr;
 }
 
 static void determine_clustering_key_boundary(
@@ -336,39 +332,40 @@ FINISH:
 	return;
 }
 
-static bool
+static ScalarDbFdwShippableCondition *
 check_keys_for_var(Var *var, List *key_attnums, List *key_names,
 		   ScalarDbFdwConditionKeyType key_type, ScalarDbFdwOperator op,
-		   Expr *expr,
-		   ScalarDbFdwShippableCondition *shippable_condition)
+		   Expr *expr)
 {
 	ListCell *lc;
 	int i = 0;
+	ScalarDbFdwShippableCondition *cond;
+
 	foreach(lc, key_attnums) {
 		int attnum = lfirst_int(lc);
 		if (attnum == var->varattno) {
-			shippable_condition->key = key_type;
-			shippable_condition->key_index = i;
-			shippable_condition->op = op;
-			shippable_condition->column = var;
-			shippable_condition->name = list_nth(key_names, i);
-			shippable_condition->expr = expr;
-			return true;
+			cond = palloc0(sizeof(ScalarDbFdwShippableCondition));
+			cond->key = key_type;
+			cond->key_index = i;
+			cond->op = op;
+			cond->column = var;
+			cond->name = list_nth(key_names, i);
+			cond->expr = expr;
+			return cond;
 		}
 		i++;
 	}
-	return false;
+	return NULL;
 }
 
-static bool
+static ScalarDbFdwShippableCondition *
 is_shippable_condition(RelOptInfo *baserel,
-		       ScalarDbFdwColumnMetadata *column_metadata, Expr *expr,
-		       ScalarDbFdwShippableCondition *shippable_condition)
+		       ScalarDbFdwColumnMetadata *column_metadata, Expr *expr)
 {
+	ScalarDbFdwShippableCondition *cond;
 	switch (nodeTag(expr)) {
 	case T_Var: {
 		Var *var = (Var *)expr;
-		bool found;
 
 		if (var->vartype != BOOLOID)
 			return false;
@@ -376,36 +373,35 @@ is_shippable_condition(RelOptInfo *baserel,
 		if (!is_foreign_table_var(var, baserel))
 			return false;
 
-		found = check_keys_for_var(
+		cond = check_keys_for_var(
 			var, column_metadata->partition_key_attnums,
 			column_metadata->partition_key_names,
 			SCALARDB_PARTITION_KEY, SCALARDB_OP_EQ,
-			(Expr *)make_boolean_const(true), shippable_condition);
-		if (found)
-			return true;
+			(Expr *)make_boolean_const(true));
+		if (cond != NULL)
+			return cond;
 
-		found = check_keys_for_var(
+		cond = check_keys_for_var(
 			var, column_metadata->clustering_key_attnums,
 			column_metadata->clustering_key_names,
 			SCALARDB_CLUSTERING_KEY, SCALARDB_OP_EQ,
-			(Expr *)make_boolean_const(true), shippable_condition);
-		if (found)
-			return true;
+			(Expr *)make_boolean_const(true));
+		if (cond != NULL)
+			return cond;
 
-		found = check_keys_for_var(
+		cond = check_keys_for_var(
 			var, column_metadata->secondary_index_attnums,
 			column_metadata->secondary_index_names,
 			SCALARDB_SECONDARY_INDEX, SCALARDB_OP_EQ,
-			(Expr *)make_boolean_const(true), shippable_condition);
-		if (found)
-			return true;
+			(Expr *)make_boolean_const(true));
+		if (cond != NULL)
+			return cond;
 
 		return false;
 	}
 	case T_BoolExpr: {
 		BoolExpr *bool_expr = (BoolExpr *)expr;
 		Var *var;
-		bool found;
 
 		/* Consider only NOT operator */
 		if (bool_expr->boolop != NOT_EXPR)
@@ -419,29 +415,29 @@ is_shippable_condition(RelOptInfo *baserel,
 		if (!is_foreign_table_var(var, baserel))
 			return false;
 
-		found = check_keys_for_var(
+		cond = check_keys_for_var(
 			var, column_metadata->partition_key_attnums,
 			column_metadata->partition_key_names,
 			SCALARDB_PARTITION_KEY, SCALARDB_OP_EQ,
-			(Expr *)make_boolean_const(false), shippable_condition);
-		if (found)
-			return true;
+			(Expr *)make_boolean_const(false));
+		if (cond != NULL)
+			return cond;
 
-		found = check_keys_for_var(
+		cond = check_keys_for_var(
 			var, column_metadata->clustering_key_attnums,
 			column_metadata->clustering_key_names,
 			SCALARDB_CLUSTERING_KEY, SCALARDB_OP_EQ,
-			(Expr *)make_boolean_const(false), shippable_condition);
-		if (found)
-			return true;
+			(Expr *)make_boolean_const(false));
+		if (cond != NULL)
+			return cond;
 
-		found = check_keys_for_var(
+		cond = check_keys_for_var(
 			var, column_metadata->secondary_index_attnums,
 			column_metadata->secondary_index_names,
 			SCALARDB_SECONDARY_INDEX, SCALARDB_OP_EQ,
-			(Expr *)make_boolean_const(false), shippable_condition);
-		if (found)
-			return true;
+			(Expr *)make_boolean_const(false));
+		if (cond != NULL)
+			return cond;
 
 		return false;
 	}
@@ -450,7 +446,6 @@ is_shippable_condition(RelOptInfo *baserel,
 		Node *right;
 		OpExpr *op = (OpExpr *)expr;
 		ScalarDbFdwOperator op_type = get_operator_type(op);
-		bool found;
 
 		if (op_type == UnsupportedConitionType)
 			return false;
@@ -471,33 +466,33 @@ is_shippable_condition(RelOptInfo *baserel,
 			return false;
 
 		if (op_type == SCALARDB_OP_EQ) {
-			found = check_keys_for_var(
+			cond = check_keys_for_var(
 				left, column_metadata->partition_key_attnums,
 				column_metadata->partition_key_names,
 				SCALARDB_PARTITION_KEY, SCALARDB_OP_EQ,
-				(Expr *)right, shippable_condition);
-			if (found)
-				return true;
+				(Expr *)right);
+			if (cond != NULL)
+				return cond;
 		}
 		if (op_type == SCALARDB_OP_EQ || op_type == SCALARDB_OP_LE ||
 		    op_type == SCALARDB_OP_LT || op_type == SCALARDB_OP_GE ||
 		    op_type == SCALARDB_OP_GT) {
-			found = check_keys_for_var(
+			cond = check_keys_for_var(
 				left, column_metadata->clustering_key_attnums,
 				column_metadata->clustering_key_names,
-				SCALARDB_CLUSTERING_KEY, op_type, (Expr *)right,
-				shippable_condition);
-			if (found)
-				return true;
+				SCALARDB_CLUSTERING_KEY, op_type,
+				(Expr *)right);
+			if (cond != NULL)
+				return cond;
 		}
 		if (op_type == SCALARDB_OP_EQ) {
-			found = check_keys_for_var(
+			cond = check_keys_for_var(
 				left, column_metadata->secondary_index_attnums,
 				column_metadata->secondary_index_names,
 				SCALARDB_SECONDARY_INDEX, SCALARDB_OP_EQ,
-				(Expr *)right, shippable_condition);
-			if (found)
-				return true;
+				(Expr *)right);
+			if (cond != NULL)
+				return cond;
 		}
 		return false;
 	}
