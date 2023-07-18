@@ -1,8 +1,10 @@
 #include "scalardb.h"
 
+#include "condition.h"
 #include "jni.h"
 #include "nodes/pg_list.h"
 #include "nodes/value.h"
+#include "postgres.h"
 #include "storage/ipc.h"
 #include "utils/builtins.h"
 #include "utils/elog.h"
@@ -56,8 +58,14 @@ static jclass ScalarDbUtils_class;
 static jmethodID ScalarDbUtils_initialize;
 static jmethodID ScalarDbUtils_closeStorage;
 static jmethodID ScalarDbUtils_scan;
+static jmethodID ScalarDbUtils_buildableScan;
+static jmethodID ScalarDbUtils_buildableScanWithIndex;
 static jmethodID ScalarDbUtils_buildableScanAll;
+static jmethodID ScalarDbUtils_keyBuilder;
 static jmethodID ScalarDbUtils_getResultColumnsSize;
+static jmethodID ScalarDbUtils_getPartitionKeyNames;
+static jmethodID ScalarDbUtils_getClusteringKeyNames;
+static jmethodID ScalarDbUtils_getSecondaryIndexNames;
 
 static jclass Result_class;
 static jmethodID Result_isNull;
@@ -72,9 +80,29 @@ static jmethodID Result_getBlobAsBytes;
 static jclass Scanner_class;
 static jmethodID Scanner_one;
 
+static jclass BuildableScan_class;
+static jmethodID BuildableScan_projections;
+static jmethodID BuildableScan_start;
+static jmethodID BuildableScan_end;
+static jmethodID BuildableScan_build;
+
+static jclass BuildableScanWithIndex_class;
+static jmethodID BuildableScanWithIndex_projections;
+static jmethodID BuildableScanWithIndex_build;
+
 static jclass BuildableScanAll_class;
 static jmethodID BuildableScanAll_projections;
 static jmethodID BuildableScanAll_build;
+
+static jclass KeyBuilder_class;
+static jmethodID KeyBuilder_addBoolean;
+static jmethodID KeyBuilder_addInt;
+static jmethodID KeyBuilder_addBigInt;
+static jmethodID KeyBuilder_addFloat;
+static jmethodID KeyBuilder_addDouble;
+static jmethodID KeyBuilder_addText;
+static jmethodID KeyBuilder_addBlob;
+static jmethodID KeyBuilder_build;
 
 static void initialize_jvm(ScalarDbFdwOptions *opts);
 static void destroy_jvm(void);
@@ -84,13 +112,24 @@ static void initialize_standard_references(void);
 static void initialize_scalardb_references(void);
 static void add_classpath_to_system_class_loader(char *classpath);
 
+static jobject get_key_from_conds(ScalarDbFdwScanCondition *scan_conds,
+				  size_t num_scan_conds);
+static jobject get_key_for_boundary(List *names, Datum *values,
+				    List *value_types, size_t num_values);
+static void add_datum_value_to_key(jobject key_builder, jstring name,
+				   Datum value, Oid value_type);
+static void apply_column_pruning(jobject buildable_scan, List *attnames,
+				 jmethodID projections_method);
+static void apply_clustering_key_boundary(jobject buildable_scan,
+					  ScalarDbFdwScanBoundary *boundary);
+
 static void clear_exception(void);
 static void catch_exception(void);
 
 static char *convert_string_to_cstring(jobject java_cstring);
 static text *convert_string_to_text(jobject java_cstring);
 static bytea *convert_jbyteArray_to_bytea(jbyteArray bytes);
-static jobjectArray convert_cstring_list_to_jarray_of_string(List *strings);
+static jobjectArray convert_string_list_to_jarray_of_string(List *strings);
 
 static void on_proc_exit_cb(int code, Datum arg);
 
@@ -154,14 +193,14 @@ void scalardb_initialize(ScalarDbFdwOptions *opts)
 }
 
 /*
- * Retruns Scan object built with the specified parameters.
+ * Retruns Scan (all) object built with the specified parameters.
  *
  * The returned object is a global reference. It is caller's responsibility to
  * release the object 
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
- * The type of `attnames` must be a List of a null-terminated char*.
+ * The type of `attnames` must be a List of String.
  */
 extern jobject scalardb_scan_all(char *namespace, char *table_name,
 				 List *attnames)
@@ -180,18 +219,236 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 		env, ScalarDbUtils_class, ScalarDbUtils_buildableScanAll,
 		namespace_str, table_name_str);
 
-	if (attnames != NIL) {
-		jobjectArray attrnames_array =
-			convert_cstring_list_to_jarray_of_string(attnames);
-		buildable_scan = (*env)->CallObjectMethod(
-			env, buildable_scan, BuildableScanAll_projections,
-			attrnames_array);
-	}
+	apply_column_pruning(buildable_scan, attnames,
+			     BuildableScanAll_projections);
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScanAll_build);
-	scan = (*env)->NewGlobalRef(env, scan);
-	return scan;
+	return (*env)->NewGlobalRef(env, scan);
+}
+
+/*
+ * Retruns Scan (partitionKey) object built with the specified parameters.
+ *
+ * The returned object is a global reference. It is caller's responsibility to
+ * release the object 
+ *
+ * If `attnames` is specified, only the columns with the names in `attnames`
+ * will be returned. (i.e. calls projections())
+ * The type of `attnames` must be a List of String.
+ */
+extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
+			     ScalarDbFdwScanCondition *scan_conds,
+			     size_t num_scan_conds,
+			     ScalarDbFdwScanBoundary *boundary)
+{
+	jstring namespace_str;
+	jstring table_name_str;
+	jobject buildable_scan;
+	jobject scan;
+	jobject key;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	namespace_str = (*env)->NewStringUTF(env, namespace);
+	table_name_str = (*env)->NewStringUTF(env, table_name);
+
+	key = get_key_from_conds(scan_conds, num_scan_conds);
+
+	buildable_scan = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_buildableScan,
+		namespace_str, table_name_str, key);
+
+	apply_column_pruning(buildable_scan, attnames,
+			     BuildableScan_projections);
+
+	apply_clustering_key_boundary(buildable_scan, boundary);
+
+	scan = (*env)->CallObjectMethod(env, buildable_scan,
+					BuildableScan_build);
+	return (*env)->NewGlobalRef(env, scan);
+}
+
+/*
+ * Retruns Scan (indexKey) object built with the specified parameters.
+ *
+ * The returned object is a global reference. It is caller's responsibility to
+ * release the object 
+ *
+ * If `attnames` is specified, only the columns with the names in `attnames`
+ * will be returned. (i.e. calls projections())
+ * The type of `attnames` must be a List of String.
+ */
+extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
+					List *attnames,
+					ScalarDbFdwScanCondition *scan_conds,
+					size_t num_scan_conds)
+{
+	jstring namespace_str;
+	jstring table_name_str;
+	jobject buildable_scan;
+	jobject scan;
+	jobject key;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	namespace_str = (*env)->NewStringUTF(env, namespace);
+	table_name_str = (*env)->NewStringUTF(env, table_name);
+
+	key = get_key_from_conds(scan_conds, num_scan_conds);
+
+	buildable_scan = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_buildableScanWithIndex,
+		namespace_str, table_name_str, key);
+
+	apply_column_pruning(buildable_scan, attnames,
+			     BuildableScanWithIndex_projections);
+
+	scan = (*env)->CallObjectMethod(env, buildable_scan,
+					BuildableScanWithIndex_build);
+	return (*env)->NewGlobalRef(env, scan);
+}
+
+static jobject get_key_from_conds(ScalarDbFdwScanCondition *scan_conds,
+				  size_t num_scan_conds)
+{
+	jobject key_builder;
+
+	key_builder = (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
+						     ScalarDbUtils_keyBuilder);
+
+	for (int i = 0; i < num_scan_conds; i++) {
+		ScalarDbFdwScanCondition *cond = &scan_conds[i];
+		jstring key_name_str;
+
+		key_name_str = (*env)->NewStringUTF(env, cond->name);
+		add_datum_value_to_key(key_builder, key_name_str, cond->value,
+				       cond->value_type);
+	}
+
+	return (*env)->CallObjectMethod(env, key_builder, KeyBuilder_build);
+}
+
+static jobject get_key_for_boundary(List *names, Datum *values,
+				    List *value_types, size_t num_values)
+{
+	jobject key_builder;
+
+	key_builder = (*env)->CallStaticObjectMethod(env, ScalarDbUtils_class,
+						     ScalarDbUtils_keyBuilder);
+	for (size_t i = 0; i < num_values; i++) {
+		jstring name_str =
+			(*env)->NewStringUTF(env, strVal(list_nth(names, i)));
+		Datum value = values[i];
+		Oid type = list_nth_oid(value_types, i);
+
+		add_datum_value_to_key(key_builder, name_str, value, type);
+	}
+	return (*env)->CallObjectMethod(env, key_builder, KeyBuilder_build);
+}
+
+static void add_datum_value_to_key(jobject key_builder, jstring name,
+				   Datum value, Oid value_type)
+{
+	switch (value_type) {
+	case BOOLOID: {
+		key_builder = (*env)->CallObjectMethod(env, key_builder,
+						       KeyBuilder_addBoolean,
+						       name,
+						       DatumGetBool(value));
+		break;
+	}
+	case INT4OID: {
+		key_builder = (*env)->CallObjectMethod(env, key_builder,
+						       KeyBuilder_addInt, name,
+						       DatumGetInt32(value));
+		break;
+	}
+	case INT8OID: {
+		key_builder = (*env)->CallObjectMethod(env, key_builder,
+						       KeyBuilder_addBigInt,
+						       name,
+						       DatumGetInt64(value));
+		break;
+	}
+	case FLOAT4OID: {
+		key_builder = (*env)->CallObjectMethod(env, key_builder,
+						       KeyBuilder_addFloat,
+						       name,
+						       DatumGetFloat4(value));
+		break;
+	}
+	case FLOAT8OID: {
+		key_builder = (*env)->CallObjectMethod(env, key_builder,
+						       KeyBuilder_addDouble,
+						       name,
+						       DatumGetFloat8(value));
+		break;
+	}
+	case TEXTOID: {
+		jstring value_str =
+			(*env)->NewStringUTF(env, TextDatumGetCString(value));
+		key_builder = (*env)->CallObjectMethod(
+			env, key_builder, KeyBuilder_addText, name, value_str);
+		(*env)->DeleteLocalRef(env, value_str);
+		break;
+	}
+	case BYTEAOID: {
+		bytea *unpacked = pg_detoast_datum_packed(
+			(bytea *)(DatumGetPointer(value)));
+		int len = VARSIZE_ANY_EXHDR(unpacked);
+
+		jbyteArray value_ary = (*env)->NewByteArray(env, len);
+		(*env)->SetByteArrayRegion(env, value_ary, 0, len,
+					   (jbyte *)VARDATA_ANY(unpacked));
+		if (unpacked != (bytea *)value)
+			pfree(unpacked);
+
+		key_builder = (*env)->CallObjectMethod(
+			env, key_builder, KeyBuilder_addBlob, name, value_ary);
+
+		(*env)->DeleteLocalRef(env, value_ary);
+		break;
+	}
+	default:
+		ereport(ERROR, errmsg("Unsupported data type: %d", value_type));
+	}
+}
+
+static void apply_column_pruning(jobject buildable_scan, List *attnames,
+				 jmethodID projections_method)
+{
+	if (attnames != NIL) {
+		jobjectArray attrnames_array =
+			convert_string_list_to_jarray_of_string(attnames);
+		buildable_scan = (*env)->CallObjectMethod(env, buildable_scan,
+							  projections_method,
+							  attrnames_array);
+	}
+}
+
+static void apply_clustering_key_boundary(jobject buildable_scan,
+					  ScalarDbFdwScanBoundary *boundary)
+{
+	if (boundary->num_start_values > 0) {
+		jobject key = get_key_for_boundary(boundary->names,
+						   boundary->start_values,
+						   boundary->start_value_types,
+						   boundary->num_start_values);
+		buildable_scan = (*env)->CallObjectMethod(
+			env, buildable_scan, BuildableScan_start, key,
+			boundary->start_inclusive);
+	}
+
+	if (boundary->num_end_values > 0) {
+		jobject key = get_key_for_boundary(boundary->names,
+						   boundary->end_values,
+						   boundary->end_value_types,
+						   boundary->num_end_values);
+		buildable_scan = (*env)->CallObjectMethod(
+			env, buildable_scan, BuildableScan_end, key,
+			boundary->end_inclusive);
+	}
 }
 
 /*
@@ -397,6 +654,118 @@ extern char *scalardb_to_string(jobject obj)
 	return cstr;
 }
 
+/*
+ * Retrieve the partition key names for the given table.
+ */
+extern void scalardb_get_paritition_key_names(char *namespace, char *table_name,
+					      List **partition_key_names)
+{
+	jstring namespace_str;
+	jstring table_name_str;
+
+	jsize len;
+	jstring elem;
+
+	jobjectArray partition_key_names_array;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	Assert(metadata->partition_key_names == NIL);
+
+	namespace_str = (*env)->NewStringUTF(env, namespace);
+	table_name_str = (*env)->NewStringUTF(env, table_name);
+
+	clear_exception();
+	partition_key_names_array = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_getPartitionKeyNames,
+		namespace_str, table_name_str);
+	catch_exception();
+
+	len = (*env)->GetArrayLength(env, partition_key_names_array);
+	for (jsize i = 0; i < len; i++) {
+		elem = (jstring)(*env)->GetObjectArrayElement(
+			env, partition_key_names_array, i);
+		*partition_key_names =
+			lappend(*partition_key_names,
+				makeString(convert_string_to_cstring(elem)));
+	}
+}
+
+/*
+ * Retrieve the clustering key names for the given table.
+ */
+extern void scalardb_get_clustering_key_names(char *namespace, char *table_name,
+					      List **clustering_key_names)
+{
+	jstring namespace_str;
+	jstring table_name_str;
+
+	jsize len;
+	jstring elem;
+
+	jobjectArray clustering_key_names_array;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	Assert(metadata->clustering_key_names == NIL);
+
+	namespace_str = (*env)->NewStringUTF(env, namespace);
+	table_name_str = (*env)->NewStringUTF(env, table_name);
+
+	clear_exception();
+	clustering_key_names_array = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_getClusteringKeyNames,
+		namespace_str, table_name_str);
+	catch_exception();
+
+	len = (*env)->GetArrayLength(env, clustering_key_names_array);
+	for (jsize i = 0; i < len; i++) {
+		elem = (jstring)(*env)->GetObjectArrayElement(
+			env, clustering_key_names_array, i);
+		*clustering_key_names =
+			lappend(*clustering_key_names,
+				makeString(convert_string_to_cstring(elem)));
+	}
+}
+
+/*
+ * Retrieve the secondary index names for the given table.
+ */
+extern void scalardb_get_secondary_index_names(char *namespace,
+					       char *table_name,
+					       List **secondary_index_names)
+{
+	jstring namespace_str;
+	jstring table_name_str;
+
+	jsize len;
+	jstring elem;
+
+	jobjectArray secondary_index_names_array;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	Assert(metadata->secondary_index_names == NIL);
+
+	namespace_str = (*env)->NewStringUTF(env, namespace);
+	table_name_str = (*env)->NewStringUTF(env, table_name);
+
+	clear_exception();
+	secondary_index_names_array = (*env)->CallStaticObjectMethod(
+		env, ScalarDbUtils_class, ScalarDbUtils_getSecondaryIndexNames,
+		namespace_str, table_name_str);
+	catch_exception();
+
+	len = (*env)->GetArrayLength(env, secondary_index_names_array);
+	for (jsize i = 0; i < len; i++) {
+		elem = (jstring)(*env)->GetObjectArrayElement(
+			env, secondary_index_names_array, i);
+		*secondary_index_names =
+			lappend(*secondary_index_names,
+				makeString(convert_string_to_cstring(elem)));
+	}
+}
+
 static void initialize_jvm(ScalarDbFdwOptions *opts)
 {
 	char *max_heap_size;
@@ -530,12 +899,35 @@ static void initialize_scalardb_references()
 		ScalarDbUtils_scan, ScalarDbUtils_class, "scan",
 		"(Lcom/scalar/db/api/Scan;)Lcom/scalar/db/api/Scanner;");
 	register_java_static_method(
+		ScalarDbUtils_buildableScan, ScalarDbUtils_class,
+		"buildableScan",
+		"(Ljava/lang/String;Ljava/lang/String;Lcom/scalar/db/io/Key;)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_static_method(
+		ScalarDbUtils_buildableScanWithIndex, ScalarDbUtils_class,
+		"buildableScanWithIndex",
+		"(Ljava/lang/String;Ljava/lang/String;Lcom/scalar/db/io/Key;)Lcom/scalar/db/api/ScanBuilder$BuildableScanWithIndex;");
+	register_java_static_method(
 		ScalarDbUtils_buildableScanAll, ScalarDbUtils_class,
 		"buildableScanAll",
 		"(Ljava/lang/String;Ljava/lang/String;)Lcom/scalar/db/api/ScanBuilder$BuildableScanAll;");
+	register_java_static_method(ScalarDbUtils_keyBuilder,
+				    ScalarDbUtils_class, "keyBuilder",
+				    "()Lcom/scalar/db/io/Key$Builder;");
 	register_java_static_method(ScalarDbUtils_getResultColumnsSize,
 				    ScalarDbUtils_class, "getResultColumnsSize",
 				    "(Lcom/scalar/db/api/Result;)I");
+	register_java_static_method(
+		ScalarDbUtils_getPartitionKeyNames, ScalarDbUtils_class,
+		"getPartitionKeyNames",
+		"(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+	register_java_static_method(
+		ScalarDbUtils_getClusteringKeyNames, ScalarDbUtils_class,
+		"getClusteringKeyNames",
+		"(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+	register_java_static_method(
+		ScalarDbUtils_getSecondaryIndexNames, ScalarDbUtils_class,
+		"getSecondaryIndexNames",
+		"(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
 
 	// com.scalar.db.api.Result
 	register_java_class(Result_class, "com/scalar/db/api/Result");
@@ -561,6 +953,33 @@ static void initialize_scalardb_references()
 	register_java_class_method(Scanner_one, Scanner_class, "one",
 				   "()Ljava/util/Optional;");
 
+	// com.scalar.db.api.ScanBuilder$BuildableScan
+	register_java_class(BuildableScan_class,
+			    "Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_class_method(
+		BuildableScan_projections, BuildableScan_class, "projections",
+		"([Ljava/lang/String;)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_class_method(
+		BuildableScan_start, BuildableScan_class, "start",
+		"(Lcom/scalar/db/io/Key;Z)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_class_method(
+		BuildableScan_end, BuildableScan_class, "end",
+		"(Lcom/scalar/db/io/Key;Z)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_class_method(BuildableScan_build, BuildableScan_class,
+				   "build", "()Lcom/scalar/db/api/Scan;");
+
+	// com.scalar.db.api.ScanBuilder$BuildableScanWithIndex
+	register_java_class(
+		BuildableScanWithIndex_class,
+		"Lcom/scalar/db/api/ScanBuilder$BuildableScanWithIndex;");
+	register_java_class_method(
+		BuildableScanWithIndex_projections,
+		BuildableScanWithIndex_class, "projections",
+		"([Ljava/lang/String;)Lcom/scalar/db/api/ScanBuilder$BuildableScanWithIndex;");
+	register_java_class_method(BuildableScanWithIndex_build,
+				   BuildableScanWithIndex_class, "build",
+				   "()Lcom/scalar/db/api/Scan;");
+
 	// com.scalar.db.api.ScanBuilder$BuildableScanAll
 	register_java_class(BuildableScanAll_class,
 			    "Lcom/scalar/db/api/ScanBuilder$BuildableScanAll;");
@@ -571,6 +990,32 @@ static void initialize_scalardb_references()
 	register_java_class_method(BuildableScanAll_build,
 				   BuildableScanAll_class, "build",
 				   "()Lcom/scalar/db/api/Scan;");
+
+	// com.scalar.db.io.Key$Builder
+	register_java_class(KeyBuilder_class, "Lcom/scalar/db/io/Key$Builder;");
+	register_java_class_method(
+		KeyBuilder_addBoolean, KeyBuilder_class, "addBoolean",
+		"(Ljava/lang/String;Z)Lcom/scalar/db/io/Key$Builder;");
+	register_java_class_method(
+		KeyBuilder_addInt, KeyBuilder_class, "addInt",
+		"(Ljava/lang/String;I)Lcom/scalar/db/io/Key$Builder;");
+	register_java_class_method(
+		KeyBuilder_addBigInt, KeyBuilder_class, "addBigInt",
+		"(Ljava/lang/String;J)Lcom/scalar/db/io/Key$Builder;");
+	register_java_class_method(
+		KeyBuilder_addFloat, KeyBuilder_class, "addFloat",
+		"(Ljava/lang/String;F)Lcom/scalar/db/io/Key$Builder;");
+	register_java_class_method(
+		KeyBuilder_addDouble, KeyBuilder_class, "addDouble",
+		"(Ljava/lang/String;D)Lcom/scalar/db/io/Key$Builder;");
+	register_java_class_method(
+		KeyBuilder_addText, KeyBuilder_class, "addText",
+		"(Ljava/lang/String;Ljava/lang/String;)Lcom/scalar/db/io/Key$Builder;");
+	register_java_class_method(
+		KeyBuilder_addBlob, KeyBuilder_class, "addBlob",
+		"(Ljava/lang/String;[B)Lcom/scalar/db/io/Key$Builder;");
+	register_java_class_method(KeyBuilder_build, KeyBuilder_class, "build",
+				   "()Lcom/scalar/db/io/Key;");
 }
 
 static void add_classpath_to_system_class_loader(char *classpath)
@@ -706,15 +1151,16 @@ static bytea *convert_jbyteArray_to_bytea(jbyteArray bytes)
 
 /*
 * Convert a list of strings to a Java String array.
-* The type of strs must be a List of a null-terminated char*;
+* The type of strs must be a List of String;
 */
-static jobjectArray convert_cstring_list_to_jarray_of_string(List *strs)
+static jobjectArray convert_string_list_to_jarray_of_string(List *strs)
 {
 	jobjectArray ret = (*env)->NewObjectArray(env, list_length(strs),
 						  String_class, NULL);
 
 	for (int i = 0; i < list_length(strs); i++) {
-		jstring str = (*env)->NewStringUTF(env, list_nth(strs, i));
+		jstring str =
+			(*env)->NewStringUTF(env, strVal(list_nth(strs, i)));
 		(*env)->SetObjectArrayElement(env, ret, i, str);
 		(*env)->DeleteLocalRef(env, str);
 	}

@@ -1,5 +1,5 @@
-#ifndef scalardb_fdw_H
-#define scalardb_fdw_H
+#ifndef SCALARDB_FDW_H
+#define SCALARDB_FDW_H
 
 #include "c.h"
 #include "postgres.h"

@@ -34,16 +34,11 @@ static struct OptionEntry valid_options[] = {
 	{ "namespace", ForeignTableRelationId },
 	{ "table_name", ForeignTableRelationId },
 
-	{ "scalardb_partition_key", AttributeRelationId },
-	{ "scalardb_clustering_key", AttributeRelationId },
-	{ "scalardb_index_key", AttributeRelationId },
-
 	/* Sentinel */
 	{ NULL, InvalidOid }
 };
 
 static bool is_valid_option(const char *option, Oid context);
-static void get_attribute_options(Oid foreigntableid, ScalarDbFdwOptions *opts);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_validator);
 
@@ -116,13 +111,6 @@ Datum scalardb_fdw_validator(PG_FUNCTION_ARGS)
 			namespace = defGetString(def);
 		} else if (strcmp(def->defname, "table_name") == 0) {
 			table_name = defGetString(def);
-		} else if (strcmp(def->defname, "scalardb_partition_key") ==
-				   0 ||
-			   strcmp(def->defname, "scalardb_clustering_key") ==
-				   0 ||
-			   strcmp(def->defname, "scalardb_index_key") == 0) {
-			// Accept only boolean value
-			defGetBoolean(def);
 		}
 	}
 
@@ -182,9 +170,6 @@ void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions *opts)
 	opts->max_heap_size = NULL;
 	opts->namespace = NULL;
 	opts->table_name = NULL;
-	opts->partition_key_column = NULL;
-	opts->clustering_key_columns = NIL;
-	opts->index_key_columns = NIL;
 
 	table = GetForeignTable(foreigntableid);
 	server = GetForeignServer(table->serverid);
@@ -206,85 +191,6 @@ void get_scalardb_fdw_options(Oid foreigntableid, ScalarDbFdwOptions *opts)
 			opts->namespace = defGetString(def);
 		} else if (strcmp(def->defname, "table_name") == 0) {
 			opts->table_name = defGetString(def);
-		} else if (strcmp(def->defname, "partition_key_column") == 0) {
-			opts->partition_key_column = defGetString(def);
-		} else if (strcmp(def->defname, "clustering_key_columns") ==
-			   0) {
-			opts->clustering_key_columns = defGetStringList(def);
-		} else if (strcmp(def->defname, "index_key_columns") == 0) {
-			opts->index_key_columns = defGetStringList(def);
 		}
 	}
-
-	get_attribute_options(foreigntableid, opts);
-}
-
-/*
- * Retrieve per-column generic options from pg_attribute and construct a list
- * of DefElems representing them.
- */
-static void get_attribute_options(Oid foreigntableid, ScalarDbFdwOptions *opts)
-{
-	Relation rel = table_open(foreigntableid, AccessShareLock);
-	TupleDesc tupleDesc = RelationGetDescr(rel);
-	AttrNumber natts = tupleDesc->natts;
-
-	/* Retrieve FDW options for all user-defined attributes. */
-	char *partition_key_column = NULL;
-	List *clustering_key_columns = NIL;
-	List *index_key_columns = NIL;
-	AttrNumber attnum;
-	for (attnum = 1; attnum <= natts; attnum++) {
-		Form_pg_attribute attr = TupleDescAttr(tupleDesc, attnum - 1);
-		List *column_options;
-		ListCell *lc;
-
-		/* Skip dropped attributes. */
-		if (attr->attisdropped)
-			continue;
-
-		column_options =
-			GetForeignColumnOptions(foreigntableid, attnum);
-		foreach(lc, column_options) {
-			DefElem *def = (DefElem *)lfirst(lc);
-
-			if (strcmp(def->defname, "scalardb_partition_key") ==
-			    0) {
-				if (defGetBoolean(def)) {
-					partition_key_column =
-						pstrdup(NameStr(attr->attname));
-				}
-			} else if (strcmp(def->defname,
-					  "scalardb_clustering_key") == 0) {
-				if (defGetBoolean(def)) {
-					char *attname =
-						pstrdup(NameStr(attr->attname));
-
-					clustering_key_columns =
-						lappend(clustering_key_columns,
-							makeString(attname));
-				}
-			} else if (strcmp(def->defname, "scalardb_index_key") ==
-				   0) {
-				if (defGetBoolean(def)) {
-					char *attname =
-						pstrdup(NameStr(attr->attname));
-
-					index_key_columns =
-						lappend(index_key_columns,
-							makeString(attname));
-				}
-			}
-		}
-	}
-	table_close(rel, AccessShareLock);
-
-	if (partition_key_column != NULL)
-		opts->partition_key_column = partition_key_column;
-
-	if (clustering_key_columns != NIL)
-		opts->clustering_key_columns = clustering_key_columns;
-
-	if (index_key_columns != NIL)
-		opts->clustering_key_columns = index_key_columns;
 }
