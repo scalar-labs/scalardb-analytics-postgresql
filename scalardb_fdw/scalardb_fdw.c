@@ -26,7 +26,6 @@
 #include "utils/lsyscache.h"
 
 #include "scalardb.h"
-#include "scalardb_fdw.h"
 #include "scalardb_fdw_util.h"
 #include "condition.h"
 #include "option.h"
@@ -149,6 +148,35 @@ static char *scan_conds_to_string(ScalarDbFdwScanCondition *scan_conds,
 				  size_t num_conds);
 static char *scan_start_boundary_to_string(ScalarDbFdwScanBoundary *boundary);
 static char *scan_end_boundary_to_string(ScalarDbFdwScanBoundary *boundary);
+
+/*
+ * FDW callback routines
+ */
+static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
+				      Oid foreigntableid);
+
+static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
+				    Oid foreigntableid);
+
+static ForeignScan *
+scalardbGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel,
+		       Oid foreigntableid, ForeignPath *best_path, List *tlist,
+		       List *scan_clauses, Plan *outer_plan);
+
+static void scalardbBeginForeignScan(ForeignScanState *node, int eflags);
+
+static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node);
+
+static void scalardbReScanForeignScan(ForeignScanState *node);
+
+static void scalardbEndForeignScan(ForeignScanState *node);
+
+static void scalardbExplainForeignScan(ForeignScanState *node,
+				       ExplainState *es);
+
+static bool scalardbAnalyzeForeignTable(Relation relation,
+					AcquireSampleRowsFunc *func,
+					BlockNumber *totalpages);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_handler);
 
