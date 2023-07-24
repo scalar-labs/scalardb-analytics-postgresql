@@ -368,10 +368,10 @@ is_shippable_condition(RelOptInfo *baserel,
 		Var *var = (Var *)expr;
 
 		if (var->vartype != BOOLOID)
-			return false;
+			return NULL;
 
 		if (!is_foreign_table_var(var, baserel))
-			return false;
+			return NULL;
 
 		cond = check_keys_for_var(
 			var, column_metadata->partition_key_attnums,
@@ -397,7 +397,7 @@ is_shippable_condition(RelOptInfo *baserel,
 		if (cond != NULL)
 			return cond;
 
-		return false;
+		return NULL;
 	}
 	case T_BoolExpr: {
 		BoolExpr *bool_expr = (BoolExpr *)expr;
@@ -405,15 +405,15 @@ is_shippable_condition(RelOptInfo *baserel,
 
 		/* Consider only NOT operator */
 		if (bool_expr->boolop != NOT_EXPR)
-			return false;
+			return NULL;
 
 		if (!IsA(linitial(bool_expr->args), Var))
-			return false;
+			return NULL;
 
 		var = linitial_node(Var, bool_expr->args);
 
 		if (!is_foreign_table_var(var, baserel))
-			return false;
+			return NULL;
 
 		cond = check_keys_for_var(
 			var, column_metadata->partition_key_attnums,
@@ -439,7 +439,7 @@ is_shippable_condition(RelOptInfo *baserel,
 		if (cond != NULL)
 			return cond;
 
-		return false;
+		return NULL;
 	}
 	case T_OpExpr: {
 		Var *left;
@@ -448,22 +448,22 @@ is_shippable_condition(RelOptInfo *baserel,
 		ScalarDbFdwOperator op_type = get_operator_type(op);
 
 		if (op_type == UnsupportedConitionType)
-			return false;
+			return NULL;
 
 		if (list_length(op->args) != 2)
-			return false;
+			return NULL;
 
 		if (!IsA(linitial(op->args), Var))
-			return false;
+			return NULL;
 
 		left = linitial_node(Var, op->args);
 		right = lsecond(op->args);
 
 		if (!is_foreign_table_var(left, baserel))
-			return false;
+			return NULL;
 
 		if (!is_pseudo_constant_clause(right))
-			return false;
+			return NULL;
 
 		if (op_type == SCALARDB_OP_EQ) {
 			cond = check_keys_for_var(
@@ -494,10 +494,10 @@ is_shippable_condition(RelOptInfo *baserel,
 			if (cond != NULL)
 				return cond;
 		}
-		return false;
+		return NULL;
 	}
 	default:
-		return false;
+		return NULL;
 	}
 }
 
