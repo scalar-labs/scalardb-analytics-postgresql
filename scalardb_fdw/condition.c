@@ -68,8 +68,6 @@ static ScalarDbFdwShippableCondition *
 is_shippable_condition(RelOptInfo *baserel,
 		       ScalarDbFdwColumnMetadata *column_metadata, Expr *expr);
 
-static bool is_foreign_table_var(Var *var, RelOptInfo *baserel);
-
 static ScalarDbFdwOperator get_operator_type(OpExpr *op);
 
 static Const *make_boolean_const(bool val);
@@ -185,6 +183,22 @@ extern void split_condition_expr(RelOptInfo *baserel,
 	*left = cond->column;
 	*left_name = cond->name;
 	*right = cond->expr;
+}
+
+/*
+ * Return true if the given expr is Var belonging to the given baserel.
+ */
+extern bool is_foreign_table_var(Expr *expr, RelOptInfo *baserel)
+{
+	Var *var;
+
+	if (!IsA(expr, Var))
+		return false;
+
+	var = (Var *)expr;
+
+	return bms_is_member(var->varno, baserel->relids) &&
+	       var->varlevelsup == 0;
 }
 
 static void determine_clustering_key_boundary(
@@ -370,7 +384,7 @@ is_shippable_condition(RelOptInfo *baserel,
 		if (var->vartype != BOOLOID)
 			return NULL;
 
-		if (!is_foreign_table_var(var, baserel))
+		if (!is_foreign_table_var((Expr *)var, baserel))
 			return NULL;
 
 		cond = check_keys_for_var(
@@ -401,19 +415,19 @@ is_shippable_condition(RelOptInfo *baserel,
 	}
 	case T_BoolExpr: {
 		BoolExpr *bool_expr = (BoolExpr *)expr;
+		Expr *expr;
 		Var *var;
 
 		/* Consider only NOT operator */
 		if (bool_expr->boolop != NOT_EXPR)
 			return NULL;
 
-		if (!IsA(linitial(bool_expr->args), Var))
+		expr = linitial_node(Expr, bool_expr->args);
+
+		if (!is_foreign_table_var(expr, baserel))
 			return NULL;
 
-		var = linitial_node(Var, bool_expr->args);
-
-		if (!is_foreign_table_var(var, baserel))
-			return NULL;
+		var = (Var *)expr;
 
 		cond = check_keys_for_var(
 			var, column_metadata->partition_key_attnums,
@@ -442,6 +456,7 @@ is_shippable_condition(RelOptInfo *baserel,
 		return NULL;
 	}
 	case T_OpExpr: {
+		Expr *left_expr;
 		Var *left;
 		Node *right;
 		OpExpr *op = (OpExpr *)expr;
@@ -453,14 +468,13 @@ is_shippable_condition(RelOptInfo *baserel,
 		if (list_length(op->args) != 2)
 			return NULL;
 
-		if (!IsA(linitial(op->args), Var))
-			return NULL;
-
-		left = linitial_node(Var, op->args);
+		left_expr = linitial_node(Expr, op->args);
 		right = lsecond(op->args);
 
-		if (!is_foreign_table_var(left, baserel))
+		if (!is_foreign_table_var(left_expr, baserel))
 			return NULL;
+
+		left = (Var *)left_expr;
 
 		if (!is_pseudo_constant_clause(right))
 			return NULL;
@@ -499,12 +513,6 @@ is_shippable_condition(RelOptInfo *baserel,
 	default:
 		return NULL;
 	}
-}
-
-static bool is_foreign_table_var(Var *var, RelOptInfo *baserel)
-{
-	return bms_is_member(var->varno, baserel->relids) &&
-	       var->varlevelsup == 0;
 }
 
 static ScalarDbFdwOperator get_operator_type(OpExpr *op)

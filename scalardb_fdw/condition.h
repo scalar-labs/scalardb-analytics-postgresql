@@ -55,4 +55,6 @@ extern void split_condition_expr(RelOptInfo *baserel,
 				 Expr *expr, Var **left, String **left_name,
 				 Expr **right);
 
+extern bool is_foreign_table_var(Expr *expr, RelOptInfo *baserel);
+
 #endif
