@@ -67,7 +67,8 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 			     ScalarDbFdwScanCondition *scan_conds,
 			     size_t scan_conds_len,
-			     ScalarDbFdwScanBoundary *boundary);
+			     ScalarDbFdwScanBoundary *boundary,
+			     List *sort_column_names, List *sort_orders);
 extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
 					List *attnames,
 					ScalarDbFdwScanCondition *scan_conds,

@@ -1,4 +1,5 @@
 #include "c.h"
+#include "lib/stringinfo.h"
 #include "postgres.h"
 
 #include "access/reloptions.h"
@@ -31,6 +32,7 @@
 #include "condition.h"
 #include "option.h"
 #include "cost.h"
+#include "pathkeys.h"
 
 PG_MODULE_MAGIC;
 
@@ -50,6 +52,8 @@ typedef struct {
 	int boundary_start_inclusive;
 	int boundary_end_expr_offset;
 	int boundary_end_inclusive;
+	List *sort_column_names;
+	List *sort_orders;
 
 	/* List of retrieved attribute names, coverted from attrs_to_retrieve */
 	List *attnames;
@@ -71,6 +75,13 @@ typedef struct {
 	jobject scanner;
 } ScalarDbFdwScanState;
 
+enum ScanFdwPathPrivateIndex {
+	/* List of String that contains column names to be used to sort the foreign relation */
+	ScanFdwPathPrivateSortColumnNames,
+	/* List of ScalarDbFdwClusteringKeyOrder to sort the foreign relation */
+	ScanFdwPathPrivateSortOrders
+};
+
 enum ScanFdwPrivateIndex {
 	/* Integer list of attribute numbers retrieved by the SELECT */
 	ScanFdwPrivateAttrsToRetrieve,
@@ -90,6 +101,10 @@ enum ScanFdwPrivateIndex {
 	ScanFdwPrivateBoundaryEndExprOffset,
 	/* Boolean indiates whether end condition is inclusive */
 	ScanFdwPrivateBoundaryEndInclusive,
+	/* List of String that contains column names to be used to srot the foreign relation */
+	ScanFdwPrivateSortColumnNames,
+	/* List of ScalarDbFdwClusteringKeyOrder to sort the foreign relation */
+	ScanFdwPrivateSortOrders
 };
 
 static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
@@ -116,6 +131,7 @@ static char *scan_conds_to_string(ScalarDbFdwScanCondition *scan_conds,
 				  size_t num_conds);
 static char *scan_start_boundary_to_string(ScalarDbFdwScanBoundary *boundary);
 static char *scan_end_boundary_to_string(ScalarDbFdwScanBoundary *boundary);
+static char *sort_to_string(List *sort_column_names, List *sort_orders);
 
 /*
  * FDW callback routines
@@ -251,10 +267,16 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 				       startup_cost, /* startup cost */
 				       total_cost, /* total cost */
 				       NIL, /* no pathkeys */
-				       NULL, /* no outer rel either */
+				       baserel->lateral_relids,
 				       NULL, /* no extra plan */
 				       NIL); /* no fdw_private */
 	add_path(baserel, (Path *)path);
+
+	/* Sorting is supported only for partition key scan */
+	if (fdw_private->scan_type == SCALARDB_SCAN_PARTITION_KEY) {
+		add_paths_with_pathkeys_for_rel(root, baserel,
+						&fdw_private->column_metadata);
+	}
 }
 
 static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
@@ -275,6 +297,9 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 
 	List *fdw_exprs = NIL;
 	List *condition_key_names = NIL;
+
+	List *sort_column_names = NIL;
+	List *sort_orders = NIL;
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
@@ -360,6 +385,19 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	fdw_private_for_scan =
 		lappend(fdw_private_for_scan,
 			makeBoolean(fdw_private->boundary.end_inclusive));
+	/*
+	 * Put information on the sorting pushed-down
+	 */
+	if (best_path->path.pathkeys) {
+		sort_column_names =
+			(List *)list_nth(best_path->fdw_private,
+					 ScanFdwPathPrivateSortColumnNames);
+
+		sort_orders = list_nth(best_path->fdw_private,
+				       ScanFdwPathPrivateSortOrders);
+	}
+	fdw_private_for_scan = lappend(fdw_private_for_scan, sort_column_names);
+	fdw_private_for_scan = lappend(fdw_private_for_scan, sort_orders);
 
 	return make_foreignscan(
 		tlist, local_exprs,
@@ -420,6 +458,12 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	fdw_state->boundary_end_inclusive = boolVal(list_nth(
 		fsplan->fdw_private, ScanFdwPrivateBoundaryEndInclusive));
 
+	fdw_state->sort_column_names = (List *)list_nth(
+		fsplan->fdw_private, ScanFdwPrivateSortColumnNames);
+
+	fdw_state->sort_orders =
+		(List *)list_nth(fsplan->fdw_private, ScanFdwPrivateSortOrders);
+
 	/* Get info we'll need for input data conversion. */
 	fdw_state->rel = node->ss.ss_currentRelation;
 	fdw_state->attinmeta =
@@ -452,12 +496,12 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 			fdw_state->boundary_end_expr_offset,
 			fdw_state->boundary_end_inclusive,
 			fdw_state->boundary_is_equals);
-		fdw_state->scan = scalardb_scan(fdw_state->options.namespace,
-						fdw_state->options.table_name,
-						fdw_state->attnames,
-						fdw_state->scan_conds,
-						fdw_state->num_scan_conds,
-						fdw_state->boundary);
+		fdw_state->scan = scalardb_scan(
+			fdw_state->options.namespace,
+			fdw_state->options.table_name, fdw_state->attnames,
+			fdw_state->scan_conds, fdw_state->num_scan_conds,
+			fdw_state->boundary, fdw_state->sort_column_names,
+			fdw_state->sort_orders);
 		break;
 	}
 	case SCALARDB_SCAN_SECONDARY_INDEX:
@@ -592,6 +636,14 @@ static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 				ExplainPropertyText("ScalarDB Scan End",
 						    end_boundary_str, es);
 			}
+		}
+
+		if (fdw_state->sort_column_names) {
+			char *sort_str =
+				sort_to_string(fdw_state->sort_column_names,
+					       fdw_state->sort_orders);
+			ExplainPropertyText("ScalarDB Scan Orderings ",
+					    sort_str, es);
 		}
 
 		if (list_length(fdw_state->attnames) > 0)
@@ -996,6 +1048,40 @@ static char *scan_end_boundary_to_string(ScalarDbFdwScanBoundary *boundary)
 
 			if (value_type == TEXTOID || value_type == BYTEAOID)
 				appendStringInfoChar(&str, '\'');
+		}
+	}
+	return str.data;
+}
+static char *sort_to_string(List *sort_column_names, List *sort_orders)
+{
+	StringInfoData str;
+	ListCell *lc_name;
+	ListCell *lc_order;
+
+	ereport(DEBUG4, errmsg("entering function %s", __func__));
+
+	initStringInfo(&str);
+	forboth(lc_name, sort_column_names, lc_order, sort_orders)
+	{
+		char *name = strVal(lfirst(lc_name));
+		ScalarDbFdwClusteringKeyOrder order =
+			(ScalarDbFdwClusteringKeyOrder)lfirst_int(lc_order);
+
+		int i = foreach_current_index(lc_name);
+
+		if (i > 0) {
+			appendStringInfoString(&str, ", ");
+		}
+
+		appendStringInfoString(&str, name);
+		appendStringInfoChar(&str, ' ');
+		switch (order) {
+		case SCALARDB_CLUSTERING_KEY_ORDER_ASC:
+			appendStringInfoString(&str, "ASC");
+			break;
+		case SCALARDB_CLUSTERING_KEY_ORDER_DESC:
+			appendStringInfoString(&str, "DESC");
+			break;
 		}
 	}
 	return str.data;

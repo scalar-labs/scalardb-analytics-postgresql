@@ -85,6 +85,7 @@ static jclass BuildableScan_class;
 static jmethodID BuildableScan_projections;
 static jmethodID BuildableScan_start;
 static jmethodID BuildableScan_end;
+static jmethodID BuildableScan_orderings;
 static jmethodID BuildableScan_build;
 
 static jclass BuildableScanWithIndex_class;
@@ -105,6 +106,10 @@ static jmethodID KeyBuilder_addText;
 static jmethodID KeyBuilder_addBlob;
 static jmethodID KeyBuilder_build;
 
+static jclass Ordering_class;
+static jmethodID Ordering_asc;
+static jmethodID Ordering_desc;
+
 static void initialize_jvm(ScalarDbFdwOptions *opts);
 static void destroy_jvm(void);
 static void attach_jvm(void);
@@ -123,6 +128,8 @@ static void apply_column_pruning(jobject buildable_scan, List *attnames,
 				 jmethodID projections_method);
 static void apply_clustering_key_boundary(jobject buildable_scan,
 					  ScalarDbFdwScanBoundary *boundary);
+static void apply_orderings(jobject buildable_scan, List *sort_column_names,
+			    List *sort_orders);
 
 static void clear_exception(void);
 static void catch_exception(void);
@@ -241,7 +248,8 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 			     ScalarDbFdwScanCondition *scan_conds,
 			     size_t num_scan_conds,
-			     ScalarDbFdwScanBoundary *boundary)
+			     ScalarDbFdwScanBoundary *boundary,
+			     List *sort_column_names, List *sort_orders)
 {
 	jstring namespace_str;
 	jstring table_name_str;
@@ -264,6 +272,8 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 			     BuildableScan_projections);
 
 	apply_clustering_key_boundary(buildable_scan, boundary);
+
+	apply_orderings(buildable_scan, sort_column_names, sort_orders);
 
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScan_build);
@@ -450,6 +460,44 @@ static void apply_clustering_key_boundary(jobject buildable_scan,
 			env, buildable_scan, BuildableScan_end, key,
 			boundary->end_inclusive);
 	}
+}
+
+static void apply_orderings(jobject buildable_scan, List *sort_column_names,
+			    List *sort_orders)
+{
+	ListCell *lc_name;
+	ListCell *lc_order;
+	jobjectArray orderings;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	orderings = (*env)->NewObjectArray(env, list_length(sort_column_names),
+					   Ordering_class, NULL);
+
+	forboth(lc_name, sort_column_names, lc_order, sort_orders)
+	{
+		char *name = strVal(lfirst(lc_name));
+		ScalarDbFdwClusteringKeyOrder order =
+			(ScalarDbFdwClusteringKeyOrder)lfirst_int(lc_order);
+		jobject ordering;
+		int i = foreach_current_index(lc_name);
+		jstring name_str = (*env)->NewStringUTF(env, name);
+
+		switch (order) {
+		case SCALARDB_CLUSTERING_KEY_ORDER_ASC:
+			ordering = (*env)->CallStaticObjectMethod(
+				env, Ordering_class, Ordering_asc, name_str);
+			break;
+		case SCALARDB_CLUSTERING_KEY_ORDER_DESC:
+			ordering = (*env)->CallStaticObjectMethod(
+				env, Ordering_class, Ordering_desc, name_str);
+			break;
+		}
+		(*env)->SetObjectArrayElement(env, orderings, i, ordering);
+		/* (*env)->DeleteLocalRef(env, ordering); */
+	}
+	buildable_scan = (*env)->CallObjectMethod(
+		env, buildable_scan, BuildableScan_orderings, orderings);
 }
 
 /*
@@ -981,6 +1029,9 @@ static void initialize_scalardb_references()
 	register_java_class_method(
 		BuildableScan_end, BuildableScan_class, "end",
 		"(Lcom/scalar/db/io/Key;Z)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_class_method(
+		BuildableScan_orderings, BuildableScan_class, "orderings",
+		"([Lcom/scalar/db/api/Scan$Ordering;)Ljava/lang/Object;");
 	register_java_class_method(BuildableScan_build, BuildableScan_class,
 				   "build", "()Lcom/scalar/db/api/Scan;");
 
@@ -1032,6 +1083,16 @@ static void initialize_scalardb_references()
 		"(Ljava/lang/String;[B)Lcom/scalar/db/io/Key$Builder;");
 	register_java_class_method(KeyBuilder_build, KeyBuilder_class, "build",
 				   "()Lcom/scalar/db/io/Key;");
+
+	// com.scalar.db.api.Scan$Ordering
+	register_java_class(Ordering_class,
+			    "Lcom/scalar/db/api/Scan$Ordering;");
+	register_java_static_method(
+		Ordering_asc, Ordering_class, "asc",
+		"(Ljava/lang/String;)Lcom/scalar/db/api/Scan$Ordering;");
+	register_java_static_method(
+		Ordering_desc, Ordering_class, "desc",
+		"(Ljava/lang/String;)Lcom/scalar/db/api/Scan$Ordering;");
 }
 
 static void add_classpath_to_system_class_loader(char *classpath)

@@ -223,3 +223,24 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0;
 --   the whole condition is pushed down.
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0 AND p_ck2 <= 1;
 select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0 AND p_ck2 <= 1;
+
+-- 
+-- Test sort push-down
+--
+-- Sorting can be pushed down only for partition key scan
+explain verbose select * from int_test where pk = 1 order by ck; --OK
+explain verbose select * from int_test order by ck; --NG
+explain verbose select * from int_test where index = 1 order by ck; --NG
+
+-- Whole ORDER BY clause must be able to be represented as clustering key orderings
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1; -- OK
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1, p_ck2; --OK
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1, p_int_col; --NG
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1, p_ck2, p_int_col; --NG
+
+-- Whole sort order must be in the same order or inversed order with the clustering key order or the table
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC; -- OK
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 DESC; -- OK
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC, p_ck2 ASC; -- OK
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 DESC, p_ck2 DESC; -- OK
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC, p_ck2 DESC; -- NG
