@@ -7,7 +7,7 @@
 #include "utils/rel.h"
 
 #include "scalardb.h"
-#include "scalardb_fdw_util.h"
+#include "column_metadata.h"
 
 extern void get_column_metadata(PlannerInfo *root, RelOptInfo *baserel,
 				char *namespace, char *table_name,

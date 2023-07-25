@@ -26,7 +26,7 @@
 #include "utils/lsyscache.h"
 
 #include "scalardb.h"
-#include "scalardb_fdw_util.h"
+#include "column_metadata.h"
 #include "condition.h"
 #include "option.h"
 

@@ -13,7 +13,7 @@
 #include "nodes/value.h"
 #include "utils/syscache.h"
 
-#include "scalardb_fdw_util.h"
+#include "column_metadata.h"
 #include "pgport.h"
 
 /*

@@ -15,7 +15,7 @@
 #include "utils/syscache.h"
 
 #include "condition.h"
-#include "scalardb_fdw_util.h"
+#include "column_metadata.h"
 
 #define UnsupportedConitionType -1
 
