@@ -25,40 +25,14 @@
 #include "utils/rel.h"
 #include "utils/lsyscache.h"
 
+#include "scalardb_fdw.h"
 #include "scalardb.h"
 #include "column_metadata.h"
 #include "condition.h"
 #include "option.h"
+#include "cost.h"
 
 PG_MODULE_MAGIC;
-
-/*
- * The plan state is set up in scalardbGetForeignRelSize and stashed away in
- * baserel->fdw_private and fetched in scalardbGetForeignPaths.
- */
-typedef struct {
-	ScalarDbFdwOptions options;
-
-	/* Bitmap of attr numbers we need to fetch from the remote server. */
-	Bitmapset *attrs_used;
-
-	/* Conditions on the index keys or secondary indexes that are pushed to ScalarDB side */
-	List *remote_conds;
-	/* Conditions that are evaluated locally */
-	List *local_conds;
-	/* the clustering keys that are pushed to ScalarDB side */
-	ScalarDbFdwClusteringKeyBoundary boundary;
-	/* Type of Scan executed on the ScalarDB side. This must be consistent with the condtitions in remote_conds */
-	ScalarDbFdwScanType scan_type;
-
-	/* estimate of physical size */
-	BlockNumber pages;
-	/* estimate of number of data rows */
-	double tuples;
-
-	/* set of the column metadata of the table*/
-	ScalarDbFdwColumnMetadata column_metadata;
-} ScalarDbFdwPlanState;
 
 /*
  * FDW-specific information for ForeignScanState.fdw_state.
@@ -117,12 +91,6 @@ enum ScanFdwPrivateIndex {
 	/* Boolean indiates whether end condition is inclusive */
 	ScanFdwPrivateBoundaryEndInclusive,
 };
-
-static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
-			  ScalarDbFdwPlanState *fdw_private);
-static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
-			   List *remote_conds, Cost *startup_cost,
-			   Cost *total_cost);
 
 static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 			    Bitmapset *attrs_used, List **attrs_to_retrieve);
@@ -238,7 +206,7 @@ static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
 	}
 
 	/* Estimate relation size */
-	estimate_size(root, baserel, fdw_private);
+	estimate_size(root, baserel);
 }
 
 /*
@@ -637,77 +605,6 @@ static bool scalardbAnalyzeForeignTable(Relation relation,
 					BlockNumber *totalpages)
 {
 	return false;
-}
-
-/*
- * Estimate the size of a foreign table.
- *
- * The main result is returned in baserel->rows.  We also set
- * fdw_private->pages and fdw_private->ntuples for later use in the cost
- * calculation.
- */
-static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
-			  ScalarDbFdwPlanState *fdw_private)
-{
-	ereport(DEBUG3, errmsg("entering function %s", __func__));
-	/*
-	 * If the foreign table has never been ANALYZEd, it will have
-	 * reltuples < 0, meaning "unknown". In this case we can use a hack
-	 * similar to plancat.c's treatment of empty relations: use a minimum
-	 * size estimate of 10 pages, and divide by the column-datatype-based
-	 * width estimate to get the corresponding number of tuples.
-	 */
-#if PG_VERSION_NUM >= 140000
-	if (baserel->tuples < 0) {
-#else
-	if (baserel->pages == 0 && baserel->tuples == 0) {
-#endif
-		baserel->pages = 10;
-		baserel->tuples =
-			(10.0 * BLCKSZ) / (baserel->reltarget->width +
-					   sizeof(HeapTupleHeaderData));
-	} else {
-		ereport(ERROR,
-			errmsg("foreign table of scalardb_fdw should not be ANALYZEd"));
-	}
-
-	/* Estimate baserel size as best we can with local statistics. */
-	set_baserel_size_estimates(root, baserel);
-}
-
-#define DEFAULT_ROWS_FOR_PARTITION_KEY_SCAN 10
-
-/*
- * Estimate costs of scanning a foreign table.
- *
- * Results are returned in *startup_cost and *total_cost.
- */
-static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
-			   List *remote_conds, Cost *startup_cost,
-			   Cost *total_cost)
-{
-	Cost run_cost = 0;
-	Cost cpu_per_tuple;
-	double rows;
-	ScalarDbFdwPlanState *fdw_private =
-		(ScalarDbFdwPlanState *)baserel->fdw_private;
-
-	ereport(DEBUG3, errmsg("entering function %s", __func__));
-
-	rows = list_length(fdw_private->remote_conds) > 0 ?
-		       DEFAULT_ROWS_FOR_PARTITION_KEY_SCAN :
-		       baserel->rows;
-
-	*startup_cost = 0;
-	*startup_cost += baserel->baserestrictcost.startup;
-	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
-	run_cost += cpu_per_tuple * baserel->tuples;
-
-	/* Add in tlist eval cost for each output row */
-	*startup_cost += baserel->reltarget->cost.startup;
-	run_cost += baserel->reltarget->cost.per_tuple * rows;
-
-	*total_cost = *startup_cost + run_cost;
 }
 
 /*
