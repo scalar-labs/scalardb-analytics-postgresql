@@ -492,6 +492,9 @@ static void apply_orderings(jobject buildable_scan, List *sort_column_names,
 			ordering = (*env)->CallStaticObjectMethod(
 				env, Ordering_class, Ordering_desc, name_str);
 			break;
+		default:
+			elog(ERROR, "unexpected clustering key order: %d",
+			     order);
 		}
 		(*env)->SetObjectArrayElement(env, orderings, i, ordering);
 		/* (*env)->DeleteLocalRef(env, ordering); */

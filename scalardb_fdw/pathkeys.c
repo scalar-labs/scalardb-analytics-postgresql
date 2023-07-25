@@ -93,7 +93,7 @@ static bool is_clustering_key_sort(List *query_pathkeys, RelOptInfo *rel,
 	ListCell *lc_name;
 	ListCell *lc_order;
 
-	bool same_order;
+	bool same_order = false;
 
 	/* The entire query_pathkeys must be represented by sorting using some or all of the clustering keys */
 	if (list_length(query_pathkeys) >
@@ -192,5 +192,7 @@ get_sort_order(ScalarDbFdwClusteringKeyOrder order, bool same_order)
 	case SCALARDB_CLUSTERING_KEY_ORDER_DESC:
 		return same_order ? SCALARDB_CLUSTERING_KEY_ORDER_DESC :
 				    SCALARDB_CLUSTERING_KEY_ORDER_ASC;
+	default:
+		elog(ERROR, "unexpected clustering key order: %d", order);
 	}
 }
