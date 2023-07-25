@@ -78,6 +78,15 @@ public class ScalarDbUtils {
     return metadata.getSecondaryIndexNames().toArray(new String[0]);
   }
 
+  static int getClusteringOrder(String namespace, String tableName, String clusteringKeyName)
+      throws ExecutionException, ScalarDbFdwException {
+    TableMetadata metadata = storageAdmin.getTableMetadata(namespace, tableName);
+    if (metadata == null) {
+      throw new ScalarDbFdwException(namespace + "." + tableName + " does not exist");
+    }
+    return metadata.getClusteringOrder(clusteringKeyName).ordinal();
+  }
+
   static void closeStorage() {
     if (storage != null) {
       storage.close();

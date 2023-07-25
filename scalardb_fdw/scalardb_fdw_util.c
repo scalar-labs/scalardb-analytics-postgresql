@@ -18,14 +18,15 @@ extern void get_column_metadata(PlannerInfo *root, RelOptInfo *baserel,
 	TupleDesc tupdesc;
 	ListCell *lc;
 
+	ereport(DEBUG3, errmsg("entering function %s", __func__));
+
 	scalardb_get_paritition_key_names(
 		namespace, table_name, &column_metadata->partition_key_names);
-	scalardb_get_clustering_key_names(
-		namespace, table_name, &column_metadata->clustering_key_names);
+	scalardb_get_clustering_key_names_and_orders(
+		namespace, table_name, &column_metadata->clustering_key_names,
+		&column_metadata->clustering_key_orders);
 	scalardb_get_secondary_index_names(
 		namespace, table_name, &column_metadata->secondary_index_names);
-
-	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
 	rte = planner_rt_fetch(baserel->relid, root);
 

@@ -66,6 +66,7 @@ static jmethodID ScalarDbUtils_getResultColumnsSize;
 static jmethodID ScalarDbUtils_getPartitionKeyNames;
 static jmethodID ScalarDbUtils_getClusteringKeyNames;
 static jmethodID ScalarDbUtils_getSecondaryIndexNames;
+static jmethodID ScalarDbUtils_getClusteringOrder;
 
 static jclass Result_class;
 static jmethodID Result_isNull;
@@ -196,7 +197,7 @@ void scalardb_initialize(ScalarDbFdwOptions *opts)
  * Retruns Scan (all) object built with the specified parameters.
  *
  * The returned object is a global reference. It is caller's responsibility to
- * release the object 
+ * release the object
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
@@ -231,7 +232,7 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
  * Retruns Scan (partitionKey) object built with the specified parameters.
  *
  * The returned object is a global reference. It is caller's responsibility to
- * release the object 
+ * release the object
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
@@ -273,7 +274,7 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
  * Retruns Scan (indexKey) object built with the specified parameters.
  *
  * The returned object is a global reference. It is caller's responsibility to
- * release the object 
+ * release the object
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
@@ -694,14 +695,15 @@ extern void scalardb_get_paritition_key_names(char *namespace, char *table_name,
 /*
  * Retrieve the clustering key names for the given table.
  */
-extern void scalardb_get_clustering_key_names(char *namespace, char *table_name,
-					      List **clustering_key_names)
+extern void
+scalardb_get_clustering_key_names_and_orders(char *namespace, char *table_name,
+					     List **clustering_key_names,
+					     List **clustering_key_orders)
 {
 	jstring namespace_str;
 	jstring table_name_str;
 
 	jsize len;
-	jstring elem;
 
 	jobjectArray clustering_key_names_array;
 
@@ -720,11 +722,21 @@ extern void scalardb_get_clustering_key_names(char *namespace, char *table_name,
 
 	len = (*env)->GetArrayLength(env, clustering_key_names_array);
 	for (jsize i = 0; i < len; i++) {
-		elem = (jstring)(*env)->GetObjectArrayElement(
+		jint order;
+		jstring name = (jstring)(*env)->GetObjectArrayElement(
 			env, clustering_key_names_array, i);
 		*clustering_key_names =
 			lappend(*clustering_key_names,
-				makeString(convert_string_to_cstring(elem)));
+				makeString(convert_string_to_cstring(name)));
+
+		order = (*env)->CallStaticIntMethod(
+			env, ScalarDbUtils_class,
+			ScalarDbUtils_getClusteringOrder, namespace_str,
+			table_name_str, name);
+
+		*clustering_key_orders =
+			lappend_int(*clustering_key_orders,
+				    (ScalarDbFdwClusteringKeyOrder)order);
 	}
 }
 
@@ -928,6 +940,10 @@ static void initialize_scalardb_references()
 		ScalarDbUtils_getSecondaryIndexNames, ScalarDbUtils_class,
 		"getSecondaryIndexNames",
 		"(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+	register_java_static_method(
+		ScalarDbUtils_getClusteringOrder, ScalarDbUtils_class,
+		"getClusteringOrder",
+		"(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I");
 
 	// com.scalar.db.api.Result
 	register_java_class(Result_class, "com/scalar/db/api/Result");
