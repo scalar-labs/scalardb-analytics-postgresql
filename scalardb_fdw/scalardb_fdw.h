@@ -26,11 +26,6 @@ typedef struct {
 	/* Type of Scan executed on the ScalarDB side. This must be consistent with the condtitions in remote_conds */
 	ScalarDbFdwScanType scan_type;
 
-	/* estimate of physical size */
-	BlockNumber pages;
-	/* estimate of number of data rows */
-	double tuples;
-
 	/* set of the column metadata of the table*/
 	ScalarDbFdwColumnMetadata column_metadata;
 } ScalarDbFdwPlanState;

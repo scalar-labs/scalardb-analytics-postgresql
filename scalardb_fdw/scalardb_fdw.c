@@ -219,6 +219,7 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 	ForeignPath *path;
 	Cost startup_cost;
 	Cost total_cost;
+	double rows;
 
 	ScalarDbFdwPlanState *fdw_private =
 		(ScalarDbFdwPlanState *)baserel->fdw_private;
@@ -239,14 +240,14 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 			       &fdw_private->boundary, &fdw_private->scan_type);
 
 	/* Estimate costs */
-	estimate_costs(root, baserel, fdw_private->remote_conds, &startup_cost,
-		       &total_cost);
+	estimate_costs(root, baserel, fdw_private->remote_conds, &rows,
+		       &startup_cost, &total_cost);
 
 	/* Create a ForeignPath node corresponding to Scan
 	 * and add it as only possible path */
 	path = create_foreignscan_path(root, baserel,
 				       NULL, /* default pathtarget */
-				       baserel->rows, /* number of rows */
+				       rows, /* number of rows */
 				       startup_cost, /* startup cost */
 				       total_cost, /* total cost */
 				       NIL, /* no pathkeys */

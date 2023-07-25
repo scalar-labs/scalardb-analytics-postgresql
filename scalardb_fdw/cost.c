@@ -48,19 +48,18 @@ void estimate_size(PlannerInfo *root, RelOptInfo *baserel)
  * Results are returned in *startup_cost and *total_cost.
  */
 void estimate_costs(PlannerInfo *root, RelOptInfo *baserel, List *remote_conds,
-		    Cost *startup_cost, Cost *total_cost)
+		    double *rows, Cost *startup_cost, Cost *total_cost)
 {
 	Cost run_cost = 0;
 	Cost cpu_per_tuple;
-	double rows;
 	ScalarDbFdwPlanState *fdw_private =
 		(ScalarDbFdwPlanState *)baserel->fdw_private;
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-	rows = list_length(fdw_private->remote_conds) > 0 ?
-		       DEFAULT_ROWS_FOR_PARTITION_KEY_SCAN :
-		       baserel->rows;
+	*rows = list_length(fdw_private->remote_conds) > 0 ?
+			DEFAULT_ROWS_FOR_PARTITION_KEY_SCAN :
+			baserel->rows;
 
 	*startup_cost = 0;
 	*startup_cost += baserel->baserestrictcost.startup;
@@ -69,7 +68,7 @@ void estimate_costs(PlannerInfo *root, RelOptInfo *baserel, List *remote_conds,
 
 	/* Add in tlist eval cost for each output row */
 	*startup_cost += baserel->reltarget->cost.startup;
-	run_cost += baserel->reltarget->cost.per_tuple * rows;
+	run_cost += baserel->reltarget->cost.per_tuple * *rows;
 
 	*total_cost = *startup_cost + run_cost;
 }
