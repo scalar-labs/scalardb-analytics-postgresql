@@ -1034,7 +1034,7 @@ static void initialize_scalardb_references()
 		"(Lcom/scalar/db/io/Key;Z)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
 	register_java_class_method(
 		BuildableScan_orderings, BuildableScan_class, "orderings",
-		"([Lcom/scalar/db/api/Scan$Ordering;)Ljava/lang/Object;");
+		"([Lcom/scalar/db/api/Scan$Ordering;)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
 	register_java_class_method(BuildableScan_build, BuildableScan_class,
 				   "build", "()Lcom/scalar/db/api/Scan;");
 
