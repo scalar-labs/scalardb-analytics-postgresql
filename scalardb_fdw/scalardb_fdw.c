@@ -193,8 +193,6 @@ static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-	baserel->rows = 0;
-
 	fdw_private = palloc0(sizeof(ScalarDbFdwPlanState));
 	baserel->fdw_private = (void *)fdw_private;
 
