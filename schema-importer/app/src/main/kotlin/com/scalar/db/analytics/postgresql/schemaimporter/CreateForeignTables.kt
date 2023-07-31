@@ -11,7 +11,7 @@ class CreateForeignTables(
     private val ctx: DatabaseContext,
     private val namespaces: Set<String>,
     private val storage: ScalarDBStorage,
-    private val admin: DistributedStorageAdmin
+    private val admin: DistributedStorageAdmin,
 ) {
     fun run() {
         for (ns in namespaces) {
@@ -25,7 +25,7 @@ class CreateForeignTables(
                 val metadata =
                     admin.getTableMetadata(ns, tableName)
                         ?: throw IllegalArgumentException(
-                            "Table metadata not found: $ns.$tableName"
+                            "Table metadata not found: $ns.$tableName",
                         )
                 val foreignTableName = "$ns._$tableName"
                 val columnDefinitions = getForeignTableColumnDefinitions(metadata)
@@ -44,7 +44,7 @@ class CreateForeignTables(
                             |) SERVER ${storageForNamespace.serverName} 
                             |OPTIONS (${options.joinToString(", ")});
                             """
-                            .trimMargin()
+                            .trimMargin(),
                     )
                 }
             }
@@ -53,7 +53,7 @@ class CreateForeignTables(
 
     private fun getForeignTableColumnDefinitions(
         metadata: TableMetadata,
-        indent: String = "    "
+        indent: String = "    ",
     ): String = getColumnInfoList(metadata).joinToString(",\n") { (col, typ) -> "$indent$col $typ" }
 
     private fun getColumnInfoList(
@@ -78,7 +78,7 @@ class CreateForeignTables(
     private fun getForeignTableOptions(
         namespace: String,
         tableName: String,
-        storage: ScalarDBStorage.SingleStorage
+        storage: ScalarDBStorage.SingleStorage,
     ): Set<String> =
         if (useScalarDBFdw(storage)) {
             getForeignTableOptionsForScalarDBFdw(namespace, tableName)
@@ -89,7 +89,7 @@ class CreateForeignTables(
     private fun getForeignTableOptionsForNativeFdw(
         namespace: String,
         tableName: String,
-        storage: ScalarDBStorage.SingleStorage
+        storage: ScalarDBStorage.SingleStorage,
     ): Set<String> =
         when (storage) {
             is ScalarDBStorage.Jdbc -> setOf("schema_name '$namespace'", "table_name '$tableName'")

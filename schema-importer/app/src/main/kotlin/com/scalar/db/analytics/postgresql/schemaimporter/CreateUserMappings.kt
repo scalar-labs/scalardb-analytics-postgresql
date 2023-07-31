@@ -1,7 +1,7 @@
 package com.scalar.db.analytics.postgresql.schemaimporter
 
-import kotlin.jvm.optionals.getOrDefault
 import mu.KotlinLogging
+import kotlin.jvm.optionals.getOrDefault
 
 private val logger = KotlinLogging.logger {}
 
@@ -34,7 +34,7 @@ class CreateUserMappings(
                 |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER ${storage.serverName}
                 |OPTIONS (username '$user', password '$password');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
         }
     }
@@ -43,7 +43,7 @@ class CreateUserMappings(
             executeUpdateWithLogging(
                 it,
                 logger,
-                "CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER ${storage.serverName};"
+                "CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER ${storage.serverName};",
             )
         }
     }

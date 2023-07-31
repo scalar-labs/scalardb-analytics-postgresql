@@ -9,23 +9,27 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
+import org.junit.jupiter.api.extension.ExtendWith
 import java.sql.Connection
 import java.sql.Statement
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
 class CreateViewsTest {
-    @MockK(relaxUnitFun = true) lateinit var connection: Connection
+    @MockK(relaxUnitFun = true)
+    lateinit var connection: Connection
 
-    @MockK(relaxUnitFun = true) lateinit var statement: Statement
+    @MockK(relaxUnitFun = true)
+    lateinit var statement: Statement
 
     private lateinit var ctx: DatabaseContext
 
-    @MockK(relaxUnitFun = true) lateinit var admin: DistributedStorageAdmin
+    @MockK(relaxUnitFun = true)
+    lateinit var admin: DistributedStorageAdmin
 
-    @MockK(relaxUnitFun = true) lateinit var metadata: TableMetadata
+    @MockK(relaxUnitFun = true)
+    lateinit var metadata: TableMetadata
 
     @BeforeTest
     fun setup() {
@@ -93,7 +97,7 @@ class CreateViewsTest {
                 |FROM ns_for_jdbc._jdbc_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -121,12 +125,13 @@ class CreateViewsTest {
                 |FROM ns_for_cassandra._cassandra_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
         confirmVerified(statement)
     }
+
     @Test
     fun `run should create view for cosmos storage`() {
         CreateViews(ctx, setOf("ns_for_cosmos"), admin).run()
@@ -148,7 +153,7 @@ class CreateViewsTest {
                 |FROM ns_for_cosmos._cosmos_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -176,7 +181,7 @@ class CreateViewsTest {
                 |FROM ns_for_dynamodb._dynamodb_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -186,15 +191,15 @@ class CreateViewsTest {
     @Test
     fun `run should create required views for multi storage`() {
         CreateViews(
-                ctx,
-                setOf(
-                    "ns_for_jdbc",
-                    "ns_for_cassandra",
-                    "ns_for_cosmos",
-                    "ns_for_dynamodb",
-                ),
-                admin
-            )
+            ctx,
+            setOf(
+                "ns_for_jdbc",
+                "ns_for_cassandra",
+                "ns_for_cosmos",
+                "ns_for_dynamodb",
+            ),
+            admin,
+        )
             .run()
         verify {
             statement.executeUpdate(
@@ -214,7 +219,7 @@ class CreateViewsTest {
                 |FROM ns_for_jdbc._jdbc_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.executeUpdate(
                 """
@@ -233,7 +238,7 @@ class CreateViewsTest {
                 |FROM ns_for_cassandra._cassandra_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.executeUpdate(
                 """
@@ -252,7 +257,7 @@ class CreateViewsTest {
                 |FROM ns_for_cosmos._cosmos_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.executeUpdate(
                 """
@@ -271,7 +276,7 @@ class CreateViewsTest {
                 |FROM ns_for_dynamodb._dynamodb_table
                 |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }

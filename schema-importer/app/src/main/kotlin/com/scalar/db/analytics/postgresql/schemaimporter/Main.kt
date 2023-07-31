@@ -15,10 +15,11 @@ class Import : CliktCommand() {
         option("--config", help = "Path to the ScalarDB configuration file").path().required()
     private val configPathOnPostgresHost: Path? by
         option(
-                "--config-on-postgres-host",
-                help =
-                    "Path to the ScalarDB configuration file on the PostgreSQL-running host. If this is not specified, the same value as --config will be used."
-            )
+            "--config-on-postgres-host",
+            help =
+            "Path to the ScalarDB configuration file on the PostgreSQL-running host." +
+                " If this is not specified, the same value as --config will be used.",
+        )
             .path()
 
     private val namespaces: Set<String> by
@@ -51,7 +52,7 @@ class Import : CliktCommand() {
                 namespaces = namespaces,
                 url = url,
                 user = user,
-                password = password
+                password = password,
             )
         importSchema(param)
     }
@@ -63,7 +64,7 @@ data class Parameter(
     val namespaces: Set<String>,
     val url: String,
     val user: String,
-    val password: String
+    val password: String,
 )
 
 fun main(args: Array<String>) = Main().subcommands(Import()).main(args)

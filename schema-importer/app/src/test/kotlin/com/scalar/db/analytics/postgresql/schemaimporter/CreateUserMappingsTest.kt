@@ -7,18 +7,20 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.extension.ExtendWith
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
 class CreateUserMappingsTest {
-    @MockK(relaxUnitFun = true) lateinit var connection: Connection
+    @MockK(relaxUnitFun = true)
+    lateinit var connection: Connection
 
-    @MockK(relaxUnitFun = true) lateinit var statement: Statement
+    @MockK(relaxUnitFun = true)
+    lateinit var statement: Statement
 
     private lateinit var ctx: DatabaseContext
 
@@ -44,7 +46,7 @@ class CreateUserMappingsTest {
                |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER jdbc
                |OPTIONS (username 'user', password 'password');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -65,12 +67,13 @@ class CreateUserMappingsTest {
                |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER cassandra
                |OPTIONS (username 'user', password 'password');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
         confirmVerified(statement)
     }
+
     @Test
     fun `run should create an empty user mapping for scalardb_fdw`() {
         val config = mockk<DatabaseConfig>()
@@ -82,7 +85,7 @@ class CreateUserMappingsTest {
                 """
                |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER cosmos;
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }

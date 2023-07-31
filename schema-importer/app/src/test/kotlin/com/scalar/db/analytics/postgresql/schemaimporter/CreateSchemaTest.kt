@@ -5,17 +5,19 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
+import org.junit.jupiter.api.extension.ExtendWith
 import java.sql.Connection
 import java.sql.Statement
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
 class CreateSchemaTest {
-    @MockK(relaxUnitFun = true) lateinit var connection: Connection
+    @MockK(relaxUnitFun = true)
+    lateinit var connection: Connection
 
-    @MockK(relaxUnitFun = true) lateinit var statement: Statement
+    @MockK(relaxUnitFun = true)
+    lateinit var statement: Statement
 
     private lateinit var ctx: DatabaseContext
 
