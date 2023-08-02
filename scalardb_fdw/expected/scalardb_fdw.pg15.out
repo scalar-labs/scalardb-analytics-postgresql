@@ -167,9 +167,9 @@ CREATE FOREIGN TABLE blob_test (
 );
 -- Test filtering push-down on partition keys
 explain verbose select * from boolean_test where pk = true;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
- Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=1463 width=4)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=10 width=4)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: boolean_test
@@ -191,9 +191,9 @@ explain verbose select * from int_test where pk = 1;
 (7 rows)
 
 explain verbose select * from bigint_test where pk = 1;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Foreign Scan on public.bigint_test  (cost=0.00..18.29 rows=7 width=32)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.bigint_test  (cost=0.00..18.29 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: bigint_test
@@ -203,9 +203,9 @@ explain verbose select * from bigint_test where pk = 1;
 (7 rows)
 
 explain verbose select * from float_test where pk = 1.0;
-                              QUERY PLAN                               
------------------------------------------------------------------------
- Foreign Scan on public.float_test  (cost=0.00..18.29 rows=7 width=32)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Foreign Scan on public.float_test  (cost=0.00..18.29 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: float_test
@@ -215,9 +215,9 @@ explain verbose select * from float_test where pk = 1.0;
 (7 rows)
 
 explain verbose select * from double_test where pk = 1.0;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Foreign Scan on public.double_test  (cost=0.00..18.29 rows=7 width=32)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.double_test  (cost=0.00..18.29 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: double_test
@@ -227,9 +227,9 @@ explain verbose select * from double_test where pk = 1.0;
 (7 rows)
 
 explain verbose select * from text_test where pk = '1';
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Foreign Scan on public.text_test  (cost=0.00..6.74 rows=3 width=128)
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Foreign Scan on public.text_test  (cost=0.00..6.74 rows=10 width=128)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: text_test
@@ -239,9 +239,9 @@ explain verbose select * from text_test where pk = '1';
 (7 rows)
 
 explain verbose select * from blob_test where pk = E'\\xDEADBEEF';
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Foreign Scan on public.blob_test  (cost=0.00..6.74 rows=3 width=128)
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Foreign Scan on public.blob_test  (cost=0.00..6.74 rows=10 width=128)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: blob_test
@@ -252,9 +252,9 @@ explain verbose select * from blob_test where pk = E'\\xDEADBEEF';
 
 -- Test filtering push-down on clustering keys
 explain verbose select * from boolean_test where pk = true AND ck = true;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
- Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=731 width=4)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=10 width=4)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: boolean_test
@@ -266,9 +266,9 @@ explain verbose select * from boolean_test where pk = true AND ck = true;
 (9 rows)
 
 explain verbose select * from int_test where pk = 1 AND ck = 1;
-                             QUERY PLAN                              
----------------------------------------------------------------------
- Foreign Scan on public.int_test  (cost=0.00..30.72 rows=1 width=16)
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Foreign Scan on public.int_test  (cost=0.00..30.72 rows=10 width=16)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: int_test
@@ -280,9 +280,9 @@ explain verbose select * from int_test where pk = 1 AND ck = 1;
 (9 rows)
 
 explain verbose select * from bigint_test where pk = 1 AND ck = 1;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Foreign Scan on public.bigint_test  (cost=0.00..21.94 rows=1 width=32)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.bigint_test  (cost=0.00..21.94 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: bigint_test
@@ -294,9 +294,9 @@ explain verbose select * from bigint_test where pk = 1 AND ck = 1;
 (9 rows)
 
 explain verbose select * from float_test where pk = 1.0 AND ck = 1.0;
-                              QUERY PLAN                               
------------------------------------------------------------------------
- Foreign Scan on public.float_test  (cost=0.00..21.94 rows=1 width=32)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Foreign Scan on public.float_test  (cost=0.00..21.94 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: float_test
@@ -308,9 +308,9 @@ explain verbose select * from float_test where pk = 1.0 AND ck = 1.0;
 (9 rows)
 
 explain verbose select * from double_test where pk = 1.0 AND ck = 1.0;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Foreign Scan on public.double_test  (cost=0.00..21.94 rows=1 width=32)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.double_test  (cost=0.00..21.94 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: double_test
@@ -322,9 +322,9 @@ explain verbose select * from double_test where pk = 1.0 AND ck = 1.0;
 (9 rows)
 
 explain verbose select * from text_test where pk = '1' AND ck = '1';
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Foreign Scan on public.text_test  (cost=0.00..8.08 rows=1 width=128)
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Foreign Scan on public.text_test  (cost=0.00..8.08 rows=10 width=128)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: text_test
@@ -336,9 +336,9 @@ explain verbose select * from text_test where pk = '1' AND ck = '1';
 (9 rows)
 
 explain verbose select * from blob_test where pk = E'\\xDEADBEEF' AND ck = E'\\xDEADBEEF';
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Foreign Scan on public.blob_test  (cost=0.00..8.08 rows=1 width=128)
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Foreign Scan on public.blob_test  (cost=0.00..8.08 rows=10 width=128)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: blob_test
@@ -351,9 +351,9 @@ explain verbose select * from blob_test where pk = E'\\xDEADBEEF' AND ck = E'\\x
 
 -- Test filtering push-down on secondary indexes 
 explain verbose select * from boolean_test where index = true;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
- Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=1463 width=4)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=10 width=4)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: boolean_test
@@ -375,9 +375,9 @@ explain verbose select * from int_test where index = 1;
 (7 rows)
 
 explain verbose select * from bigint_test where index = 1;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Foreign Scan on public.bigint_test  (cost=0.00..18.29 rows=7 width=32)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.bigint_test  (cost=0.00..18.29 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: bigint_test
@@ -387,9 +387,9 @@ explain verbose select * from bigint_test where index = 1;
 (7 rows)
 
 explain verbose select * from float_test where index = 1.0;
-                              QUERY PLAN                               
------------------------------------------------------------------------
- Foreign Scan on public.float_test  (cost=0.00..18.29 rows=7 width=32)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Foreign Scan on public.float_test  (cost=0.00..18.29 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: float_test
@@ -399,9 +399,9 @@ explain verbose select * from float_test where index = 1.0;
 (7 rows)
 
 explain verbose select * from double_test where index = 1.0;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Foreign Scan on public.double_test  (cost=0.00..18.29 rows=7 width=32)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.double_test  (cost=0.00..18.29 rows=10 width=32)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: double_test
@@ -411,9 +411,9 @@ explain verbose select * from double_test where index = 1.0;
 (7 rows)
 
 explain verbose select * from text_test where index = '1';
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Foreign Scan on public.text_test  (cost=0.00..6.74 rows=3 width=128)
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Foreign Scan on public.text_test  (cost=0.00..6.74 rows=10 width=128)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: text_test
@@ -423,9 +423,9 @@ explain verbose select * from text_test where index = '1';
 (7 rows)
 
 explain verbose select * from blob_test where index = E'\\xDEADBEEF';
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Foreign Scan on public.blob_test  (cost=0.00..6.74 rows=3 width=128)
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Foreign Scan on public.blob_test  (cost=0.00..6.74 rows=10 width=128)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: blob_test
@@ -436,9 +436,9 @@ explain verbose select * from blob_test where index = E'\\xDEADBEEF';
 
 -- Test filtering push-down for boolean conditions
 explain verbose select * from boolean_test where pk;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
- Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=1463 width=4)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=10 width=4)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: boolean_test
@@ -448,9 +448,9 @@ explain verbose select * from boolean_test where pk;
 (7 rows)
 
 explain verbose select * from boolean_test where not pk;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
- Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=1463 width=4)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=10 width=4)
    Output: pk, ck, index, col
    ScalarDB Namespace: postgresns
    ScalarDB Table: boolean_test
@@ -462,9 +462,9 @@ explain verbose select * from boolean_test where not pk;
 -- Test priorities of filtering push-down
 -- Conditions of partition keys have higher priorities than indexed columns
 explain verbose select * from boolean_test where pk and index;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
- Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=731 width=4)
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on public.boolean_test  (cost=0.00..29.26 rows=10 width=4)
    Output: pk, ck, index, col
    Filter: boolean_test.index
    ScalarDB Namespace: postgresns
@@ -478,7 +478,7 @@ explain verbose select * from boolean_test where pk and index;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 < 1 ;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    ScalarDB Namespace: postgresns
    ScalarDB Table: test
@@ -496,7 +496,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 < 1;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 <= 1 ;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    ScalarDB Namespace: postgresns
    ScalarDB Table: test
@@ -515,7 +515,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 <= 1;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 1 ;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    ScalarDB Namespace: postgresns
    ScalarDB Table: test
@@ -533,7 +533,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 > 1;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 >= 1 ;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    ScalarDB Namespace: postgresns
    ScalarDB Table: test
@@ -556,7 +556,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 >= 1;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 = 1;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..11.11 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..11.11 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    ScalarDB Namespace: postgresns
    ScalarDB Table: test
@@ -596,7 +596,7 @@ select * from postgresns_test where p_ck1 = 1 AND p_ck2 = 1;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    ScalarDB Namespace: postgresns
    ScalarDB Table: test
@@ -617,7 +617,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 = 1;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck2 = 1;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    Filter: (postgresns_test.p_ck2 = 1)
    ScalarDB Namespace: postgresns
@@ -640,7 +640,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck2 = 1;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 0 AND p_ck2 > 0;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..11.11 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..11.11 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    Filter: (postgresns_test.p_ck2 > 0)
    ScalarDB Namespace: postgresns
@@ -663,7 +663,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 > 0 AND p_ck2 > 0;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 > 0;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..9.53 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    ScalarDB Namespace: postgresns
    ScalarDB Table: test
@@ -684,7 +684,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 > 0;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..11.11 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..11.11 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    Filter: (postgresns_test.p_ck2 > 0)
    ScalarDB Namespace: postgresns
@@ -707,7 +707,7 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0;
 explain verbose select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0 AND p_ck2 <= 1;
                                                                       QUERY PLAN                                                                       
 -------------------------------------------------------------------------------------------------------------------------------------------------------
- Foreign Scan on public.postgresns_test  (cost=0.00..12.70 rows=1 width=105)
+ Foreign Scan on public.postgresns_test  (cost=0.00..12.70 rows=10 width=105)
    Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
    ScalarDB Namespace: postgresns
    ScalarDB Table: test
@@ -723,4 +723,175 @@ select * from postgresns_test where p_pk = 1 AND p_ck1 = 1 AND p_ck2 > 0 AND p_c
 ------+-------+-------+---------------+-----------+--------------+-------------+--------------+------------+------------
     1 |     1 |     1 | t             |         1 |            1 |           0 |            1 | test       | \x010203
 (1 row)
+
+-- 
+-- Test sort push-down
+--
+-- Sorting can be pushed down only for partition key scan
+explain verbose select * from int_test where pk = 1 order by ck; --OK
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Foreign Scan on public.int_test  (cost=0.00..25.60 rows=10 width=16)
+   Output: pk, ck, index, col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: int_test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: pk = 1
+   ScalarDB Scan Orderings : ck ASC
+   ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+(8 rows)
+
+explain verbose select * from int_test order by ck; --NG
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Sort  (cost=133.12..138.24 rows=2048 width=16)
+   Output: pk, ck, index, col
+   Sort Key: int_test.ck
+   ->  Foreign Scan on public.int_test  (cost=0.00..20.48 rows=2048 width=16)
+         Output: pk, ck, index, col
+         ScalarDB Namespace: postgresns
+         ScalarDB Table: int_test
+         ScalarDB Scan Type: all
+         ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+(9 rows)
+
+explain verbose select * from int_test where index = 1 order by ck; --NG
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Sort  (cost=25.77..25.79 rows=10 width=16)
+   Output: pk, ck, index, col
+   Sort Key: int_test.ck
+   ->  Foreign Scan on public.int_test  (cost=0.00..25.60 rows=10 width=16)
+         Output: pk, ck, index, col
+         ScalarDB Namespace: postgresns
+         ScalarDB Table: int_test
+         ScalarDB Scan Type: secondary index
+         ScalarDB Scan Condition: index = 1
+         ScalarDB Scan Attribute: ("pk" "ck" "index" "col")
+(10 rows)
+
+-- Whole ORDER BY clause must be able to be represented as clustering key orderings
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1; -- OK
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Orderings : p_ck1 ASC
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(8 rows)
+
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1, p_ck2; --OK
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Orderings : p_ck1 ASC, p_ck2 ASC
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(8 rows)
+
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1, p_int_col; --NG
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=8.10..8.13 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   Sort Key: postgresns_test.p_ck1, postgresns_test.p_int_col
+   ->  Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+         Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+         ScalarDB Namespace: postgresns
+         ScalarDB Table: test
+         ScalarDB Scan Type: partition key
+         ScalarDB Scan Condition: p_pk = 1
+         ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(10 rows)
+
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1, p_ck2, p_int_col; --NG
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=8.10..8.13 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   Sort Key: postgresns_test.p_ck1, postgresns_test.p_ck2, postgresns_test.p_int_col
+   ->  Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+         Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+         ScalarDB Namespace: postgresns
+         ScalarDB Table: test
+         ScalarDB Scan Type: partition key
+         ScalarDB Scan Condition: p_pk = 1
+         ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(10 rows)
+
+-- Whole sort order must be in the same order or inversed order with the clustering key order or the table
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC; -- OK
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Orderings : p_ck1 ASC
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(8 rows)
+
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 DESC; -- OK
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Orderings : p_ck1 DESC
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(8 rows)
+
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC, p_ck2 ASC; -- OK
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Orderings : p_ck1 ASC, p_ck2 ASC
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(8 rows)
+
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 DESC, p_ck2 DESC; -- OK
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   ScalarDB Namespace: postgresns
+   ScalarDB Table: test
+   ScalarDB Scan Type: partition key
+   ScalarDB Scan Condition: p_pk = 1
+   ScalarDB Scan Orderings : p_ck1 DESC, p_ck2 DESC
+   ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(8 rows)
+
+explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC, p_ck2 DESC; -- NG
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=8.10..8.13 rows=10 width=105)
+   Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+   Sort Key: postgresns_test.p_ck1, postgresns_test.p_ck2 DESC
+   ->  Foreign Scan on public.postgresns_test  (cost=0.00..7.94 rows=10 width=105)
+         Output: p_pk, p_ck1, p_ck2, p_boolean_col, p_int_col, p_bigint_col, p_float_col, p_double_col, p_text_col, p_blob_col
+         ScalarDB Namespace: postgresns
+         ScalarDB Table: test
+         ScalarDB Scan Type: partition key
+         ScalarDB Scan Condition: p_pk = 1
+         ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
+(10 rows)
 

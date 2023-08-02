@@ -12,6 +12,17 @@
 #include "option.h"
 
 /*
+ * Represents a clustering key order.
+ *
+ * The integer value of this enum is intentionally matched with the ordinal value of 
+ * com.scalar.db.api.Scan.Ordering.Order
+ */
+typedef enum {
+	SCALARDB_CLUSTERING_KEY_ORDER_ASC,
+	SCALARDB_CLUSTERING_KEY_ORDER_DESC,
+} ScalarDbFdwClusteringKeyOrder;
+
+/*
  * Represents a key condition of Scan operation in the executor phase.
  */
 typedef struct {
@@ -56,7 +67,8 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 			     ScalarDbFdwScanCondition *scan_conds,
 			     size_t scan_conds_len,
-			     ScalarDbFdwScanBoundary *boundary);
+			     ScalarDbFdwScanBoundary *boundary,
+			     List *sort_column_names, List *sort_orders);
 extern jobject scalardb_scan_with_index(char *namespace, char *table_name,
 					List *attnames,
 					ScalarDbFdwScanCondition *scan_conds,
@@ -91,8 +103,10 @@ extern int scalardb_result_columns_size(jobject result);
 
 extern void scalardb_get_paritition_key_names(char *namespace, char *table_name,
 					      List **partition_key_names);
-extern void scalardb_get_clustering_key_names(char *namespace, char *table_name,
-					      List **clustering_key_names);
+extern void
+scalardb_get_clustering_key_names_and_orders(char *namespace, char *table_name,
+					     List **clustering_key_names,
+					     List **clustering_key_orders);
 extern void scalardb_get_secondary_index_names(char *namespace,
 					       char *table_name,
 					       List **secondary_index_names);

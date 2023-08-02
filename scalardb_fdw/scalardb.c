@@ -66,6 +66,7 @@ static jmethodID ScalarDbUtils_getResultColumnsSize;
 static jmethodID ScalarDbUtils_getPartitionKeyNames;
 static jmethodID ScalarDbUtils_getClusteringKeyNames;
 static jmethodID ScalarDbUtils_getSecondaryIndexNames;
+static jmethodID ScalarDbUtils_getClusteringOrder;
 
 static jclass Result_class;
 static jmethodID Result_isNull;
@@ -84,6 +85,7 @@ static jclass BuildableScan_class;
 static jmethodID BuildableScan_projections;
 static jmethodID BuildableScan_start;
 static jmethodID BuildableScan_end;
+static jmethodID BuildableScan_orderings;
 static jmethodID BuildableScan_build;
 
 static jclass BuildableScanWithIndex_class;
@@ -104,6 +106,10 @@ static jmethodID KeyBuilder_addText;
 static jmethodID KeyBuilder_addBlob;
 static jmethodID KeyBuilder_build;
 
+static jclass Ordering_class;
+static jmethodID Ordering_asc;
+static jmethodID Ordering_desc;
+
 static void initialize_jvm(ScalarDbFdwOptions *opts);
 static void destroy_jvm(void);
 static void attach_jvm(void);
@@ -122,6 +128,8 @@ static void apply_column_pruning(jobject buildable_scan, List *attnames,
 				 jmethodID projections_method);
 static void apply_clustering_key_boundary(jobject buildable_scan,
 					  ScalarDbFdwScanBoundary *boundary);
+static void apply_orderings(jobject buildable_scan, List *sort_column_names,
+			    List *sort_orders);
 
 static void clear_exception(void);
 static void catch_exception(void);
@@ -196,7 +204,7 @@ void scalardb_initialize(ScalarDbFdwOptions *opts)
  * Retruns Scan (all) object built with the specified parameters.
  *
  * The returned object is a global reference. It is caller's responsibility to
- * release the object 
+ * release the object
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
@@ -231,7 +239,7 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
  * Retruns Scan (partitionKey) object built with the specified parameters.
  *
  * The returned object is a global reference. It is caller's responsibility to
- * release the object 
+ * release the object
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
@@ -240,7 +248,8 @@ extern jobject scalardb_scan_all(char *namespace, char *table_name,
 extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 			     ScalarDbFdwScanCondition *scan_conds,
 			     size_t num_scan_conds,
-			     ScalarDbFdwScanBoundary *boundary)
+			     ScalarDbFdwScanBoundary *boundary,
+			     List *sort_column_names, List *sort_orders)
 {
 	jstring namespace_str;
 	jstring table_name_str;
@@ -264,6 +273,8 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
 
 	apply_clustering_key_boundary(buildable_scan, boundary);
 
+	apply_orderings(buildable_scan, sort_column_names, sort_orders);
+
 	scan = (*env)->CallObjectMethod(env, buildable_scan,
 					BuildableScan_build);
 	return (*env)->NewGlobalRef(env, scan);
@@ -273,7 +284,7 @@ extern jobject scalardb_scan(char *namespace, char *table_name, List *attnames,
  * Retruns Scan (indexKey) object built with the specified parameters.
  *
  * The returned object is a global reference. It is caller's responsibility to
- * release the object 
+ * release the object
  *
  * If `attnames` is specified, only the columns with the names in `attnames`
  * will be returned. (i.e. calls projections())
@@ -449,6 +460,47 @@ static void apply_clustering_key_boundary(jobject buildable_scan,
 			env, buildable_scan, BuildableScan_end, key,
 			boundary->end_inclusive);
 	}
+}
+
+static void apply_orderings(jobject buildable_scan, List *sort_column_names,
+			    List *sort_orders)
+{
+	ListCell *lc_name;
+	ListCell *lc_order;
+	jobjectArray orderings;
+
+	ereport(DEBUG5, errmsg("entering function %s", __func__));
+
+	orderings = (*env)->NewObjectArray(env, list_length(sort_column_names),
+					   Ordering_class, NULL);
+
+	forboth(lc_name, sort_column_names, lc_order, sort_orders)
+	{
+		char *name = strVal(lfirst(lc_name));
+		ScalarDbFdwClusteringKeyOrder order =
+			(ScalarDbFdwClusteringKeyOrder)lfirst_int(lc_order);
+		jobject ordering;
+		int i = foreach_current_index(lc_name);
+		jstring name_str = (*env)->NewStringUTF(env, name);
+
+		switch (order) {
+		case SCALARDB_CLUSTERING_KEY_ORDER_ASC:
+			ordering = (*env)->CallStaticObjectMethod(
+				env, Ordering_class, Ordering_asc, name_str);
+			break;
+		case SCALARDB_CLUSTERING_KEY_ORDER_DESC:
+			ordering = (*env)->CallStaticObjectMethod(
+				env, Ordering_class, Ordering_desc, name_str);
+			break;
+		default:
+			elog(ERROR, "unexpected clustering key order: %d",
+			     order);
+		}
+		(*env)->SetObjectArrayElement(env, orderings, i, ordering);
+		/* (*env)->DeleteLocalRef(env, ordering); */
+	}
+	buildable_scan = (*env)->CallObjectMethod(
+		env, buildable_scan, BuildableScan_orderings, orderings);
 }
 
 /*
@@ -694,14 +746,15 @@ extern void scalardb_get_paritition_key_names(char *namespace, char *table_name,
 /*
  * Retrieve the clustering key names for the given table.
  */
-extern void scalardb_get_clustering_key_names(char *namespace, char *table_name,
-					      List **clustering_key_names)
+extern void
+scalardb_get_clustering_key_names_and_orders(char *namespace, char *table_name,
+					     List **clustering_key_names,
+					     List **clustering_key_orders)
 {
 	jstring namespace_str;
 	jstring table_name_str;
 
 	jsize len;
-	jstring elem;
 
 	jobjectArray clustering_key_names_array;
 
@@ -720,11 +773,21 @@ extern void scalardb_get_clustering_key_names(char *namespace, char *table_name,
 
 	len = (*env)->GetArrayLength(env, clustering_key_names_array);
 	for (jsize i = 0; i < len; i++) {
-		elem = (jstring)(*env)->GetObjectArrayElement(
+		jint order;
+		jstring name = (jstring)(*env)->GetObjectArrayElement(
 			env, clustering_key_names_array, i);
 		*clustering_key_names =
 			lappend(*clustering_key_names,
-				makeString(convert_string_to_cstring(elem)));
+				makeString(convert_string_to_cstring(name)));
+
+		order = (*env)->CallStaticIntMethod(
+			env, ScalarDbUtils_class,
+			ScalarDbUtils_getClusteringOrder, namespace_str,
+			table_name_str, name);
+
+		*clustering_key_orders =
+			lappend_int(*clustering_key_orders,
+				    (ScalarDbFdwClusteringKeyOrder)order);
 	}
 }
 
@@ -928,6 +991,10 @@ static void initialize_scalardb_references()
 		ScalarDbUtils_getSecondaryIndexNames, ScalarDbUtils_class,
 		"getSecondaryIndexNames",
 		"(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+	register_java_static_method(
+		ScalarDbUtils_getClusteringOrder, ScalarDbUtils_class,
+		"getClusteringOrder",
+		"(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I");
 
 	// com.scalar.db.api.Result
 	register_java_class(Result_class, "com/scalar/db/api/Result");
@@ -965,6 +1032,9 @@ static void initialize_scalardb_references()
 	register_java_class_method(
 		BuildableScan_end, BuildableScan_class, "end",
 		"(Lcom/scalar/db/io/Key;Z)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
+	register_java_class_method(
+		BuildableScan_orderings, BuildableScan_class, "orderings",
+		"([Lcom/scalar/db/api/Scan$Ordering;)Lcom/scalar/db/api/ScanBuilder$BuildableScan;");
 	register_java_class_method(BuildableScan_build, BuildableScan_class,
 				   "build", "()Lcom/scalar/db/api/Scan;");
 
@@ -1016,6 +1086,16 @@ static void initialize_scalardb_references()
 		"(Ljava/lang/String;[B)Lcom/scalar/db/io/Key$Builder;");
 	register_java_class_method(KeyBuilder_build, KeyBuilder_class, "build",
 				   "()Lcom/scalar/db/io/Key;");
+
+	// com.scalar.db.api.Scan$Ordering
+	register_java_class(Ordering_class,
+			    "Lcom/scalar/db/api/Scan$Ordering;");
+	register_java_static_method(
+		Ordering_asc, Ordering_class, "asc",
+		"(Ljava/lang/String;)Lcom/scalar/db/api/Scan$Ordering;");
+	register_java_static_method(
+		Ordering_desc, Ordering_class, "desc",
+		"(Ljava/lang/String;)Lcom/scalar/db/api/Scan$Ordering;");
 }
 
 static void add_classpath_to_system_class_loader(char *classpath)

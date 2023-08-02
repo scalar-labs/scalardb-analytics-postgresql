@@ -13,7 +13,7 @@
 #include "nodes/value.h"
 #include "utils/syscache.h"
 
-#include "scalardb_fdw_util.h"
+#include "column_metadata.h"
 #include "pgport.h"
 
 /*
@@ -54,5 +54,7 @@ extern void split_condition_expr(RelOptInfo *baserel,
 				 ScalarDbFdwColumnMetadata *column_metadata,
 				 Expr *expr, Var **left, String **left_name,
 				 Expr **right);
+
+extern bool is_foreign_table_var(Expr *expr, RelOptInfo *baserel);
 
 #endif

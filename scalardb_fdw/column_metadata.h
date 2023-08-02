@@ -22,6 +22,9 @@ typedef struct {
 	List *partition_key_attnums;
 	List *clustering_key_attnums;
 	List *secondary_index_attnums;
+
+	/* List of ScalarDbFdwClusteringKeyOrder */
+	List *clustering_key_orders;
 } ScalarDbFdwColumnMetadata;
 
 extern void get_column_metadata(PlannerInfo *root, RelOptInfo *baserel,

@@ -52,30 +52,39 @@ public class ScalarDbUtils {
   }
 
   static String[] getPartitionKeyNames(String namespace, String tableName)
-      throws ExecutionException {
+      throws ExecutionException, ScalarDbFdwException {
     TableMetadata metadata = storageAdmin.getTableMetadata(namespace, tableName);
     if (metadata == null) {
-      return null;
+      throw new ScalarDbFdwException(namespace + "." + tableName + " does not exist");
     }
     return metadata.getPartitionKeyNames().toArray(new String[0]);
   }
 
   static String[] getClusteringKeyNames(String namespace, String tableName)
-      throws ExecutionException {
+      throws ExecutionException, ScalarDbFdwException {
     TableMetadata metadata = storageAdmin.getTableMetadata(namespace, tableName);
     if (metadata == null) {
-      return null;
+      throw new ScalarDbFdwException(namespace + "." + tableName + " does not exist");
     }
     return metadata.getClusteringKeyNames().toArray(new String[0]);
   }
 
   static String[] getSecondaryIndexNames(String namespace, String tableName)
-      throws ExecutionException {
+      throws ExecutionException, ScalarDbFdwException {
     TableMetadata metadata = storageAdmin.getTableMetadata(namespace, tableName);
     if (metadata == null) {
-      return null;
+      throw new ScalarDbFdwException(namespace + "." + tableName + " does not exist");
     }
     return metadata.getSecondaryIndexNames().toArray(new String[0]);
+  }
+
+  static int getClusteringOrder(String namespace, String tableName, String clusteringKeyName)
+      throws ExecutionException, ScalarDbFdwException {
+    TableMetadata metadata = storageAdmin.getTableMetadata(namespace, tableName);
+    if (metadata == null) {
+      throw new ScalarDbFdwException(namespace + "." + tableName + " does not exist");
+    }
+    return metadata.getClusteringOrder(clusteringKeyName).ordinal();
   }
 
   static void closeStorage() {

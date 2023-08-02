@@ -1,4 +1,5 @@
 #include "c.h"
+#include "lib/stringinfo.h"
 #include "postgres.h"
 
 #include "access/reloptions.h"
@@ -25,41 +26,15 @@
 #include "utils/rel.h"
 #include "utils/lsyscache.h"
 
-#include "scalardb.h"
 #include "scalardb_fdw.h"
-#include "scalardb_fdw_util.h"
+#include "scalardb.h"
+#include "column_metadata.h"
 #include "condition.h"
 #include "option.h"
+#include "cost.h"
+#include "pathkeys.h"
 
 PG_MODULE_MAGIC;
-
-/*
- * The plan state is set up in scalardbGetForeignRelSize and stashed away in
- * baserel->fdw_private and fetched in scalardbGetForeignPaths.
- */
-typedef struct {
-	ScalarDbFdwOptions options;
-
-	/* Bitmap of attr numbers we need to fetch from the remote server. */
-	Bitmapset *attrs_used;
-
-	/* Conditions on the index keys or secondary indexes that are pushed to ScalarDB side */
-	List *remote_conds;
-	/* Conditions that are evaluated locally */
-	List *local_conds;
-	/* the clustering keys that are pushed to ScalarDB side */
-	ScalarDbFdwClusteringKeyBoundary boundary;
-	/* Type of Scan executed on the ScalarDB side. This must be consistent with the condtitions in remote_conds */
-	ScalarDbFdwScanType scan_type;
-
-	/* estimate of physical size */
-	BlockNumber pages;
-	/* estimate of number of data rows */
-	double tuples;
-
-	/* set of the column metadata of the table*/
-	ScalarDbFdwColumnMetadata column_metadata;
-} ScalarDbFdwPlanState;
 
 /*
  * FDW-specific information for ForeignScanState.fdw_state.
@@ -77,6 +52,8 @@ typedef struct {
 	int boundary_start_inclusive;
 	int boundary_end_expr_offset;
 	int boundary_end_inclusive;
+	List *sort_column_names;
+	List *sort_orders;
 
 	/* List of retrieved attribute names, coverted from attrs_to_retrieve */
 	List *attnames;
@@ -98,6 +75,13 @@ typedef struct {
 	jobject scanner;
 } ScalarDbFdwScanState;
 
+enum ScanFdwPathPrivateIndex {
+	/* List of String that contains column names to be used to sort the foreign relation */
+	ScanFdwPathPrivateSortColumnNames,
+	/* List of ScalarDbFdwClusteringKeyOrder to sort the foreign relation */
+	ScanFdwPathPrivateSortOrders
+};
+
 enum ScanFdwPrivateIndex {
 	/* Integer list of attribute numbers retrieved by the SELECT */
 	ScanFdwPrivateAttrsToRetrieve,
@@ -117,13 +101,11 @@ enum ScanFdwPrivateIndex {
 	ScanFdwPrivateBoundaryEndExprOffset,
 	/* Boolean indiates whether end condition is inclusive */
 	ScanFdwPrivateBoundaryEndInclusive,
+	/* List of String that contains column names to be used to srot the foreign relation */
+	ScanFdwPrivateSortColumnNames,
+	/* List of ScalarDbFdwClusteringKeyOrder to sort the foreign relation */
+	ScanFdwPrivateSortOrders
 };
-
-static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
-			  ScalarDbFdwPlanState *fdw_private);
-static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
-			   List *remote_conds, Cost *startup_cost,
-			   Cost *total_cost);
 
 static void get_target_list(PlannerInfo *root, RelOptInfo *baserel,
 			    Bitmapset *attrs_used, List **attrs_to_retrieve);
@@ -149,6 +131,36 @@ static char *scan_conds_to_string(ScalarDbFdwScanCondition *scan_conds,
 				  size_t num_conds);
 static char *scan_start_boundary_to_string(ScalarDbFdwScanBoundary *boundary);
 static char *scan_end_boundary_to_string(ScalarDbFdwScanBoundary *boundary);
+static char *sort_to_string(List *sort_column_names, List *sort_orders);
+
+/*
+ * FDW callback routines
+ */
+static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
+				      Oid foreigntableid);
+
+static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
+				    Oid foreigntableid);
+
+static ForeignScan *
+scalardbGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel,
+		       Oid foreigntableid, ForeignPath *best_path, List *tlist,
+		       List *scan_clauses, Plan *outer_plan);
+
+static void scalardbBeginForeignScan(ForeignScanState *node, int eflags);
+
+static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node);
+
+static void scalardbReScanForeignScan(ForeignScanState *node);
+
+static void scalardbEndForeignScan(ForeignScanState *node);
+
+static void scalardbExplainForeignScan(ForeignScanState *node,
+				       ExplainState *es);
+
+static bool scalardbAnalyzeForeignTable(Relation relation,
+					AcquireSampleRowsFunc *func,
+					BlockNumber *totalpages);
 
 PG_FUNCTION_INFO_V1(scalardb_fdw_handler);
 
@@ -181,8 +193,6 @@ static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
-	baserel->rows = 0;
-
 	fdw_private = palloc0(sizeof(ScalarDbFdwPlanState));
 	baserel->fdw_private = (void *)fdw_private;
 
@@ -210,7 +220,7 @@ static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
 	}
 
 	/* Estimate relation size */
-	estimate_size(root, baserel, fdw_private);
+	estimate_size(root, baserel);
 }
 
 /*
@@ -223,6 +233,7 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 	ForeignPath *path;
 	Cost startup_cost;
 	Cost total_cost;
+	double rows;
 
 	ScalarDbFdwPlanState *fdw_private =
 		(ScalarDbFdwPlanState *)baserel->fdw_private;
@@ -243,21 +254,27 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 			       &fdw_private->boundary, &fdw_private->scan_type);
 
 	/* Estimate costs */
-	estimate_costs(root, baserel, fdw_private->remote_conds, &startup_cost,
-		       &total_cost);
+	estimate_costs(root, baserel, fdw_private->remote_conds, &rows,
+		       &startup_cost, &total_cost);
 
 	/* Create a ForeignPath node corresponding to Scan
 	 * and add it as only possible path */
 	path = create_foreignscan_path(root, baserel,
 				       NULL, /* default pathtarget */
-				       baserel->rows, /* number of rows */
+				       rows, /* number of rows */
 				       startup_cost, /* startup cost */
 				       total_cost, /* total cost */
 				       NIL, /* no pathkeys */
-				       NULL, /* no outer rel either */
+				       baserel->lateral_relids,
 				       NULL, /* no extra plan */
 				       NIL); /* no fdw_private */
 	add_path(baserel, (Path *)path);
+
+	/* Sorting is supported only for partition key scan */
+	if (fdw_private->scan_type == SCALARDB_SCAN_PARTITION_KEY) {
+		add_paths_with_pathkeys_for_rel(root, baserel,
+						&fdw_private->column_metadata);
+	}
 }
 
 static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
@@ -278,6 +295,9 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 
 	List *fdw_exprs = NIL;
 	List *condition_key_names = NIL;
+
+	List *sort_column_names = NIL;
+	List *sort_orders = NIL;
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
@@ -363,6 +383,19 @@ static ForeignScan *scalardbGetForeignPlan(PlannerInfo *root,
 	fdw_private_for_scan =
 		lappend(fdw_private_for_scan,
 			makeBoolean(fdw_private->boundary.end_inclusive));
+	/*
+	 * Put information on the sorting pushed-down
+	 */
+	if (best_path->path.pathkeys) {
+		sort_column_names =
+			(List *)list_nth(best_path->fdw_private,
+					 ScanFdwPathPrivateSortColumnNames);
+
+		sort_orders = list_nth(best_path->fdw_private,
+				       ScanFdwPathPrivateSortOrders);
+	}
+	fdw_private_for_scan = lappend(fdw_private_for_scan, sort_column_names);
+	fdw_private_for_scan = lappend(fdw_private_for_scan, sort_orders);
 
 	return make_foreignscan(
 		tlist, local_exprs,
@@ -423,6 +456,12 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 	fdw_state->boundary_end_inclusive = boolVal(list_nth(
 		fsplan->fdw_private, ScanFdwPrivateBoundaryEndInclusive));
 
+	fdw_state->sort_column_names = (List *)list_nth(
+		fsplan->fdw_private, ScanFdwPrivateSortColumnNames);
+
+	fdw_state->sort_orders =
+		(List *)list_nth(fsplan->fdw_private, ScanFdwPrivateSortOrders);
+
 	/* Get info we'll need for input data conversion. */
 	fdw_state->rel = node->ss.ss_currentRelation;
 	fdw_state->attinmeta =
@@ -455,12 +494,12 @@ static void scalardbBeginForeignScan(ForeignScanState *node, int eflags)
 			fdw_state->boundary_end_expr_offset,
 			fdw_state->boundary_end_inclusive,
 			fdw_state->boundary_is_equals);
-		fdw_state->scan = scalardb_scan(fdw_state->options.namespace,
-						fdw_state->options.table_name,
-						fdw_state->attnames,
-						fdw_state->scan_conds,
-						fdw_state->num_scan_conds,
-						fdw_state->boundary);
+		fdw_state->scan = scalardb_scan(
+			fdw_state->options.namespace,
+			fdw_state->options.table_name, fdw_state->attnames,
+			fdw_state->scan_conds, fdw_state->num_scan_conds,
+			fdw_state->boundary, fdw_state->sort_column_names,
+			fdw_state->sort_orders);
 		break;
 	}
 	case SCALARDB_SCAN_SECONDARY_INDEX:
@@ -597,6 +636,14 @@ static void scalardbExplainForeignScan(ForeignScanState *node, ExplainState *es)
 			}
 		}
 
+		if (fdw_state->sort_column_names) {
+			char *sort_str =
+				sort_to_string(fdw_state->sort_column_names,
+					       fdw_state->sort_orders);
+			ExplainPropertyText("ScalarDB Scan Orderings ",
+					    sort_str, es);
+		}
+
 		if (list_length(fdw_state->attnames) > 0)
 			ExplainPropertyText("ScalarDB Scan Attribute",
 					    nodeToString(fdw_state->attnames),
@@ -609,77 +656,6 @@ static bool scalardbAnalyzeForeignTable(Relation relation,
 					BlockNumber *totalpages)
 {
 	return false;
-}
-
-/*
- * Estimate the size of a foreign table.
- *
- * The main result is returned in baserel->rows.  We also set
- * fdw_private->pages and fdw_private->ntuples for later use in the cost
- * calculation.
- */
-static void estimate_size(PlannerInfo *root, RelOptInfo *baserel,
-			  ScalarDbFdwPlanState *fdw_private)
-{
-	ereport(DEBUG3, errmsg("entering function %s", __func__));
-	/*
-	 * If the foreign table has never been ANALYZEd, it will have
-	 * reltuples < 0, meaning "unknown". In this case we can use a hack
-	 * similar to plancat.c's treatment of empty relations: use a minimum
-	 * size estimate of 10 pages, and divide by the column-datatype-based
-	 * width estimate to get the corresponding number of tuples.
-	 */
-#if PG_VERSION_NUM >= 140000
-	if (baserel->tuples < 0) {
-#else
-	if (baserel->pages == 0 && baserel->tuples == 0) {
-#endif
-		baserel->pages = 10;
-		baserel->tuples =
-			(10.0 * BLCKSZ) / (baserel->reltarget->width +
-					   sizeof(HeapTupleHeaderData));
-	} else {
-		ereport(ERROR,
-			errmsg("foreign table of scalardb_fdw should not be ANALYZEd"));
-	}
-
-	/* Estimate baserel size as best we can with local statistics. */
-	set_baserel_size_estimates(root, baserel);
-}
-
-#define DEFAULT_ROWS_FOR_PARTITION_KEY_SCAN 10
-
-/*
- * Estimate costs of scanning a foreign table.
- *
- * Results are returned in *startup_cost and *total_cost.
- */
-static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
-			   List *remote_conds, Cost *startup_cost,
-			   Cost *total_cost)
-{
-	Cost run_cost = 0;
-	Cost cpu_per_tuple;
-	double rows;
-	ScalarDbFdwPlanState *fdw_private =
-		(ScalarDbFdwPlanState *)baserel->fdw_private;
-
-	ereport(DEBUG3, errmsg("entering function %s", __func__));
-
-	rows = list_length(fdw_private->remote_conds) > 0 ?
-		       DEFAULT_ROWS_FOR_PARTITION_KEY_SCAN :
-		       baserel->rows;
-
-	*startup_cost = 0;
-	*startup_cost += baserel->baserestrictcost.startup;
-	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
-	run_cost += cpu_per_tuple * baserel->tuples;
-
-	/* Add in tlist eval cost for each output row */
-	*startup_cost += baserel->reltarget->cost.startup;
-	run_cost += baserel->reltarget->cost.per_tuple * rows;
-
-	*total_cost = *startup_cost + run_cost;
 }
 
 /*
@@ -1070,6 +1046,40 @@ static char *scan_end_boundary_to_string(ScalarDbFdwScanBoundary *boundary)
 
 			if (value_type == TEXTOID || value_type == BYTEAOID)
 				appendStringInfoChar(&str, '\'');
+		}
+	}
+	return str.data;
+}
+static char *sort_to_string(List *sort_column_names, List *sort_orders)
+{
+	StringInfoData str;
+	ListCell *lc_name;
+	ListCell *lc_order;
+
+	ereport(DEBUG4, errmsg("entering function %s", __func__));
+
+	initStringInfo(&str);
+	forboth(lc_name, sort_column_names, lc_order, sort_orders)
+	{
+		char *name = strVal(lfirst(lc_name));
+		ScalarDbFdwClusteringKeyOrder order =
+			(ScalarDbFdwClusteringKeyOrder)lfirst_int(lc_order);
+
+		int i = foreach_current_index(lc_name);
+
+		if (i > 0) {
+			appendStringInfoString(&str, ", ");
+		}
+
+		appendStringInfoString(&str, name);
+		appendStringInfoChar(&str, ' ');
+		switch (order) {
+		case SCALARDB_CLUSTERING_KEY_ORDER_ASC:
+			appendStringInfoString(&str, "ASC");
+			break;
+		case SCALARDB_CLUSTERING_KEY_ORDER_DESC:
+			appendStringInfoString(&str, "DESC");
+			break;
 		}
 	}
 	return str.data;

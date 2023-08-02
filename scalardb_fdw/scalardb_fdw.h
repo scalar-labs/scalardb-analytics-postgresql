@@ -4,35 +4,30 @@
 #include "c.h"
 #include "postgres.h"
 
-#include "commands/explain.h"
-#include "fmgr.h"
-#include "foreign/fdwapi.h"
-#include "funcapi.h"
+#include "condition.h"
+#include "option.h"
 
-static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
-				      Oid foreigntableid);
+/*
+ * The plan state is set up in scalardbGetForeignRelSize and stashed away in
+ * baserel->fdw_private and fetched in scalardbGetForeignPaths.
+ */
+typedef struct {
+	ScalarDbFdwOptions options;
 
-static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
-				    Oid foreigntableid);
+	/* Bitmap of attr numbers we need to fetch from the remote server. */
+	Bitmapset *attrs_used;
 
-static ForeignScan *
-scalardbGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel,
-		       Oid foreigntableid, ForeignPath *best_path, List *tlist,
-		       List *scan_clauses, Plan *outer_plan);
+	/* Conditions on the index keys or secondary indexes that are pushed to ScalarDB side */
+	List *remote_conds;
+	/* Conditions that are evaluated locally */
+	List *local_conds;
+	/* the clustering keys that are pushed to ScalarDB side */
+	ScalarDbFdwClusteringKeyBoundary boundary;
+	/* Type of Scan executed on the ScalarDB side. This must be consistent with the condtitions in remote_conds */
+	ScalarDbFdwScanType scan_type;
 
-static void scalardbBeginForeignScan(ForeignScanState *node, int eflags);
-
-static TupleTableSlot *scalardbIterateForeignScan(ForeignScanState *node);
-
-static void scalardbReScanForeignScan(ForeignScanState *node);
-
-static void scalardbEndForeignScan(ForeignScanState *node);
-
-static void scalardbExplainForeignScan(ForeignScanState *node,
-				       ExplainState *es);
-
-static bool scalardbAnalyzeForeignTable(Relation relation,
-					AcquireSampleRowsFunc *func,
-					BlockNumber *totalpages);
+	/* set of the column metadata of the table*/
+	ScalarDbFdwColumnMetadata column_metadata;
+} ScalarDbFdwPlanState;
 
 #endif
