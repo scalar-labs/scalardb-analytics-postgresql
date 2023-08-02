@@ -4,6 +4,7 @@ import com.scalar.db.config.DatabaseConfig
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Paths
 import java.sql.Connection
 import java.sql.ResultSet
@@ -11,13 +12,14 @@ import java.sql.Statement
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
-import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
 class CreateServersTest {
-    @MockK(relaxUnitFun = true) lateinit var connection: Connection
+    @MockK(relaxUnitFun = true)
+    lateinit var connection: Connection
 
-    @MockK(relaxUnitFun = true) lateinit var statement: Statement
+    @MockK(relaxUnitFun = true)
+    lateinit var statement: Statement
 
     private lateinit var ctx: DatabaseContext
 
@@ -58,7 +60,7 @@ class CreateServersTest {
                 |  maxheapsize '1024'
                 |);
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -88,12 +90,13 @@ class CreateServersTest {
                 |  maxheapsize '1024'
                 |);
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
         confirmVerified(statement)
     }
+
     @Test
     fun `run should create a foreign server for Oracle using jdbc_fdw`() {
         val config = mockk<DatabaseConfig>()
@@ -117,7 +120,7 @@ class CreateServersTest {
                 |  maxheapsize '1024'
                 |);
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -147,7 +150,7 @@ class CreateServersTest {
                 |  maxheapsize '1024'
                 |);
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -181,7 +184,7 @@ class CreateServersTest {
                 |FOREIGN DATA WRAPPER cassandra2_fdw
                 |OPTIONS (host 'localhost', port '9042');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -203,7 +206,7 @@ class CreateServersTest {
                 |FOREIGN DATA WRAPPER scalardb_fdw
                 |OPTIONS (config_file_path '/absolute/path/to/config.properties');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -225,7 +228,7 @@ class CreateServersTest {
                 |FOREIGN DATA WRAPPER scalardb_fdw
                 |OPTIONS (config_file_path '/absolute/path/to/config.properties');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -272,7 +275,7 @@ class CreateServersTest {
                 |  maxheapsize '1024'
                 |);
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.executeUpdate(
                 """
@@ -280,7 +283,7 @@ class CreateServersTest {
                 |FOREIGN DATA WRAPPER cassandra2_fdw
                 |OPTIONS (host 'localhost', port '9042');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -304,7 +307,7 @@ class CreateServersTest {
                 |FOREIGN DATA WRAPPER scalardb_fdw
                 |OPTIONS (config_file_path '/absolute/path/on/postgres/host/to/config.properties');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }

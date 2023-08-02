@@ -11,24 +11,28 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.extension.ExtendWith
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
 class CreateForeignTablesTest {
-    @MockK(relaxUnitFun = true) lateinit var connection: Connection
+    @MockK(relaxUnitFun = true)
+    lateinit var connection: Connection
 
-    @MockK(relaxUnitFun = true) lateinit var statement: Statement
+    @MockK(relaxUnitFun = true)
+    lateinit var statement: Statement
 
     private lateinit var ctx: DatabaseContext
 
-    @MockK(relaxUnitFun = true) lateinit var admin: DistributedStorageAdmin
+    @MockK(relaxUnitFun = true)
+    lateinit var admin: DistributedStorageAdmin
 
-    @MockK(relaxUnitFun = true) lateinit var metadata: TableMetadata
+    @MockK(relaxUnitFun = true)
+    lateinit var metadata: TableMetadata
 
     @BeforeTest
     fun setup() {
@@ -115,12 +119,13 @@ class CreateForeignTablesTest {
                 |) SERVER jdbc 
                 |OPTIONS (schema_name 'ns_for_jdbc', table_name 'jdbc_table');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
         confirmVerified(statement)
     }
+
     @Test
     fun `run should create a foreign table including log data for cassandra storage`() {
         val config = mockk<DatabaseConfig>()
@@ -161,12 +166,13 @@ class CreateForeignTablesTest {
                 |) SERVER cassandra 
                 |OPTIONS (schema_name 'ns_for_cassandra', table_name 'cassandra_table');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
         confirmVerified(statement)
     }
+
     @Test
     fun `run should create a foreign table including log data for cosmos storage`() {
         val config = mockk<DatabaseConfig>()
@@ -207,7 +213,7 @@ class CreateForeignTablesTest {
                 |) SERVER cosmos 
                 |OPTIONS (namespace 'ns_for_cosmos', table_name 'cosmos_table');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -254,7 +260,7 @@ class CreateForeignTablesTest {
                 |) SERVER dynamodb 
                 |OPTIONS (namespace 'ns_for_dynamodb', table_name 'dynamodb_table');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }
@@ -287,16 +293,16 @@ class CreateForeignTablesTest {
         val storage = ScalarDBStorage.MultiStorage(storages, namespaceStorageMap)
 
         CreateForeignTables(
-                ctx,
-                setOf(
-                    "ns_for_jdbc",
-                    "ns_for_cassandra",
-                    "ns_for_cosmos",
-                    "ns_for_dynamodb",
-                ),
-                storage,
-                admin
-            )
+            ctx,
+            setOf(
+                "ns_for_jdbc",
+                "ns_for_cassandra",
+                "ns_for_cosmos",
+                "ns_for_dynamodb",
+            ),
+            storage,
+            admin,
+        )
             .run()
 
         verify {
@@ -333,7 +339,7 @@ class CreateForeignTablesTest {
                 |) SERVER jdbc 
                 |OPTIONS (schema_name 'ns_for_jdbc', table_name 'jdbc_table');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.executeUpdate(
                 """
@@ -368,7 +374,7 @@ class CreateForeignTablesTest {
                 |) SERVER cassandra 
                 |OPTIONS (schema_name 'ns_for_cassandra', table_name 'cassandra_table');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.executeUpdate(
                 """
@@ -403,7 +409,7 @@ class CreateForeignTablesTest {
                 |) SERVER cosmos 
                 |OPTIONS (namespace 'ns_for_cosmos', table_name 'cosmos_table');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.executeUpdate(
                 """
@@ -438,7 +444,7 @@ class CreateForeignTablesTest {
                 |) SERVER dynamodb 
                 |OPTIONS (namespace 'ns_for_dynamodb', table_name 'dynamodb_table');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
             statement.close()
         }

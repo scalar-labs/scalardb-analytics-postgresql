@@ -10,7 +10,7 @@ private val logger = KotlinLogging.logger {}
 class CreateViews(
     private val ctx: DatabaseContext,
     private val namespaces: Set<String>,
-    private val admin: DistributedStorageAdmin
+    private val admin: DistributedStorageAdmin,
 ) {
     fun run() {
         for (ns in namespaces) {
@@ -18,7 +18,7 @@ class CreateViews(
                 val metadata =
                     admin.getTableMetadata(ns, tableName)
                         ?: throw IllegalArgumentException(
-                            "Table metadata not found: $ns.$tableName"
+                            "Table metadata not found: $ns.$tableName",
                         )
 
                 val pks = metadata.partitionKeyNames
@@ -51,7 +51,9 @@ class CreateViews(
                             "${Attribute.STATE} IS NULL OR " +
                             // Committed in the past
                             "${Attribute.BEFORE_STATE} = 3"
-                    } else ""
+                    } else {
+                        ""
+                    }
 
                 val viewName = "$ns.$tableName"
                 val rawTableName = "$ns._$tableName"
@@ -68,7 +70,7 @@ class CreateViews(
                             |FROM $rawTableName
                             |$whereClause;
                             """
-                            .trimMargin()
+                            .trimMargin(),
                     )
                 }
             }

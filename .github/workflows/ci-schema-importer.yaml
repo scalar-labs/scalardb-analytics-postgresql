@@ -1,0 +1,30 @@
+name: CI for Schema Importer
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "schema-importer/**"
+  pull_request:
+    paths:
+      - "schema-importer/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: "8"
+          distribution: "temurin"
+
+      - name: Run Gradle check
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: check
+          build-root-directory: schema-importer

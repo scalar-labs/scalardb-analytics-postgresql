@@ -8,6 +8,7 @@ sealed interface ScalarDBStorage {
     sealed interface SingleStorage : ScalarDBStorage {
         /** Foreign server name for this storage */
         val serverName: String
+
         /** Corresponding configuration for this storage */
         val config: DatabaseConfig
         val name: String
@@ -21,7 +22,7 @@ sealed interface ScalarDBStorage {
                 config.contactPoints.let {
                     if (it.size != 1) {
                         throw IllegalArgumentException(
-                            "JDBC only supports a single contact point. Got ${it.joinToString(",")}"
+                            "JDBC only supports a single contact point. Got ${it.joinToString(",")}",
                         )
                     }
                     it.first()
@@ -30,7 +31,7 @@ sealed interface ScalarDBStorage {
 
     class Cassandra(
         override val config: DatabaseConfig,
-        override val serverName: String = "cassandra"
+        override val serverName: String = "cassandra",
     ) : SingleStorage {
         val host: String
             get() = config.contactPoints.joinToString(",")
@@ -41,7 +42,7 @@ sealed interface ScalarDBStorage {
 
     class DynamoDB(
         override val config: DatabaseConfig,
-        override val serverName: String = "dynamodb"
+        override val serverName: String = "dynamodb",
     ) : SingleStorage
 
     class Cosmos(override val config: DatabaseConfig, override val serverName: String = "cosmos") :
@@ -49,7 +50,7 @@ sealed interface ScalarDBStorage {
 
     class MultiStorage(
         val storages: Map<String, SingleStorage>,
-        private val namespaceStorageMap: Map<String, String>
+        private val namespaceStorageMap: Map<String, String>,
     ) : ScalarDBStorage {
         fun getStorageForNamespace(namespace: String): SingleStorage {
             val name =
@@ -77,7 +78,7 @@ sealed interface ScalarDBStorage {
                                     throw IllegalArgumentException("MultiStorage cannot be nested")
                                 else ->
                                     throw IllegalArgumentException(
-                                        "${dbConfig.storage} is not supported yet"
+                                        "${dbConfig.storage} is not supported yet",
                                     )
                             }
                         }

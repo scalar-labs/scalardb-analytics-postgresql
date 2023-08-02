@@ -1,7 +1,7 @@
 package com.scalar.db.analytics.postgresql.schemaimporter
 
-import java.nio.file.Path
 import mu.KotlinLogging
+import java.nio.file.Path
 
 private val logger = KotlinLogging.logger {}
 
@@ -13,8 +13,7 @@ class CreateServers(
 ) {
     private val configPathForScalarDBFdw =
         configPathOnPostgresHost
-            ?:
-            // Only configPath is converted to an absolute path because configPathOnPostgres is a
+            ?: // Only configPath is converted to an absolute path because configPathOnPostgres is a
             // path on a remote host
             configPath.toAbsolutePath().normalize()
 
@@ -53,11 +52,11 @@ class CreateServers(
                 |FOREIGN DATA WRAPPER cassandra2_fdw
                 |OPTIONS (host '${storage.host}', port '${storage.port}');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
         }
 
-    private fun createServerForJdbc(storage: ScalarDBStorage.Jdbc): Unit {
+    private fun createServerForJdbc(storage: ScalarDBStorage.Jdbc) {
         val url = storage.url
 
         val driverName =
@@ -85,7 +84,7 @@ class CreateServers(
                 |  maxheapsize '1024'
                 |);
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
         }
     }
@@ -108,7 +107,7 @@ class CreateServers(
                 |FOREIGN DATA WRAPPER scalardb_fdw
                 |OPTIONS (config_file_path '${configPathForScalarDBFdw.toAbsolutePath()}');
                 """
-                    .trimMargin()
+                    .trimMargin(),
             )
         }
 }

@@ -2,6 +2,7 @@ plugins {
     id("com.palantir.docker") version "0.34.0"
     id("org.jetbrains.kotlin.jvm") version "1.8.20"
     id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("com.diffplug.spotless") version "6.13.0"
 
     application
 }
@@ -48,4 +49,21 @@ docker {
     dependsOn(tasks.shadowJar.get())
     name = "ghcr.io/scalar-labs/scalardb-analytics-postgresql-schema-importer:${project.version}"
     files(tasks.shadowJar.get().outputs)
+}
+
+spotless {
+  kotlin {
+    ktlint()
+        .setEditorConfigPath("$rootDir/.editorconfig")
+        .editorConfigOverride(mapOf(
+            "max_line_length" to 130,
+            "ij_kotlin_packages_to_use_import_on_demand" to
+                "java.util.*,com.github.ajalt.clikt.parameters.**,io.mockk",
+        ))
+
+  }
+}
+
+tasks.check {
+    dependsOn(tasks.spotlessCheck)
 }
