@@ -1,4 +1,4 @@
-FROM ghcr.io/scalar-labs/jdk8-postgres15:1.0.0
+FROM ghcr.io/scalar-labs/jdk8-postgres15:1.0.3
 
 ENV JDBC_FDW_VERSION=0.3.0 \
     CASSANDRA_CPP_DRIVER_VERSION=2.16.2 \

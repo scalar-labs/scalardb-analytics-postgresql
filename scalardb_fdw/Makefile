@@ -4,7 +4,7 @@ OBJS = scalardb_fdw.o option.o scalardb.o condition.o column_metadata.o pgport.o
 EXTENSION = scalardb_fdw
 DATA = scalardb_fdw--1.0.sql
 
-scalardb_version = 3.9.0
+scalardb_version = 3.10.1
 
 scalardb_jar = scalardb-$(scalardb_version)-all.jar
 scalardb_jar_built = scalardb-utils/build/libs/$(scalardb_jar)
