@@ -1,5 +1,4 @@
 plugins {
-    id("com.palantir.docker") version "0.34.0"
     id("org.jetbrains.kotlin.jvm") version "1.8.20"
     id("com.github.johnrengelman.shadow") version "7.1.2"
     id("com.diffplug.spotless") version "6.13.0"
@@ -43,12 +42,6 @@ tasks.shadowJar {
 
 tasks.test {
     useJUnitPlatform()
-}
-
-docker {
-    dependsOn(tasks.shadowJar.get())
-    name = "ghcr.io/scalar-labs/scalardb-analytics-postgresql-schema-importer:${project.version}"
-    files(tasks.shadowJar.get().outputs)
 }
 
 spotless {

@@ -1,6 +1,6 @@
-FROM ghcr.io/scalar-labs/jre8:1.1.12
+FROM ghcr.io/scalar-labs/jre8:1.1.14
 
-COPY scalardb-analytics-postgresql-schema-importer-*.jar /app.jar
+COPY ./app/build/libs/scalardb-analytics-postgresql-schema-importer-*.jar /app.jar
 
 RUN groupadd -r --gid 201 scalar && \
     useradd -r --uid 201 -g scalar scalar
