@@ -1,6 +1,6 @@
 FROM ghcr.io/scalar-labs/jdk8-postgres15:1.0.3
 
-ENV JDBC_FDW_VERSION=0.3.0 \
+ENV JDBC_FDW_VERSION=0.3.0-forked \
     CASSANDRA_CPP_DRIVER_VERSION=2.16.2 \
     CASSANDRA_FDW_VERSION=ae5e8145e341f50c150a05d464a9fa4a5eb91179
 
@@ -22,7 +22,7 @@ RUN apt-get update \
     # jdbc_fdw
     && cd /tmp \
     && ln -s $(find /usr/local/openjdk-8 -name libjvm.so) /usr/lib \
-    && wget -q https://github.com/pgspider/jdbc_fdw/archive/refs/tags/v${JDBC_FDW_VERSION}.tar.gz \
+    && wget -q https://github.com/scalar-labs/jdbc_fdw/archive/refs/tags/v${JDBC_FDW_VERSION}.tar.gz \
     && tar zxf v${JDBC_FDW_VERSION}.tar.gz \
     && cd jdbc_fdw-${JDBC_FDW_VERSION} \
     && make USE_PGXS=1 install \
