@@ -10,10 +10,6 @@ If this PR addresses or references any issues, please list them here. For exampl
 
 Outline the specific changes made in this pull request. Include relevant details such as added features, bug fixes, code refactoring, or improvements.
 
-## Screenshots (if applicable)
-
-If your changes include visual modifications, provide screenshots or GIFs to help reviewers understand the visual impact of the changes.
-
 ## Testing Done
 
 Describe the testing you have performed to ensure the changes are working as expected. Include details of the test cases or scenarios covered.
