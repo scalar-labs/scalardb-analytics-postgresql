@@ -181,6 +181,9 @@ void scalardb_initialize(ScalarDbFdwOptions *opts)
 	if (already_initialized == true) {
 		ereport(DEBUG3,
 			errmsg("scalardb has already been initialized"));
+		/* Check if JNI Env is available. This is required because other extensions, like jdbc_fdw,
+		 * may detaches JNI Env from the thread. We need to re-attach it, then. */
+		get_jni_env();
 		return;
 	}
 
