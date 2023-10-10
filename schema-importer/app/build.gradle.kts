@@ -26,6 +26,14 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("org.slf4j:slf4j-simple:2.0.7")
 
+    // These dependencies are added as tentative solution for the warnings caused by missing of
+    // Netty's native transport library.
+    // Once this issue is addressed in the ScalarDB core, these will be removed.
+    implementation("io.netty:netty-transport-native-epoll:4.1.99.Final:linux-x86_64")
+    implementation("io.netty:netty-transport-native-epoll:4.1.99.Final:linux-aarch_64")
+    implementation("io.netty:netty-transport-native-kqueue:4.1.99.Final:osx-x86_64")
+    implementation("io.netty:netty-transport-native-kqueue:4.1.99.Final:osx-aarch_64")
+
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
     testImplementation("io.mockk:mockk:1.13.5")
