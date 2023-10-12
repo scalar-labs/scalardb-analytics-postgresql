@@ -1,4 +1,4 @@
-FROM ghcr.io/scalar-labs/jre8:1.1.14
+FROM ghcr.io/scalar-labs/jre8:1.1.15
 
 COPY ./app/build/libs/scalardb-analytics-postgresql-schema-importer-*.jar /app.jar
 
