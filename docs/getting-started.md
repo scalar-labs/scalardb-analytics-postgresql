@@ -79,7 +79,3 @@ ScalarDB Analytics with PostgreSQL reads data with the **Read Committed** isolat
 ### Write operations are not supported
 
 ScalarDB Analytics with PostgreSQL only supports read-only queries. `INSERT`, `UPDATE`, and other write operations are not supported.
-
-### Conflicts among FDW extensions
-
-If you have a multi-storage configuration and use JDBC with DynamoDB or CosmosDB, you may encounter an error due to a conflict between the underlying FDW extensions. We plan to fix this issue in the near future. Until we fix this issue, you can avoid the error by reading data in DynamoDB or CosmosDB first, then reading data by using JDBC.
