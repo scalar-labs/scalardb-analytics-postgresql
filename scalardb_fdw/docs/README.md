@@ -1,6 +1,8 @@
-# Get started with FDW for ScalarDB
+# ScalarDB FDW
 
-This PostgreSQL extension implements a Foreign Data Wrapper (FDW) for [ScalarDB](https://scalar-labs.com/products/scalardb).
+ScalarDB FDW is a PostgreSQL extension implementing a Foreign Data Wrapper (FDW) for [ScalarDB](https://www.scalar-labs.com/scalardb/).
+
+ScalarDB FDW uses the Java Native Interface to directly utilize ScalarDB as a library inside the FDW and read data from external databases via scan operations for ScalarDB.
 
 ## Prerequisites
 
@@ -80,9 +82,9 @@ To create a foreign table, run the following command:
 
 ```sql
 CREATE FOREIGN TABLE sample_table (
-    pk int OPTIONS(scalardb_partition_key 'true'),
-    ck1 int OPTIONS(scalardb_clustering_key 'true'),
-    ck2 int OPTIONS(scalardb_clustering_key 'true'),
+    pk int,
+    ck1 int,
+    ck2 int,
     boolean_col boolean,
     bigint_col bigint,
     float_col double precision,
@@ -126,16 +128,8 @@ The following options can be set on a ScalarDB foreign table object:
 
 | Name         | Required | Type     | Description                                                      |
 | ------------ | -------- | -------- | ---------------------------------------------------------------- |
-| `name_space` | **Yes**  | `string` | The name of the namespace of the table in the ScalarDB instance. |
+| `namespace` | **Yes**  | `string` | The name of the namespace of the table in the ScalarDB instance. |
 | `table_name` | **Yes**  | `string` | The name of the table in the ScalarDB instance.                  |
-
-#### Column
-
-| Name                      | Required | Type      | Description                                                                                                                                            |
-| ------------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `scalardb_partition_key`  | No       | `boolean` | This specifies that the column is a partition key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set.  |
-| `scalardb_clustering_key` | No       | `boolean` | This specifies that the column is a clustering key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set. |
-| `scalardb_index_key`      | No       | `boolean` | This specifies that the column is an index key in the ScalarDB-side table definition. This is optional and used to optimize the query plan if set.     |
 
 ### Data-type mapping
 
@@ -178,4 +172,3 @@ make installcheck
 ## Limitations
 
 - This extension aims to enable analytical query processing on ScalarDB-managed databases. Therefore, this extension only supports reading data from ScalarDB.
-- Currently, this extension always reads all records from the underlying databases, no matter what selection exists in queries.
