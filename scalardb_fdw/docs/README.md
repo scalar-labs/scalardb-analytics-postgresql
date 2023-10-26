@@ -1,6 +1,6 @@
 # ScalarDB FDW
 
-ScalarDB FDW is a PostgreSQL extension implementing a Foreign Data Wrapper (FDW) for [ScalarDB](https://www.scalar-labs.com/scalardb/).
+ScalarDB FDW is a PostgreSQL extension that implements a foreign data wrapper (FDW) for [ScalarDB](https://www.scalar-labs.com/scalardb/).
 
 ScalarDB FDW uses the Java Native Interface to directly utilize ScalarDB as a library inside the FDW and read data from external databases via scan operations for ScalarDB.
 
