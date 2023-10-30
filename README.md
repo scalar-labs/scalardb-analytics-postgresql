@@ -20,7 +20,7 @@ This repository mainly includes two components. For details, please refer to the
 This repository contains other directories, including:
 
 - [docker/](./docker): Dockerfile to build a Docker image that contains PostgreSQL with the community-provided foreign data wrapper (FDW) extensions installed.
-- [docs](./docs): Documentation written in Markdown.
+- [docs/](./docs): Documentation written in Markdown.
 
 ## Contributing
 
