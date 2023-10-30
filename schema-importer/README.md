@@ -53,7 +53,7 @@ To test Schema Importer, run the following command:
 ## Build a Docker image of Schema Importer
 
 
-To build Docker image of Schema Importer, run the following command replacing `<TAG>` with a proper tag name:
+To build a Docker image of Schema Importer, run the following command, replacing `<TAG>` with the tag version of Schema Importer that you want to use:
 
 ```console
 docker build -t ghcr.io/scalar-labs/scalardb-analytics-postgresql-schema-importer:<TAG> -f ./app/Dockerfile .
