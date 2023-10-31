@@ -6,7 +6,7 @@ Schema Importer reads the ScalarDB configuration file, retrieves the schemas of 
 
 ## Build Schema Importer
 
-You can build Schema Importer by using [Gradle](https://scalardb.scalar-labs.com/docs/latest/scalardb-analytics-postgresql/getting-started/). To build Schema Importer, run the following command:
+You can build Schema Importer by using [Gradle](https://gradle.org/). To build Schema Importer, run the following command:
 
 ```console
 ./gradlew build
