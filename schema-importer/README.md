@@ -29,17 +29,17 @@ java -jar <PATH_TO_FAT_JAR_FILE>
 ```
 Available options are as follows: 
 
-| Name                        | Required | Description                                                            | Default                                    |
-| --------------------------- | -------- | ---------------------------------------------------------------------- | ------------------------------------------ |
-| `--config`                  | **Yes**  | Path to the ScalarDB configuration file                                |                                            |
-| `--config-on-postgres-host` | No       | Path to the ScalarDB configuration file on the PostgreSQL-running host | The same value as `--config` will be used. |
-| `--namespace`, `-n`         | **Yes**  | Namespaces to import into the analytics instance                       |                                            |
-| `--host`                    | No       | PostgreSQL host                                                        | localhost                                  |
-| `--port`                    | No       | PostgreSQL port                                                        | 5432                                       |
-| `--database`                | No       | PostgreSQL port                                                        | postgres                                   |
-| `--user`                    | No       | PostgreSQL user                                                        | postgres                                   |
-| `--password`                | No       | PostgreSQL password                                                    |                                            |
-| `--debug`                   | No       | Enable debug mode                                                      |                                            |
+| Name                        | Required | Description                                                                                                                                 | Default                                    |
+| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `--config`                  | **Yes**  | Path to the ScalarDB configuration file                                                                                                     |                                            |
+| `--config-on-postgres-host` | No       | Path to the ScalarDB configuration file on the PostgreSQL-running host                                                                      | The same value as `--config` will be used. |
+| `--namespace`, `-n`         | **Yes**  | Namespaces to import into the analytics instance. You can specify the `--namespace` option multiple times if you two or more namespaces.    |                                            |
+| `--host`                    | No       | PostgreSQL host                                                                                                                             | localhost                                  |
+| `--port`                    | No       | PostgreSQL port                                                                                                                             | 5432                                       |
+| `--database`                | No       | PostgreSQL port                                                                                                                             | postgres                                   |
+| `--user`                    | No       | PostgreSQL user                                                                                                                             | postgres                                   |
+| `--password`                | No       | PostgreSQL password                                                                                                                         |                                            |
+| `--debug`                   | No       | Enable debug mode                                                                                                                           |                                            |
 
 
 ## Test Schema Importer
