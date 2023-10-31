@@ -2,7 +2,7 @@
 
 ScalarDB Analytics with PostgreSQL expands the capabilities of [ScalarDB](https://www.scalar-labs.com/scalardb/) to support various queries, including joins and aggregations, and enables users to run advanced processing, such as ad-hoc analysis.
 
-ScalarDB Analytics with PostgreSQL, as the name suggests, uses PostgreSQL to execute queries on the data that ScalarDB manages, enabling users to perform various queries that PostgreSQL supports. For details, see the [docs](#docs).
+ScalarDB Analytics with PostgreSQL, as the name suggests, uses PostgreSQL to execute queries on the data that ScalarDB manages, enabling users to perform various queries that PostgreSQL supports. For details, see the [docs](./docs).
 
 ## Online documentation
 
