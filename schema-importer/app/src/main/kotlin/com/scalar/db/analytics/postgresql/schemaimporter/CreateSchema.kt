@@ -23,6 +23,7 @@ class CreateSchema(private val ctx: DatabaseContext, private val namespaces: Set
     fun run() {
         for (ns in namespaces) {
             ctx.useStatement() {
+                val ns = escapeIdentifier(ns)
                 logger.info { "Creating schema: $ns" }
                 executeUpdateWithLogging(it, logger, "CREATE SCHEMA IF NOT EXISTS $ns;")
             }
