@@ -47,6 +47,7 @@ fun executeUpdateWithLogging(stmt: Statement, logger: KLogger, sql: String) {
 fun escapeIdentifier(ident: String): String {
     return Utils.escapeIdentifier(null, ident).toString()
 }
+
 fun escapeLiteral(literal: String): String {
     return Utils.escapeLiteral(null, literal, false).toString()
 }

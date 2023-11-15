@@ -53,8 +53,8 @@ class CreateExtensionTest {
         CreateExtension(ctx, storage).run()
 
         verify {
-            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"jdbc_fdw\";")
-            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"scalardb_fdw\";")
+            statement.executeUpdate("""CREATE EXTENSION IF NOT EXISTS "jdbc_fdw";""")
+            statement.executeUpdate("""CREATE EXTENSION IF NOT EXISTS "scalardb_fdw";""")
             statement.close()
         }
         confirmVerified(statement)
@@ -67,7 +67,7 @@ class CreateExtensionTest {
         CreateExtension(ctx, storage).run()
 
         verify {
-            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"cassandra2_fdw\";")
+            statement.executeUpdate("""CREATE EXTENSION IF NOT EXISTS "cassandra2_fdw";""")
             statement.close()
         }
         confirmVerified(statement)
@@ -80,7 +80,7 @@ class CreateExtensionTest {
         CreateExtension(ctx, storage).run()
 
         verify {
-            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"scalardb_fdw\";")
+            statement.executeUpdate("""CREATE EXTENSION IF NOT EXISTS "scalardb_fdw";""")
             statement.close()
         }
         confirmVerified(statement)
@@ -93,7 +93,7 @@ class CreateExtensionTest {
         CreateExtension(ctx, storage).run()
 
         verify {
-            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"scalardb_fdw\";")
+            statement.executeUpdate("""CREATE EXTENSION IF NOT EXISTS "scalardb_fdw";""")
             statement.close()
         }
         confirmVerified(statement)
@@ -127,9 +127,9 @@ class CreateExtensionTest {
         CreateExtension(ctx, storage).run()
 
         verify {
-            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"jdbc_fdw\";")
-            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"cassandra2_fdw\";")
-            statement.executeUpdate("CREATE EXTENSION IF NOT EXISTS \"scalardb_fdw\";")
+            statement.executeUpdate("""CREATE EXTENSION IF NOT EXISTS "jdbc_fdw";""")
+            statement.executeUpdate("""CREATE EXTENSION IF NOT EXISTS "cassandra2_fdw";""")
+            statement.executeUpdate("""CREATE EXTENSION IF NOT EXISTS "scalardb_fdw";""")
             statement.close()
         }
         confirmVerified(statement)
