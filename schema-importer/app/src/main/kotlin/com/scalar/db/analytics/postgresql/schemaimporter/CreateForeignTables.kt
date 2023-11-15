@@ -42,13 +42,12 @@ class CreateForeignTables(
                         ?: throw IllegalArgumentException(
                             "Table metadata not found: $ns.$tableName",
                         )
-                val foreignTableName = "$ns._$tableName"
+                val foreignTableName = escapeTableName(ns, tableName)
                 val columnDefinitions = getForeignTableColumnDefinitions(metadata)
                 val options = getForeignTableOptions(ns, tableName, storageForNamespace)
+                val serverName = escapeIdentifier(storageForNamespace.serverName)
 
-                logger.info {
-                    "Creating foreign table: $foreignTableName for ${storageForNamespace.serverName}"
-                }
+                logger.info { "Creating foreign table: $foreignTableName for $serverName" }
                 ctx.useStatement {
                     executeUpdateWithLogging(
                         it,
@@ -56,7 +55,7 @@ class CreateForeignTables(
                         """
                             |CREATE FOREIGN TABLE IF NOT EXISTS $foreignTableName (
                             |$columnDefinitions
-                            |) SERVER ${storageForNamespace.serverName} 
+                            |) SERVER $serverName
                             |OPTIONS (${options.joinToString(", ")});
                             """
                             .trimMargin(),
@@ -66,10 +65,13 @@ class CreateForeignTables(
         }
     }
 
+    private fun escapeTableName(schema: String, table: String): String =
+        "${escapeIdentifier(schema)}.${escapeIdentifier("_$table")}"
+
     private fun getForeignTableColumnDefinitions(
         metadata: TableMetadata,
         indent: String = "    ",
-    ): String = getColumnInfoList(metadata).joinToString(",\n") { (col, typ) -> "$indent$col $typ" }
+    ): String = getColumnInfoList(metadata).joinToString(",\n") { (col, typ) -> "$indent${escapeIdentifier(col)} $typ" }
 
     private fun getColumnInfoList(
         metadata: TableMetadata,
@@ -105,17 +107,19 @@ class CreateForeignTables(
         namespace: String,
         tableName: String,
         storage: ScalarDBStorage.SingleStorage,
-    ): Set<String> =
-        when (storage) {
-            is ScalarDBStorage.Jdbc -> setOf("schema_name '$namespace'", "table_name '$tableName'")
+    ): Set<String> {
+        return when (storage) {
+            is ScalarDBStorage.Jdbc ->
+                setOf("schema_name '${escapeLiteral(namespace)}'", "table_name '${escapeLiteral(tableName)}'")
             is ScalarDBStorage.Cassandra ->
-                setOf("schema_name '$namespace'", "table_name '$tableName'")
+                setOf("schema_name '${escapeLiteral(namespace)}'", "table_name '${escapeLiteral(tableName)}'")
             else ->
                 throw IllegalArgumentException("Native FDW of ${storage.name} is not supported yet")
         }
+    }
 
     private fun getForeignTableOptionsForScalarDBFdw(
         namespace: String,
         tableName: String,
-    ): Set<String> = setOf("namespace '$namespace'", "table_name '$tableName'")
+    ): Set<String> = setOf("namespace '${escapeLiteral(namespace)}'", "table_name '${escapeLiteral(tableName)}'")
 }
