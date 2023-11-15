@@ -58,7 +58,7 @@ class CreateUserMappingsTest {
         verify {
             statement.executeUpdate(
                 """
-               |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER jdbc
+               |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER "jdbc"
                |OPTIONS (username 'user', password 'password');
                 """
                     .trimMargin(),
@@ -79,7 +79,7 @@ class CreateUserMappingsTest {
         verify {
             statement.executeUpdate(
                 """
-               |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER cassandra
+               |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER "cassandra"
                |OPTIONS (username 'user', password 'password');
                 """
                     .trimMargin(),
@@ -98,7 +98,7 @@ class CreateUserMappingsTest {
         verify {
             statement.executeUpdate(
                 """
-               |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER cosmos;
+               |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER "cosmos";
                 """
                     .trimMargin(),
             )
