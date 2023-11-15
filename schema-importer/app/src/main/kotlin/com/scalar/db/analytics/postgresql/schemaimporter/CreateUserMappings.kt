@@ -64,7 +64,7 @@ class CreateUserMappings(
     }
 
     private fun createMultipleUserMappings(multiStorage: ScalarDBStorage.MultiStorage) {
-        for ((name, storage) in multiStorage.storages) {
+        for ((_, storage) in multiStorage.storages) {
             logger.info { "Create user mapping: ${escapeIdentifier(storage.serverName)}" }
             if (useScalarDBFdw(storage)) {
                 createEmptyUserMapping(storage)
