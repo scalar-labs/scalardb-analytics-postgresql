@@ -21,12 +21,15 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils
 import mu.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
+private val escapedStateColumn: String = escapeIdentifier(Attribute.STATE)
+private val escapedBeforeStateColumn: String = escapeIdentifier(Attribute.BEFORE_STATE)
 
 class CreateViews(
     private val ctx: DatabaseContext,
     private val namespaces: Set<String>,
     private val admin: DistributedStorageAdmin,
 ) {
+
     fun run() {
         for (ns in namespaces) {
             for (tableName in admin.getNamespaceTableNames(ns)) {
@@ -47,31 +50,31 @@ class CreateViews(
                         .filter { !ConsensusCommitUtils.isTransactionMetaColumn(it, metadata) }
                         .joinToString(",\n") { c ->
                             if (transactionEnabled.not() || pks.contains(c) || cks.contains(c)) {
-                                "${indent}$c"
+                                "${indent}${escapeIdentifier(c)}"
                             } else {
                                 "${indent}CASE " +
                                     // Use the current value if the row is in COMMITTED state
-                                    "WHEN ${Attribute.STATE} = 3 OR ${Attribute.STATE} IS NULL THEN $c " +
+                                    "WHEN $escapedStateColumn = 3 OR $escapedStateColumn IS NULL THEN ${escapeIdentifier(c)} " +
                                     // Use the value in the before image if the row is under
                                     // transaction processing
-                                    "ELSE ${Attribute.BEFORE_PREFIX}$c END AS $c"
+                                    "ELSE ${escapeIdentifier(Attribute.BEFORE_PREFIX + c)} END AS ${escapeIdentifier(c)}"
                             }
                         }
 
                 val whereClause =
                     if (transactionEnabled) {
                         // In COMMITTED state
-                        "WHERE ${Attribute.STATE} = 3 OR " +
+                        "WHERE $escapedStateColumn = 3 OR " +
                             // Committed before being integrated with ScalarDB.
-                            "${Attribute.STATE} IS NULL OR " +
+                            "$escapedStateColumn IS NULL OR " +
                             // Committed in the past
-                            "${Attribute.BEFORE_STATE} = 3"
+                            "$escapedBeforeStateColumn = 3"
                     } else {
                         ""
                     }
 
-                val viewName = "$ns.$tableName"
-                val rawTableName = "$ns._$tableName"
+                val viewName = "${escapeIdentifier(ns)}.${escapeIdentifier(tableName)}"
+                val rawTableName = "${escapeIdentifier(ns)}.${escapeIdentifier("_$tableName")}"
 
                 logger.info { "Creating view: $viewName for $rawTableName" }
                 ctx.useStatement {
