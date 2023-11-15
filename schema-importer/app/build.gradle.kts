@@ -23,7 +23,7 @@ plugins {
 
 group = "com.scalar-labs"
 
-project.version = "3.10.2"
+project.version = "3.10.3"
 
 repositories {
     mavenCentral()
