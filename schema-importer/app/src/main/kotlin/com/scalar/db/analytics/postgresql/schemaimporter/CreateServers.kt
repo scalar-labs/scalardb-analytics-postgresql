@@ -35,7 +35,7 @@ class CreateServers(
     fun run() {
         when (storage) {
             is ScalarDBStorage.SingleStorage -> {
-                logger.info { "Creating server: ${storage.name} as ${storage.serverName}" }
+                logger.info { "Creating server: ${escapeIdentifier(storage.name)} as ${escapeIdentifier(storage.serverName)}" }
                 if (useScalarDBFdw(storage)) {
                     createServerWithScalarDBFdw(storage)
                 } else {
@@ -48,7 +48,7 @@ class CreateServers(
 
     private fun createServerForMultiStorage(multiStorage: ScalarDBStorage.MultiStorage) {
         for ((name, storage) in multiStorage.storages) {
-            logger.info { "Creating server: $name as ${storage.serverName}" }
+            logger.info { "Creating server: ${escapeIdentifier(name)} as ${escapeIdentifier(storage.serverName)}" }
             if (useScalarDBFdw(storage)) {
                 createServerWithScalarDBFdw(storage)
             } else {
@@ -63,9 +63,9 @@ class CreateServers(
                 it,
                 logger,
                 """
-                |CREATE SERVER IF NOT EXISTS ${storage.serverName}
+                |CREATE SERVER IF NOT EXISTS ${escapeIdentifier(storage.serverName)}
                 |FOREIGN DATA WRAPPER cassandra2_fdw
-                |OPTIONS (host '${storage.host}', port '${storage.port}');
+                |OPTIONS (host '${escapeLiteral(storage.host)}', port '${escapeLiteral(storage.port.toString())}');
                 """
                     .trimMargin(),
             )
@@ -84,17 +84,17 @@ class CreateServers(
             }
 
         ctx.useStatement {
-            val jarFile = findScalarDBFdwJarFile(it)
+            val jarFile = escapeLiteral(findScalarDBFdwJarFile(it))
             executeUpdateWithLogging(
                 it,
                 logger,
                 """
-                |CREATE SERVER IF NOT EXISTS ${storage.serverName}
+                |CREATE SERVER IF NOT EXISTS ${escapeIdentifier(storage.serverName)}
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
-                |  drivername '$driverName',
-                |  jarfile '$jarFile',
-                |  url '$url',
+                |  drivername '${escapeLiteral(driverName)}',
+                |  jarfile '${escapeLiteral(jarFile)}',
+                |  url '${escapeLiteral(url)}',
                 |  querytimeout '60',
                 |  maxheapsize '1024'
                 |);
@@ -118,9 +118,9 @@ class CreateServers(
                 it,
                 logger,
                 """
-                |CREATE SERVER IF NOT EXISTS ${storage.serverName}
+                |CREATE SERVER IF NOT EXISTS ${escapeIdentifier(storage.serverName)}
                 |FOREIGN DATA WRAPPER scalardb_fdw
-                |OPTIONS (config_file_path '${configPathForScalarDBFdw.toAbsolutePath()}');
+                |OPTIONS (config_file_path '${escapeLiteral(configPathForScalarDBFdw.toAbsolutePath().toString())}');
                 """
                     .trimMargin(),
             )

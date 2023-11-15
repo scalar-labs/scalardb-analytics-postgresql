@@ -65,7 +65,7 @@ class CreateServersTest {
             statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS jdbc
+                |CREATE SERVER IF NOT EXISTS "jdbc"
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'org.postgresql.Driver',
@@ -95,7 +95,7 @@ class CreateServersTest {
             statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS jdbc
+                |CREATE SERVER IF NOT EXISTS "jdbc"
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'com.mysql.jdbc.Driver',
@@ -125,7 +125,7 @@ class CreateServersTest {
             statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS jdbc
+                |CREATE SERVER IF NOT EXISTS "jdbc"
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'oracle.jdbc.OracleDriver',
@@ -155,7 +155,7 @@ class CreateServersTest {
             statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS jdbc
+                |CREATE SERVER IF NOT EXISTS "jdbc"
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'com.microsoft.sqlserver.jdbc.SQLServerDriver',
@@ -195,7 +195,7 @@ class CreateServersTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS cassandra
+                |CREATE SERVER IF NOT EXISTS "cassandra"
                 |FOREIGN DATA WRAPPER cassandra2_fdw
                 |OPTIONS (host 'localhost', port '9042');
                 """
@@ -217,7 +217,7 @@ class CreateServersTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS cosmos
+                |CREATE SERVER IF NOT EXISTS "cosmos"
                 |FOREIGN DATA WRAPPER scalardb_fdw
                 |OPTIONS (config_file_path '/absolute/path/to/config.properties');
                 """
@@ -239,7 +239,7 @@ class CreateServersTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS dynamodb
+                |CREATE SERVER IF NOT EXISTS "dynamodb"
                 |FOREIGN DATA WRAPPER scalardb_fdw
                 |OPTIONS (config_file_path '/absolute/path/to/config.properties');
                 """
@@ -280,7 +280,7 @@ class CreateServersTest {
             statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS jdbc
+                |CREATE SERVER IF NOT EXISTS "jdbc"
                 |FOREIGN DATA WRAPPER jdbc_fdw
                 |OPTIONS (
                 |  drivername 'org.postgresql.Driver',
@@ -294,7 +294,7 @@ class CreateServersTest {
             )
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS cassandra
+                |CREATE SERVER IF NOT EXISTS "cassandra"
                 |FOREIGN DATA WRAPPER cassandra2_fdw
                 |OPTIONS (host 'localhost', port '9042');
                 """
@@ -318,7 +318,7 @@ class CreateServersTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE SERVER IF NOT EXISTS cosmos
+                |CREATE SERVER IF NOT EXISTS "cosmos"
                 |FOREIGN DATA WRAPPER scalardb_fdw
                 |OPTIONS (config_file_path '/absolute/path/on/postgres/host/to/config.properties');
                 """
