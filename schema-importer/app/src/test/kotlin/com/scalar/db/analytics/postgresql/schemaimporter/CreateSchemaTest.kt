@@ -49,8 +49,8 @@ class CreateSchemaTest {
         CreateSchema(ctx, namespaces).run()
 
         verify {
-            statement.executeUpdate("CREATE SCHEMA IF NOT EXISTS ns1;")
-            statement.executeUpdate("CREATE SCHEMA IF NOT EXISTS ns2;")
+            statement.executeUpdate("""CREATE SCHEMA IF NOT EXISTS "ns1";""")
+            statement.executeUpdate("""CREATE SCHEMA IF NOT EXISTS "ns2";""")
             statement.close()
         }
         confirmVerified(statement)

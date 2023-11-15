@@ -97,20 +97,20 @@ class CreateViewsTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE OR REPLACE VIEW ns_for_jdbc.jdbc_table AS
+                |CREATE OR REPLACE VIEW "ns_for_jdbc"."jdbc_table" AS
                 |SELECT
-                |    pk,
-                |    ck1,
-                |    ck2,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
-                |FROM ns_for_jdbc._jdbc_table
-                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                |    "pk",
+                |    "ck1",
+                |    "ck2",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "boolean_col" ELSE "before_boolean_col" END AS "boolean_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "int_col" ELSE "before_int_col" END AS "int_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "bigint_col" ELSE "before_bigint_col" END AS "bigint_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "float_col" ELSE "before_float_col" END AS "float_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "double_col" ELSE "before_double_col" END AS "double_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "text_col" ELSE "before_text_col" END AS "text_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "blob_col" ELSE "before_blob_col" END AS "blob_col"
+                |FROM "ns_for_jdbc"."_jdbc_table"
+                |WHERE "tx_state" = 3 OR "tx_state" IS NULL OR "before_tx_state" = 3;
                 """
                     .trimMargin(),
             )
@@ -125,20 +125,20 @@ class CreateViewsTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE OR REPLACE VIEW ns_for_cassandra.cassandra_table AS
+                |CREATE OR REPLACE VIEW "ns_for_cassandra"."cassandra_table" AS
                 |SELECT
-                |    pk,
-                |    ck1,
-                |    ck2,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
-                |FROM ns_for_cassandra._cassandra_table
-                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                |    "pk",
+                |    "ck1",
+                |    "ck2",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "boolean_col" ELSE "before_boolean_col" END AS "boolean_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "int_col" ELSE "before_int_col" END AS "int_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "bigint_col" ELSE "before_bigint_col" END AS "bigint_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "float_col" ELSE "before_float_col" END AS "float_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "double_col" ELSE "before_double_col" END AS "double_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "text_col" ELSE "before_text_col" END AS "text_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "blob_col" ELSE "before_blob_col" END AS "blob_col"
+                |FROM "ns_for_cassandra"."_cassandra_table"
+                |WHERE "tx_state" = 3 OR "tx_state" IS NULL OR "before_tx_state" = 3;
                 """
                     .trimMargin(),
             )
@@ -153,20 +153,20 @@ class CreateViewsTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE OR REPLACE VIEW ns_for_cosmos.cosmos_table AS
+                |CREATE OR REPLACE VIEW "ns_for_cosmos"."cosmos_table" AS
                 |SELECT
-                |    pk,
-                |    ck1,
-                |    ck2,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
-                |FROM ns_for_cosmos._cosmos_table
-                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                |    "pk",
+                |    "ck1",
+                |    "ck2",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "boolean_col" ELSE "before_boolean_col" END AS "boolean_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "int_col" ELSE "before_int_col" END AS "int_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "bigint_col" ELSE "before_bigint_col" END AS "bigint_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "float_col" ELSE "before_float_col" END AS "float_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "double_col" ELSE "before_double_col" END AS "double_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "text_col" ELSE "before_text_col" END AS "text_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "blob_col" ELSE "before_blob_col" END AS "blob_col"
+                |FROM "ns_for_cosmos"."_cosmos_table"
+                |WHERE "tx_state" = 3 OR "tx_state" IS NULL OR "before_tx_state" = 3;
                 """
                     .trimMargin(),
             )
@@ -181,20 +181,20 @@ class CreateViewsTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE OR REPLACE VIEW ns_for_dynamodb.dynamodb_table AS
+                |CREATE OR REPLACE VIEW "ns_for_dynamodb"."dynamodb_table" AS
                 |SELECT
-                |    pk,
-                |    ck1,
-                |    ck2,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
-                |FROM ns_for_dynamodb._dynamodb_table
-                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                |    "pk",
+                |    "ck1",
+                |    "ck2",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "boolean_col" ELSE "before_boolean_col" END AS "boolean_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "int_col" ELSE "before_int_col" END AS "int_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "bigint_col" ELSE "before_bigint_col" END AS "bigint_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "float_col" ELSE "before_float_col" END AS "float_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "double_col" ELSE "before_double_col" END AS "double_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "text_col" ELSE "before_text_col" END AS "text_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "blob_col" ELSE "before_blob_col" END AS "blob_col"
+                |FROM "ns_for_dynamodb"."_dynamodb_table"
+                |WHERE "tx_state" = 3 OR "tx_state" IS NULL OR "before_tx_state" = 3;
                 """
                     .trimMargin(),
             )
@@ -219,77 +219,77 @@ class CreateViewsTest {
         verify {
             statement.executeUpdate(
                 """
-                |CREATE OR REPLACE VIEW ns_for_jdbc.jdbc_table AS
+                |CREATE OR REPLACE VIEW "ns_for_jdbc"."jdbc_table" AS
                 |SELECT
-                |    pk,
-                |    ck1,
-                |    ck2,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
-                |FROM ns_for_jdbc._jdbc_table
-                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                |    "pk",
+                |    "ck1",
+                |    "ck2",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "boolean_col" ELSE "before_boolean_col" END AS "boolean_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "int_col" ELSE "before_int_col" END AS "int_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "bigint_col" ELSE "before_bigint_col" END AS "bigint_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "float_col" ELSE "before_float_col" END AS "float_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "double_col" ELSE "before_double_col" END AS "double_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "text_col" ELSE "before_text_col" END AS "text_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "blob_col" ELSE "before_blob_col" END AS "blob_col"
+                |FROM "ns_for_jdbc"."_jdbc_table"
+                |WHERE "tx_state" = 3 OR "tx_state" IS NULL OR "before_tx_state" = 3;
                 """
                     .trimMargin(),
             )
             statement.executeUpdate(
                 """
-                |CREATE OR REPLACE VIEW ns_for_cassandra.cassandra_table AS
+                |CREATE OR REPLACE VIEW "ns_for_cassandra"."cassandra_table" AS
                 |SELECT
-                |    pk,
-                |    ck1,
-                |    ck2,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
-                |FROM ns_for_cassandra._cassandra_table
-                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                |    "pk",
+                |    "ck1",
+                |    "ck2",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "boolean_col" ELSE "before_boolean_col" END AS "boolean_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "int_col" ELSE "before_int_col" END AS "int_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "bigint_col" ELSE "before_bigint_col" END AS "bigint_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "float_col" ELSE "before_float_col" END AS "float_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "double_col" ELSE "before_double_col" END AS "double_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "text_col" ELSE "before_text_col" END AS "text_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "blob_col" ELSE "before_blob_col" END AS "blob_col"
+                |FROM "ns_for_cassandra"."_cassandra_table"
+                |WHERE "tx_state" = 3 OR "tx_state" IS NULL OR "before_tx_state" = 3;
                 """
                     .trimMargin(),
             )
             statement.executeUpdate(
                 """
-                |CREATE OR REPLACE VIEW ns_for_cosmos.cosmos_table AS
+                |CREATE OR REPLACE VIEW "ns_for_cosmos"."cosmos_table" AS
                 |SELECT
-                |    pk,
-                |    ck1,
-                |    ck2,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
-                |FROM ns_for_cosmos._cosmos_table
-                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                |    "pk",
+                |    "ck1",
+                |    "ck2",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "boolean_col" ELSE "before_boolean_col" END AS "boolean_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "int_col" ELSE "before_int_col" END AS "int_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "bigint_col" ELSE "before_bigint_col" END AS "bigint_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "float_col" ELSE "before_float_col" END AS "float_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "double_col" ELSE "before_double_col" END AS "double_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "text_col" ELSE "before_text_col" END AS "text_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "blob_col" ELSE "before_blob_col" END AS "blob_col"
+                |FROM "ns_for_cosmos"."_cosmos_table"
+                |WHERE "tx_state" = 3 OR "tx_state" IS NULL OR "before_tx_state" = 3;
                 """
                     .trimMargin(),
             )
             statement.executeUpdate(
                 """
-                |CREATE OR REPLACE VIEW ns_for_dynamodb.dynamodb_table AS
+                |CREATE OR REPLACE VIEW "ns_for_dynamodb"."dynamodb_table" AS
                 |SELECT
-                |    pk,
-                |    ck1,
-                |    ck2,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN boolean_col ELSE before_boolean_col END AS boolean_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN int_col ELSE before_int_col END AS int_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN bigint_col ELSE before_bigint_col END AS bigint_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN float_col ELSE before_float_col END AS float_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN double_col ELSE before_double_col END AS double_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN text_col ELSE before_text_col END AS text_col,
-                |    CASE WHEN tx_state = 3 OR tx_state IS NULL THEN blob_col ELSE before_blob_col END AS blob_col
-                |FROM ns_for_dynamodb._dynamodb_table
-                |WHERE tx_state = 3 OR tx_state IS NULL OR before_tx_state = 3;
+                |    "pk",
+                |    "ck1",
+                |    "ck2",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "boolean_col" ELSE "before_boolean_col" END AS "boolean_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "int_col" ELSE "before_int_col" END AS "int_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "bigint_col" ELSE "before_bigint_col" END AS "bigint_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "float_col" ELSE "before_float_col" END AS "float_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "double_col" ELSE "before_double_col" END AS "double_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "text_col" ELSE "before_text_col" END AS "text_col",
+                |    CASE WHEN "tx_state" = 3 OR "tx_state" IS NULL THEN "blob_col" ELSE "before_blob_col" END AS "blob_col"
+                |FROM "ns_for_dynamodb"."_dynamodb_table"
+                |WHERE "tx_state" = 3 OR "tx_state" IS NULL OR "before_tx_state" = 3;
                 """
                     .trimMargin(),
             )

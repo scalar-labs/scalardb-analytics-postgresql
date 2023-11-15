@@ -16,6 +16,7 @@
 package com.scalar.db.analytics.postgresql.schemaimporter
 
 import mu.KLogger
+import org.postgresql.core.Utils
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.Statement
@@ -41,4 +42,12 @@ fun <T> useDatabaseContext(
 fun executeUpdateWithLogging(stmt: Statement, logger: KLogger, sql: String) {
     logger.debug { sql }
     stmt.executeUpdate(sql)
+}
+
+fun escapeIdentifier(ident: String): String {
+    return Utils.escapeIdentifier(null, ident).toString()
+}
+
+fun escapeLiteral(literal: String): String {
+    return Utils.escapeLiteral(null, literal, false).toString()
 }

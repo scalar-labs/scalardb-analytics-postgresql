@@ -27,7 +27,7 @@ class CreateUserMappings(
     fun run() {
         when (storage) {
             is ScalarDBStorage.SingleStorage -> {
-                logger.info { "Create user mapping: ${storage.serverName}" }
+                logger.info { "Create user mapping: ${escapeIdentifier(storage.serverName)}" }
                 if (useScalarDBFdw(storage)) {
                     createEmptyUserMapping(storage)
                 } else {
@@ -46,8 +46,8 @@ class CreateUserMappings(
                 it,
                 logger,
                 """
-                |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER ${storage.serverName}
-                |OPTIONS (username '$user', password '$password');
+                |CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER ${escapeIdentifier(storage.serverName)}
+                |OPTIONS (username '${escapeLiteral(user)}', password '${escapeLiteral(password)}');
                 """
                     .trimMargin(),
             )
@@ -58,14 +58,14 @@ class CreateUserMappings(
             executeUpdateWithLogging(
                 it,
                 logger,
-                "CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER ${storage.serverName};",
+                "CREATE USER MAPPING IF NOT EXISTS FOR PUBLIC SERVER ${escapeIdentifier(storage.serverName)};",
             )
         }
     }
 
     private fun createMultipleUserMappings(multiStorage: ScalarDBStorage.MultiStorage) {
-        for ((name, storage) in multiStorage.storages) {
-            logger.info { "Create user mapping: ${storage.serverName}" }
+        for ((_, storage) in multiStorage.storages) {
+            logger.info { "Create user mapping: ${escapeIdentifier(storage.serverName)}" }
             if (useScalarDBFdw(storage)) {
                 createEmptyUserMapping(storage)
             } else {

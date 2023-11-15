@@ -23,8 +23,9 @@ class CreateExtension(private val ctx: DatabaseContext, private val storage: Sca
     fun run() {
         ctx.useStatement() { stmt ->
             for (fdw in storageToFdw(storage)) {
+                val fdw = escapeIdentifier(fdw)
                 logger.info { "Creating extension: $fdw" }
-                executeUpdateWithLogging(stmt, logger, "CREATE EXTENSION IF NOT EXISTS \"$fdw\";")
+                executeUpdateWithLogging(stmt, logger, "CREATE EXTENSION IF NOT EXISTS $fdw;")
             }
         }
     }
