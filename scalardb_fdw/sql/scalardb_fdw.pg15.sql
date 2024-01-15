@@ -247,3 +247,9 @@ explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 DESC
 explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC, p_ck2 ASC; -- OK
 explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 DESC, p_ck2 DESC; -- OK
 explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC, p_ck2 DESC; -- NG
+
+-- Columns that are required to evaluate WHERE clause locally at PostgreSQL side must be returned from the remote server
+-- - ForeignScan on cassandrans_test must return c_boolean_col
+explain verbose select p_pk from postgresns_test inner join cassandrans_test on p_pk = c_pk where c_boolean_col;
+-- - The query must return 1 row
+select p_pk from postgresns_test inner join cassandrans_test on p_pk = c_pk where c_boolean_col;

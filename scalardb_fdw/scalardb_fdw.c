@@ -204,7 +204,6 @@ static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
 				      Oid foreigntableid)
 {
 	ScalarDbFdwPlanState *fdw_private;
-	ListCell *lc;
 
 	ereport(DEBUG3, errmsg("entering function %s", __func__));
 
@@ -218,21 +217,6 @@ static void scalardbGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel,
 	get_column_metadata(root, baserel, fdw_private->options.namespace,
 			    fdw_private->options.table_name,
 			    &fdw_private->column_metadata);
-
-	/*
-	 * Identify which attributes will need to be retrieved from the remote
-	 * server. These include all attrs needed for attrs used in the local_conds.
-	 */
-	fdw_private->attrs_used = NULL;
-	pull_varattnos((Node *)baserel->reltarget->exprs, baserel->relid,
-		       &fdw_private->attrs_used);
-
-	foreach(lc, fdw_private->local_conds) {
-		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
-
-		pull_varattnos((Node *)rinfo->clause, baserel->relid,
-			       &fdw_private->attrs_used);
-	}
 
 	/* Estimate relation size */
 	estimate_size(root, baserel);
@@ -249,6 +233,7 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 	Cost startup_cost;
 	Cost total_cost;
 	double rows;
+	ListCell *lc;
 
 	ScalarDbFdwPlanState *fdw_private =
 		(ScalarDbFdwPlanState *)baserel->fdw_private;
@@ -267,6 +252,21 @@ static void scalardbGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel,
 			       &fdw_private->remote_conds,
 			       &fdw_private->local_conds,
 			       &fdw_private->boundary, &fdw_private->scan_type);
+
+	/*
+	 * Identify which attributes will need to be retrieved from the remote
+	 * server. These include all attrs needed for attrs used in the local_conds.
+	 */
+	fdw_private->attrs_used = NULL;
+	pull_varattnos((Node *)baserel->reltarget->exprs, baserel->relid,
+		       &fdw_private->attrs_used);
+
+	foreach(lc, fdw_private->local_conds) {
+		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lc);
+
+		pull_varattnos((Node *)rinfo->clause, baserel->relid,
+			       &fdw_private->attrs_used);
+	}
 
 	/* Estimate costs */
 	estimate_costs(root, baserel, fdw_private->remote_conds, &rows,
