@@ -895,3 +895,39 @@ explain verbose select * from postgresns_test where p_pk = 1 order by p_ck1 ASC,
          ScalarDB Scan Attribute: ("p_pk" "p_ck1" "p_ck2" "p_boolean_col" "p_int_col" "p_bigint_col" "p_float_col" "p_double_col" "p_text_col" "p_blob_col")
 (10 rows)
 
+-- Columns that are required to evaluate WHERE clause locally at PostgreSQL side must be returned from the remote server
+-- - ForeignScan on cassandrans_test must return c_boolean_col
+explain verbose select p_pk from postgresns_test inner join cassandrans_test on p_pk = c_pk where c_boolean_col;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Merge Join  (cost=303.89..632.27 rows=21404 width=4)
+   Output: postgresns_test.p_pk
+   Merge Cond: (cassandrans_test.c_pk = postgresns_test.p_pk)
+   ->  Sort  (cost=106.17..109.83 rows=1463 width=4)
+         Output: cassandrans_test.c_pk
+         Sort Key: cassandrans_test.c_pk
+         ->  Foreign Scan on public.cassandrans_test  (cost=0.00..29.26 rows=1463 width=4)
+               Output: cassandrans_test.c_pk
+               Filter: cassandrans_test.c_boolean_col
+               ScalarDB Namespace: cassandrans
+               ScalarDB Table: test
+               ScalarDB Scan Type: all
+               ScalarDB Scan Attribute: ("c_pk" "c_boolean_col")
+   ->  Sort  (cost=197.72..205.04 rows=2926 width=4)
+         Output: postgresns_test.p_pk
+         Sort Key: postgresns_test.p_pk
+         ->  Foreign Scan on public.postgresns_test  (cost=0.00..29.26 rows=2926 width=4)
+               Output: postgresns_test.p_pk
+               ScalarDB Namespace: postgresns
+               ScalarDB Table: test
+               ScalarDB Scan Type: all
+               ScalarDB Scan Attribute: ("p_pk")
+(22 rows)
+
+-- - The query must return 1 row
+select p_pk from postgresns_test inner join cassandrans_test on p_pk = c_pk where c_boolean_col;
+ p_pk 
+------
+    1
+(1 row)
+
