@@ -34,8 +34,13 @@ OS = $(shell uname | tr '[:upper:]' '[:lower:]')
 PG_CPPFLAGS = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(OS) -D'SCALARDB_JAR_PATH=$(scalardb_jar_path)'
 
 libjvm_path = $(word 1, $(shell find -L $(JAVA_HOME) -name libjvm\.*))
+libjvm_dir = $(dir $(libjvm_path))
 
-SHLIB_LINK+=-L$(dir $(libjvm_path)) -ljvm
+ifeq ($(OS),darwin)
+	SHLIB_LINK+=-L$(libjvm_dir) -ljvm -rpath $(libjvm_dir)
+else
+	SHLIB_LINK+=-L$(libjvm_dir) -ljvm
+endif
 
 EXTRA_CLEAN = build
 
