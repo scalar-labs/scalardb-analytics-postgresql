@@ -34,7 +34,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.scalar-labs:scalardb:3.10.1")
+    implementation("com.scalar-labs:scalardb:3.11.0")
     implementation("com.github.ajalt.clikt:clikt:3.5.2")
     implementation("org.postgresql:postgresql:42.5.1")
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
