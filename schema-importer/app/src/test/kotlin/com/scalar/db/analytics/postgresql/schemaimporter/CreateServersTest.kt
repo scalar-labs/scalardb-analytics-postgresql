@@ -173,6 +173,36 @@ class CreateServersTest {
     }
 
     @Test
+    fun `run should create a foreign server for SQLite using jdbc_fdw`() {
+        val config = mockk<DatabaseConfig>()
+        every { config.contactPoints } returns listOf("jdbc:sqlite:/path/to/database.db")
+        val storage = ScalarDBStorage.Jdbc(config)
+        val path = Paths.get("/absolute/path/to/config.properties")
+
+        CreateServers(ctx, storage, path).run()
+
+        verify {
+            statement.executeQuery("select scalardb_fdw_get_jar_file_path() as path;")
+            statement.executeUpdate(
+                """
+                |CREATE SERVER IF NOT EXISTS "jdbc"
+                |FOREIGN DATA WRAPPER jdbc_fdw
+                |OPTIONS (
+                |  drivername 'org.sqlite.JDBC',
+                |  jarfile '/path/to/scalardb/jar/file.jar',
+                |  url 'jdbc:sqlite:/path/to/database.db',
+                |  querytimeout '60',
+                |  maxheapsize '1024'
+                |);
+                """
+                    .trimMargin(),
+            )
+            statement.close()
+        }
+        confirmVerified(statement)
+    }
+
+    @Test
     fun `run should throw IllegalArgumentException for an unsupported JDBC database type`() {
         val config = mockk<DatabaseConfig>()
         every { config.contactPoints } returns listOf("jdbc:db2://host:port/database")

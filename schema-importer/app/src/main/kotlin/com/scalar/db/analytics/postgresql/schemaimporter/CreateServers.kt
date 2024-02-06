@@ -80,6 +80,7 @@ class CreateServers(
                 url.startsWith("jdbc:mysql:") -> "com.mysql.jdbc.Driver"
                 url.startsWith("jdbc:oracle:") -> "oracle.jdbc.OracleDriver"
                 url.startsWith("jdbc:sqlserver:") -> "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+                url.startsWith("jdbc:sqlite:") -> "org.sqlite.JDBC"
                 else -> throw IllegalArgumentException("Unsupported JDBC URL: $url")
             }
 
