@@ -1,3 +1,9 @@
+> [!CAUTION]
+> 
+> This documentation has been moved to the centralized ScalarDB documentation repository, [docs-internal-scalardb](https://github.com/scalar-labs/docs-internal-scalardb). Please update this documentation in that repository instead.
+> 
+> To view the ScalarDB documentation, visit [ScalarDB Documentation](https://scalardb.scalar-labs.com/docs/).
+
 # How to Install ScalarDB Analytics with PostgreSQL in Your Local Environment by Using Docker
 
 This document explains how to set up a local environment that runs ScalarDB Analytics with PostgreSQL using the multi-storage back-end of Cassandra, PostgreSQL, and DynamoDB local server using [Docker Compose](https://docs.docker.com/compose/).
